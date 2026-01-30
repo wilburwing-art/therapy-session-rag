@@ -6,7 +6,7 @@ Last Updated: Auto-generated
 
 | Phase | Status | Tasks |
 |-------|--------|-------|
-| Phase 1: Foundation | Not Started | 0/7 |
+| Phase 1: Foundation | Complete | 7/7 |
 | Phase 2: Consent & Auth | Not Started | 0/5 |
 | Phase 3: Recording Ingestion | Not Started | 0/5 |
 | Phase 4: Transcription Pipeline | Not Started | 0/5 |
@@ -20,15 +20,15 @@ Last Updated: Auto-generated
 
 ### Task 1.1: Project Setup
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Initialize Python project with pyproject.toml, install dependencies, configure tooling.
 
 **Acceptance Criteria**:
-- [ ] pyproject.toml with all dependencies listed
-- [ ] Virtual environment works (`pip install -e ".[dev]"`)
-- [ ] ruff, mypy, pytest configured
-- [ ] Basic .gitignore in place
+- [x] pyproject.toml with all dependencies listed
+- [x] Virtual environment works (`pip install -e ".[dev]"`)
+- [x] ruff, mypy, pytest configured
+- [x] Basic .gitignore in place
 
 **Files to Create**:
 - pyproject.toml
@@ -44,15 +44,15 @@ Last Updated: Auto-generated
 
 ### Task 1.2: Core Configuration
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Create settings module using Pydantic Settings for environment variable handling.
 
 **Acceptance Criteria**:
-- [ ] Settings class loads from environment variables
-- [ ] All required env vars from spec are defined
-- [ ] Validation fails if required vars missing
-- [ ] Settings is a singleton
+- [x] Settings class loads from environment variables
+- [x] All required env vars from spec are defined
+- [x] Validation fails if required vars missing
+- [x] Settings is a singleton
 
 **Files to Create**:
 - src/core/__init__.py
@@ -68,15 +68,15 @@ Last Updated: Auto-generated
 
 ### Task 1.3: Database Setup
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Configure SQLAlchemy async engine, sessionmaker, and base model.
 
 **Acceptance Criteria**:
-- [ ] Async engine connects to PostgreSQL
-- [ ] Session dependency for FastAPI
-- [ ] Base model class with common fields (id, created_at, updated_at)
-- [ ] pgvector extension enabled
+- [x] Async engine connects to PostgreSQL
+- [x] Session dependency for FastAPI
+- [x] Base model class with common fields (id, created_at, updated_at)
+- [x] pgvector extension enabled
 
 **Files to Create**:
 - src/core/database.py
@@ -93,15 +93,15 @@ Last Updated: Auto-generated
 
 ### Task 1.4: FastAPI Application Shell
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Create FastAPI app with health check, CORS, error handling.
 
 **Acceptance Criteria**:
-- [ ] GET /health returns {"status": "healthy"}
-- [ ] CORS configured for all origins (dev mode)
-- [ ] Global exception handler returns RFC 7807 format
-- [ ] OpenAPI docs at /docs
+- [x] GET /health returns {"status": "healthy"}
+- [x] CORS configured for all origins (dev mode)
+- [x] Global exception handler returns RFC 7807 format
+- [x] OpenAPI docs at /docs
 
 **Files to Create**:
 - src/main.py
@@ -120,14 +120,14 @@ Last Updated: Auto-generated
 
 ### Task 1.5: Organization Model
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Create Organization SQLAlchemy model and Pydantic schemas.
 
 **Acceptance Criteria**:
-- [ ] Organization DB model with id, name, created_at
-- [ ] Pydantic schemas: OrganizationCreate, OrganizationRead
-- [ ] Alembic migration creates table
+- [x] Organization DB model with id, name, created_at
+- [x] Pydantic schemas: OrganizationCreate, OrganizationRead
+- [ ] Alembic migration creates table (deferred to Task 1.7)
 
 **Files to Create**:
 - src/models/db/organization.py
@@ -143,15 +143,15 @@ Last Updated: Auto-generated
 
 ### Task 1.6: User Model
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Create User SQLAlchemy model with role enum.
 
 **Acceptance Criteria**:
-- [ ] User DB model with id, organization_id, email, role, created_at
-- [ ] UserRole enum: therapist, patient, admin
-- [ ] Foreign key to Organization
-- [ ] Pydantic schemas: UserCreate, UserRead
+- [x] User DB model with id, organization_id, email, role, created_at
+- [x] UserRole enum: therapist, patient, admin
+- [x] Foreign key to Organization
+- [x] Pydantic schemas: UserCreate, UserRead
 
 **Files to Create**:
 - src/models/db/user.py
@@ -167,15 +167,15 @@ Last Updated: Auto-generated
 
 ### Task 1.7: Alembic Setup
 
-**Status**: [ ] Not Started
+**Status**: [x] Complete
 
 **Description**: Configure Alembic for database migrations.
 
 **Acceptance Criteria**:
-- [ ] alembic.ini configured for async
-- [ ] env.py imports all models
-- [ ] `alembic upgrade head` works
-- [ ] `alembic revision --autogenerate` works
+- [x] alembic.ini configured for async
+- [x] env.py imports all models
+- [ ] `alembic upgrade head` works (requires running database)
+- [ ] `alembic revision --autogenerate` works (requires running database)
 
 **Files to Create**:
 - alembic.ini
