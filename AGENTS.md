@@ -4,29 +4,29 @@ This file contains operational instructions for building, testing, and validatin
 
 ## Tech Stack
 
-- Python 3.11+
-- FastAPI
-- PostgreSQL with pgvector
-- Redis + RQ
+- Python 3.12+
+- FastAPI (async)
+- PostgreSQL 16 with pgvector
+- Redis 7 + RQ
 - pytest for testing
 - ruff for linting
-- mypy for type checking
+- mypy for type checking (strict mode)
+- uv for dependency management
 
 ## Setup Commands
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
+# Install dependencies with uv (recommended)
+uv sync
 
-# Install dependencies
+# Or with pip
 pip install -e ".[dev]"
 
 # Start services (requires Docker)
-docker compose up -d
+docker compose up -d postgres redis minio
 
 # Run database migrations
-alembic upgrade head
+uv run alembic upgrade head
 ```
 
 ## Validation Commands (Backpressure)
@@ -34,30 +34,41 @@ alembic upgrade head
 **IMPORTANT**: Run ALL validation commands before committing. Do NOT commit if any fail.
 
 ```bash
+# Full e2e test suite (RECOMMENDED - runs all checks)
+./scripts/e2e_test.sh
+
+# Individual commands:
+
 # Type checking (MUST PASS)
-mypy src --strict
+uv run mypy src/
 
 # Linting (MUST PASS)
-ruff check src tests
-ruff format --check src tests
+uv run ruff check src/ tests/
+uv run ruff format --check src/ tests/
 
 # Unit tests (MUST PASS)
-pytest tests/unit -v --tb=short
+uv run pytest tests/unit -v --tb=short
 
-# Integration tests (run if services are up)
-pytest tests/integration -v --tb=short
+# Integration tests (requires docker services)
+uv run pytest tests/integration -v --tb=short
 
 # All tests with coverage
-pytest tests -v --cov=src --cov-report=term-missing --cov-fail-under=80
+uv run pytest tests -v --cov=src --cov-report=term-missing --cov-fail-under=80
 ```
+
+## Current Status
+
+- **Unit Tests**: 407 passing
+- **Lint**: Clean
+- **Type Check**: Clean (mypy strict mode)
+- **Integration Tests**: Ready (requires docker)
 
 ## Before Each Commit
 
-1. Run `ruff format src tests` to auto-format
-2. Run `ruff check src tests --fix` to auto-fix lint issues
-3. Run `mypy src --strict` - fix any type errors
-4. Run `pytest tests -v` - all tests must pass
-5. Only then: `git add . && git commit -m "descriptive message"`
+1. Run `./scripts/e2e_test.sh` - all checks must pass
+2. If needed, run `uv run ruff format src/ tests/` to auto-format
+3. If needed, run `uv run ruff check src/ tests/ --fix` to auto-fix lint issues
+4. Only then: `git add . && git commit -m "descriptive message"`
 
 ## Code Patterns
 
@@ -66,26 +77,35 @@ pytest tests -v --cov=src --cov-report=term-missing --cov-fail-under=80
 - Return Pydantic models, not dicts
 - Use HTTPException for errors with RFC 7807 format
 - Always add OpenAPI descriptions
+- Use TenantContext for row-level security
 
 ### Services
 - One service per domain concept
 - Services take repositories via constructor
 - Async where I/O is involved
 - Return domain models, not ORM models
+- Accept TenantContext for multi-tenant isolation
 
 ### Database
 - Use SQLAlchemy 2.0 style (select, not query)
 - Alembic for migrations
 - Repository pattern for data access
 - Use transactions explicitly
+- Add composite indexes for common query patterns
+
+### Pagination
+- Use cursor-based pagination (not offset)
+- Use `CursorPage[T]` from `src/core/pagination.py`
+- Encode cursor with `encode_cursor()`, decode with `decode_cursor()`
 
 ### Tests
 - Unit tests mock external dependencies
 - Integration tests use real database (test container)
 - Each test file mirrors src structure
 - Fixtures in conftest.py
+- Use `pytest.mark.asyncio` for async tests
 
-## File Naming
+## File Structure
 
 ```
 src/
@@ -94,35 +114,49 @@ src/
       endpoints/
         sessions.py      # /api/v1/sessions/*
         chat.py          # /api/v1/chat/*
+        consent.py       # /api/v1/consent/*
       dependencies.py    # FastAPI dependencies
       router.py          # Main v1 router
+  core/
+    config.py            # Settings
+    database.py          # DB setup
+    exceptions.py        # Custom exceptions
+    health.py            # Health checks
+    logging.py           # Structured logging
+    pagination.py        # Cursor-based pagination
+    tenant.py            # Row-level security
   services/
     consent_service.py
     session_service.py
     transcription_service.py
     embedding_service.py
     chat_service.py
+    claude_client.py
+    deepgram_client.py
+    embedding_client.py
+    rate_limiter.py
+    storage_service.py
   models/
     domain/              # Pydantic models
     db/                  # SQLAlchemy models
   repositories/
     consent_repo.py
     session_repo.py
+    chunk_repo.py
   workers/
     transcription_worker.py
     embedding_worker.py
-  core/
-    config.py            # Settings
-    database.py          # DB setup
-    exceptions.py        # Custom exceptions
 tests/
   unit/
-    services/
     api/
+    services/
+    core/
+    models/
   integration/
-    test_consent_flow.py
-    test_transcription_flow.py
+    test_full_pipeline.py
   conftest.py
+scripts/
+  e2e_test.sh           # Full validation script
 ```
 
 ## Common Gotchas
@@ -131,8 +165,9 @@ tests/
 2. **Async**: FastAPI endpoints are async, use `async def`
 3. **Pydantic v2**: Use `model_dump()` not `dict()`
 4. **SQLAlchemy 2.0**: Use `select()` not `query()`
-5. **Type hints**: Always include return types
+5. **Type hints**: Always include return types, use Literal for constrained strings
 6. **Tests**: Use `pytest.mark.asyncio` for async tests
+7. **TextBlock**: When mocking Anthropic responses, use real `TextBlock` from `anthropic.types`
 
 ## Progress Tracking
 

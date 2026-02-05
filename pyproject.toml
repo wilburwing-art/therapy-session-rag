@@ -58,14 +58,18 @@ dev = [
     "pytest-cov>=4.1.0",
     "httpx>=0.26.0",
     "faker>=22.0.0",
-    
+
     # Linting & Formatting
     "ruff>=0.1.14",
     "mypy>=1.8.0",
-    
+
     # Type stubs
     "types-redis>=4.6.0",
     "types-passlib>=1.7.7",
+
+    # Dev pipeline CLI
+    "click>=8.1.0",
+    "tomli>=2.0.0;python_version<'3.11'",
 ]
 
 [project.scripts]
@@ -109,6 +113,9 @@ ignore = [
     "B904",   # raise without from (sometimes intentional)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG001", "ARG002"]  # Unused arguments are common in pytest fixtures
+
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
 
@@ -128,8 +135,11 @@ module = [
     "minio.*",
     "rq.*",
     "deepgram.*",
+    "pgvector.*",
+    "pgvector.sqlalchemy",
 ]
 ignore_missing_imports = true
+follow_untyped_imports = true
 
 [tool.coverage.run]
 source = ["src"]

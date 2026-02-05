@@ -1903,6 +1903,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "click" },
     { name = "faker" },
     { name = "httpx" },
     { name = "mypy" },
@@ -1919,6 +1920,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "anthropic", specifier = ">=0.18.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
+    { name = "click", marker = "extra == 'dev'", specifier = ">=8.1.0" },
     { name = "email-validator", specifier = ">=2.3.0" },
     { name = "faker", marker = "extra == 'dev'", specifier = ">=22.0.0" },
     { name = "fastapi", specifier = ">=0.109.0" },
@@ -1943,6 +1945,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=24.1.0" },
     { name = "tenacity", specifier = ">=8.2.0" },
     { name = "tiktoken", specifier = ">=0.5.0" },
+    { name = "tomli", marker = "python_full_version < '3.11' and extra == 'dev'", specifier = ">=2.0.0" },
     { name = "types-passlib", marker = "extra == 'dev'", specifier = ">=1.7.7" },
     { name = "types-redis", marker = "extra == 'dev'", specifier = ">=4.6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.27.0" },

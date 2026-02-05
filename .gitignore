@@ -133,3 +133,7 @@ recordings/
 
 # Ralph loop state (optional - may want to track)
 # .ralph/logs/
+
+# Dev pipeline data (cached transcripts, embeddings, etc.)
+dev_data/
+dev/dev_config.local.toml

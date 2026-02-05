@@ -1,0 +1,30 @@
+# Dev pipeline configuration
+# Override locally with dev_config.local.toml (gitignored)
+
+[audio]
+# Path to directory containing audio files (set via CLI or local override)
+source_dir = ""
+extensions = ["mp3", "wav", "webm", "ogg", "flac", "m4a"]
+
+[transcription]
+language = "en"
+enable_diarization = true
+
+[chunking]
+target_chunk_size = 500  # tokens (approximate, ~4 chars per token)
+max_chunk_size = 750
+min_chunk_size = 100
+
+[embedding]
+model = "text-embedding-3-small"
+dimensions = 1536
+batch_size = 100
+
+[chat]
+model = "claude-sonnet-4-20250514"
+temperature = 0.7
+top_k = 5
+
+[dev]
+cache_dir = "dev_data/cache"
+max_concurrent = 2

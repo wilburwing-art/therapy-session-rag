@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from src.models.db.organization import Organization
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     """User role enumeration."""
 
     THERAPIST = "therapist"

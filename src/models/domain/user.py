@@ -1,13 +1,13 @@
 """User Pydantic schemas."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     """User role enumeration."""
 
     THERAPIST = "therapist"
