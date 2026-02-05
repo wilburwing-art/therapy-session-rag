@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.v1.dependencies import get_api_key_auth
+from src.api.v1.dependencies import get_api_key_auth, get_event_publisher
 from src.api.v1.endpoints.sessions import (
     get_session_service,
     get_storage_service,
@@ -80,6 +80,10 @@ def app(
     test_app.dependency_overrides[get_transcription_service] = (
         lambda: mock_transcription_service
     )
+
+    mock_events = MagicMock()
+    mock_events.publish = AsyncMock(return_value=None)
+    test_app.dependency_overrides[get_event_publisher] = lambda: mock_events
 
     return test_app
 

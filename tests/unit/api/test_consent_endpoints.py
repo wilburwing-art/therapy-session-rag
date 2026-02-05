@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.v1.dependencies import get_api_key_auth
+from src.api.v1.dependencies import get_api_key_auth, get_event_publisher
 from src.api.v1.endpoints.consent import get_consent_service, router
 from src.core.database import get_db_session
 from src.models.domain.consent import (
@@ -42,9 +42,13 @@ def app(mock_auth_context: MagicMock, mock_consent_service: MagicMock) -> FastAP
     test_app = FastAPI()
     test_app.include_router(router, prefix="/consent")
 
+    mock_events = MagicMock()
+    mock_events.publish = AsyncMock(return_value=None)
+
     test_app.dependency_overrides[get_api_key_auth] = lambda: mock_auth_context
     test_app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     test_app.dependency_overrides[get_consent_service] = lambda: mock_consent_service
+    test_app.dependency_overrides[get_event_publisher] = lambda: mock_events
 
     return test_app
 

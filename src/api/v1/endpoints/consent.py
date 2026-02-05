@@ -5,8 +5,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from src.api.v1.dependencies import Auth
+from src.api.v1.dependencies import Auth, Events
 from src.core.database import DbSession
+from src.models.db.event import EventCategory
 from src.models.domain.consent import (
     ConsentAuditEntry,
     ConsentCheck,
@@ -39,8 +40,9 @@ def get_client_info(request: Request) -> tuple[str | None, str | None]:
 async def grant_consent(
     grant: ConsentGrant,
     request: Request,
-    auth: Auth,  # noqa: ARG001
+    auth: Auth,
     service: ConsentSvc,
+    events: Events,
 ) -> ConsentRead:
     """Grant consent for a patient.
 
@@ -48,19 +50,33 @@ async def grant_consent(
     Returns 409 Conflict if active consent already exists for this type.
     """
     ip_address, user_agent = get_client_info(request)
-    return await service.grant_consent(
+    result = await service.grant_consent(
         grant=grant,
         ip_address=ip_address,
         user_agent=user_agent,
     )
+
+    await events.publish(
+        event_name="consent.granted",
+        category=EventCategory.USER_ACTION,
+        organization_id=auth.organization_id,
+        actor_id=grant.patient_id,
+        properties={
+            "consent_type": grant.consent_type.value,
+            "therapist_id": str(grant.therapist_id),
+        },
+    )
+
+    return result
 
 
 @router.delete("", response_model=ConsentRead)
 async def revoke_consent(
     revoke: ConsentRevoke,
     request: Request,
-    auth: Auth,  # noqa: ARG001
+    auth: Auth,
     service: ConsentSvc,
+    events: Events,
 ) -> ConsentRead:
     """Revoke consent for a patient.
 
@@ -68,11 +84,24 @@ async def revoke_consent(
     Returns 404 if no active consent exists to revoke.
     """
     ip_address, user_agent = get_client_info(request)
-    return await service.revoke_consent(
+    result = await service.revoke_consent(
         revoke=revoke,
         ip_address=ip_address,
         user_agent=user_agent,
     )
+
+    await events.publish(
+        event_name="consent.revoked",
+        category=EventCategory.USER_ACTION,
+        organization_id=auth.organization_id,
+        actor_id=revoke.patient_id,
+        properties={
+            "consent_type": revoke.consent_type.value,
+            "therapist_id": str(revoke.therapist_id),
+        },
+    )
+
+    return result
 
 
 @router.get("/{patient_id}/check", response_model=ConsentCheck)

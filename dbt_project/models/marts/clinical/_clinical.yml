@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: fact_sessions
+    description: >
+      One row per therapy session with enriched transcript and chunk metrics.
+      Tracks pipeline processing time and session quality indicators.
+    columns:
+      - name: session_id
+        description: "Primary key"
+        tests: [unique, not_null]
+      - name: patient_id
+        tests: [not_null]
+      - name: therapist_id
+        tests: [not_null]
+      - name: chunk_count
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: fact_messages
+    description: >
+      One row per chat message event extracted from the analytics event stream.
+      Contains message-level metrics for RAG quality analysis.
+    columns:
+      - name: message_event_id
+        description: "Primary key (event_id)"
+        tests: [unique, not_null]
+      - name: message_length
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+
+  - name: dim_patients
+    description: >
+      Patient dimension with lifetime session history, chat engagement,
+      and consent metrics. One row per patient.
+    columns:
+      - name: patient_id
+        description: "Primary key"
+        tests: [unique, not_null]
+      - name: organization_id
+        tests: [not_null]
+      - name: total_sessions
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: dim_therapists
+    description: >
+      Therapist dimension with workload, patient count, and quality metrics.
+      One row per therapist.
+    columns:
+      - name: therapist_id
+        description: "Primary key"
+        tests: [unique, not_null]
+      - name: organization_id
+        tests: [not_null]
+      - name: session_success_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: dim_time
+    description: "Standard date dimension generated from seed data."
+    columns:
+      - name: date_key
+        description: "Primary key (calendar date)"
+        tests: [unique, not_null]

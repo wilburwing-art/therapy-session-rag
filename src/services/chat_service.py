@@ -10,6 +10,7 @@ from src.models.domain.chat import ChatResponse, ChatSource
 from src.repositories.vector_search_repo import VectorSearchRepository
 from src.services.claude_client import ClaudeClient, ClaudeError, Message
 from src.services.embedding_client import EmbeddingClient, EmbeddingError
+from src.services.safety.guardrails import GuardrailAction, Guardrails
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,9 @@ class ChatService:
         self.vector_search = VectorSearchRepository(db_session)
         self._embedding_client: EmbeddingClient | None = None
         self._claude_client: ClaudeClient | None = None
+        self._guardrails: Guardrails | None = (
+            Guardrails() if self.settings.safety_enabled else None
+        )
 
     @property
     def embedding_client(self) -> EmbeddingClient:
@@ -77,6 +81,27 @@ class ChatService:
             ChatServiceError: If chat processing fails
         """
         try:
+            # Safety check on input
+            prepend_crisis = False
+            if self._guardrails:
+                input_check = self._guardrails.check_input(message)
+                if input_check.action == GuardrailAction.BLOCK:
+                    logger.warning(
+                        "Input blocked by guardrails: %s",
+                        input_check.assessment.triggered_rules,
+                    )
+                    return ChatResponse(
+                        response=(
+                            "I'm not able to help with that request. "
+                            "If you're in distress, please reach out to your "
+                            "therapist or call 988 (Suicide & Crisis Lifeline)."
+                        ),
+                        conversation_id=uuid.uuid4(),
+                        sources=[],
+                    )
+                if input_check.action == GuardrailAction.ESCALATE:
+                    prepend_crisis = True
+
             # Generate embedding for the query
             query_embedding = await self._get_query_embedding(message)
 
@@ -141,11 +166,33 @@ class ChatService:
                 temperature=0.7,
             )
 
+            response_text = claude_response.content
+
+            # Safety check on output
+            if self._guardrails:
+                output_check = self._guardrails.check_output(response_text)
+                if output_check.action == GuardrailAction.BLOCK:
+                    logger.warning(
+                        "Output blocked by guardrails: %s",
+                        output_check.assessment.triggered_rules,
+                    )
+                    response_text = (
+                        "I generated a response that may not be appropriate. "
+                        "Please consult your therapist or healthcare provider "
+                        "for guidance on this topic."
+                    )
+                elif output_check.action == GuardrailAction.MODIFY and output_check.modified_text:
+                    response_text = output_check.modified_text
+
+            # Prepend crisis resources if escalation was triggered
+            if prepend_crisis:
+                response_text = Guardrails.prepend_crisis_resources(response_text)
+
             # Generate conversation ID
             conversation_id = uuid.uuid4()
 
             return ChatResponse(
-                response=claude_response.content,
+                response=response_text,
                 conversation_id=conversation_id,
                 sources=sources,
             )

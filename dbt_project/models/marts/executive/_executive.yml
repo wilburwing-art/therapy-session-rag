@@ -1,0 +1,72 @@
+version: 2
+
+models:
+  - name: therapist_utilization
+    description: >
+      Weekly therapist utilization metrics including session volume,
+      patient count, duration, and pipeline success rates.
+    columns:
+      - name: utilization_id
+        description: "Surrogate key (therapist_id + period_start)"
+        tests: [unique, not_null]
+      - name: therapist_id
+        tests: [not_null]
+      - name: success_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: patient_engagement_trends
+    description: >
+      Weekly patient engagement trends by organization.
+      Tracks activation rates, session/message activity, and consent health.
+    columns:
+      - name: trend_id
+        description: "Surrogate key (organization_id + period_start)"
+        tests: [unique, not_null]
+      - name: organization_id
+        tests: [not_null]
+      - name: patient_activation_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: session_outcomes_summary
+    description: >
+      Weekly session processing outcomes by organization.
+      Tracks pipeline reliability, content quality, and processing SLAs.
+    columns:
+      - name: outcome_id
+        description: "Surrogate key (organization_id + period_start)"
+        tests: [unique, not_null]
+      - name: organization_id
+        tests: [not_null]
+      - name: success_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: failure_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: ai_safety_metrics
+    description: >
+      Weekly AI safety and RAG quality metrics by organization.
+      Tracks grounding rates, safety event counts, and guardrail effectiveness.
+      Will be enriched when Phase 4 (Clinical AI Safety) is implemented.
+    columns:
+      - name: safety_metric_id
+        description: "Surrogate key (organization_id + period_start)"
+        tests: [unique, not_null]
+      - name: organization_id
+        tests: [not_null]
+      - name: grounding_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100

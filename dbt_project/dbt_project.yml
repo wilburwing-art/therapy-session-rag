@@ -1,0 +1,32 @@
+name: therapy_session_analytics
+version: "1.0.0"
+config-version: 2
+
+profile: therapy_session_analytics
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  therapy_session_analytics:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      clinical:
+        +materialized: table
+        +schema: clinical
+      operational:
+        +materialized: table
+        +schema: operational
+      executive:
+        +materialized: table
+        +schema: executive
+      experimentation:
+        +materialized: table
+        +schema: experimentation

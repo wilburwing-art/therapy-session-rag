@@ -5,9 +5,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from src.api.v1.dependencies import Auth
+from src.api.v1.dependencies import Auth, Events
 from src.core.database import DbSession
 from src.core.exceptions import RateLimitError
+from src.models.db.event import EventCategory
 from src.models.domain.chat import ChatRequest, ChatResponse
 from src.services.chat_service import ChatService
 from src.services.claude_client import Message
@@ -34,9 +35,10 @@ RateLimiterDep = Annotated[ChatRateLimiter, Depends(get_chat_rate_limiter)]
 async def chat(
     request: ChatRequest,
     patient_id: uuid.UUID,
-    auth: Auth,  # noqa: ARG001
+    auth: Auth,
     service: ChatSvc,
     rate_limiter: RateLimiterDep,
+    events: Events,
 ) -> ChatResponse:
     """Send a message to the RAG chatbot.
 
@@ -81,6 +83,19 @@ async def chat(
         message=request.message,
         conversation_history=conversation_history,
         top_k=request.top_k,
+    )
+
+    await events.publish(
+        event_name="chat.message_sent",
+        category=EventCategory.USER_ACTION,
+        organization_id=auth.organization_id,
+        actor_id=patient_id,
+        properties={
+            "top_k": request.top_k,
+            "source_count": len(response.sources),
+            "has_conversation_id": request.conversation_id is not None,
+            "message_length": len(request.message),
+        },
     )
 
     return response

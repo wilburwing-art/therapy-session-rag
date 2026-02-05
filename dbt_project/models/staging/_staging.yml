@@ -1,0 +1,284 @@
+version: 2
+
+sources:
+  - name: therapy_rag
+    schema: public
+    description: "Therapy Session RAG application database"
+    tables:
+      - name: organizations
+        description: "Multi-tenant organizations"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: name
+            tests: [not_null]
+
+      - name: users
+        description: "Patients, therapists, and admins"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: organization_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('therapy_rag', 'organizations')
+                  field: id
+          - name: email
+            tests: [unique, not_null]
+          - name: role
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["therapist", "patient", "admin"]
+
+      - name: consents
+        description: "Append-only consent audit trail"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: patient_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('therapy_rag', 'users')
+                  field: id
+          - name: therapist_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('therapy_rag', 'users')
+                  field: id
+          - name: consent_type
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["recording", "transcription", "ai_analysis"]
+          - name: status
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["granted", "revoked"]
+
+      - name: sessions
+        description: "Therapy sessions with processing pipeline status"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: patient_id
+            tests: [not_null]
+          - name: therapist_id
+            tests: [not_null]
+          - name: consent_id
+            tests: [not_null]
+          - name: status
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["pending", "uploaded", "transcribing", "embedding", "ready", "failed"]
+
+      - name: transcripts
+        description: "Session transcripts with metadata"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: session_id
+            tests: [unique, not_null]
+          - name: full_text
+            tests: [not_null]
+
+      - name: transcription_jobs
+        description: "Transcription job tracking"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: session_id
+            tests: [not_null]
+          - name: status
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["pending", "processing", "completed", "failed"]
+
+      - name: session_chunks
+        description: "Embedded transcript chunks for vector search"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: session_id
+            tests: [not_null]
+          - name: transcript_id
+            tests: [not_null]
+          - name: content
+            tests: [not_null]
+
+      - name: analytics_events
+        description: "Snowplow-style event tracking"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: event_name
+            tests: [not_null]
+          - name: event_category
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["user_action", "system", "clinical", "performance"]
+          - name: organization_id
+            tests: [not_null]
+
+      - name: api_keys
+        description: "Organization API keys"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: organization_id
+            tests: [not_null]
+
+      - name: experiments
+        description: "A/B test experiment definitions"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: name
+            tests: [not_null]
+          - name: status
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["draft", "running", "paused", "completed"]
+          - name: organization_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('therapy_rag', 'organizations')
+                  field: id
+
+      - name: experiment_assignments
+        description: "Variant assignments per subject per experiment"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: experiment_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('therapy_rag', 'experiments')
+                  field: id
+          - name: subject_id
+            tests: [not_null]
+          - name: variant
+            tests: [not_null]
+
+      - name: experiment_metrics
+        description: "Metric observations per subject per experiment"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: experiment_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('therapy_rag', 'experiments')
+                  field: id
+          - name: subject_id
+            tests: [not_null]
+          - name: metric_name
+            tests: [not_null]
+
+models:
+  - name: stg_organizations
+    description: "Cleaned organizations"
+    columns:
+      - name: organization_id
+        tests: [unique, not_null]
+      - name: organization_name
+        tests: [not_null]
+
+  - name: stg_users
+    description: "Cleaned users with role classification"
+    columns:
+      - name: user_id
+        tests: [unique, not_null]
+      - name: organization_id
+        tests: [not_null]
+      - name: email
+        tests: [unique, not_null]
+      - name: user_role
+        tests: [not_null]
+
+  - name: stg_consents
+    description: "Cleaned consent records"
+    columns:
+      - name: consent_id
+        tests: [unique, not_null]
+      - name: patient_id
+        tests: [not_null]
+      - name: therapist_id
+        tests: [not_null]
+
+  - name: stg_sessions
+    description: "Cleaned therapy sessions"
+    columns:
+      - name: session_id
+        tests: [unique, not_null]
+      - name: patient_id
+        tests: [not_null]
+      - name: therapist_id
+        tests: [not_null]
+
+  - name: stg_transcripts
+    description: "Cleaned transcripts"
+    columns:
+      - name: transcript_id
+        tests: [unique, not_null]
+      - name: session_id
+        tests: [unique, not_null]
+
+  - name: stg_session_chunks
+    description: "Cleaned session chunks (excludes embedding vectors)"
+    columns:
+      - name: chunk_id
+        tests: [unique, not_null]
+      - name: session_id
+        tests: [not_null]
+
+  - name: stg_events
+    description: "Cleaned analytics events"
+    columns:
+      - name: event_id
+        tests: [unique, not_null]
+      - name: event_name
+        tests: [not_null]
+      - name: organization_id
+        tests: [not_null]
+
+  - name: stg_experiments
+    description: "Cleaned experiment definitions"
+    columns:
+      - name: experiment_id
+        tests: [unique, not_null]
+      - name: experiment_name
+        tests: [not_null]
+      - name: organization_id
+        tests: [not_null]
+
+  - name: stg_experiment_assignments
+    description: "Cleaned experiment variant assignments"
+    columns:
+      - name: assignment_id
+        tests: [unique, not_null]
+      - name: experiment_id
+        tests: [not_null]
+      - name: subject_id
+        tests: [not_null]
+
+  - name: stg_experiment_metrics
+    description: "Cleaned experiment metric observations"
+    columns:
+      - name: metric_id
+        tests: [unique, not_null]
+      - name: experiment_id
+        tests: [not_null]
+      - name: subject_id
+        tests: [not_null]

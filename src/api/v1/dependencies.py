@@ -8,11 +8,12 @@ from fastapi import Depends, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_db_session
+from src.core.database import DbSession, get_db_session
 from src.core.exceptions import UnauthorizedError
 from src.core.security import is_valid_api_key_format, verify_api_key
 from src.models.db.api_key import ApiKey
 from src.repositories.api_key_repo import ApiKeyRepository
+from src.services.event_service import EventPublisher
 
 
 @dataclass
@@ -70,3 +71,11 @@ async def get_api_key_auth(
 
 # Type alias for dependency injection
 Auth = Annotated[AuthContext, Depends(get_api_key_auth)]
+
+
+def get_event_publisher(session: DbSession) -> EventPublisher:
+    """Get event publisher instance."""
+    return EventPublisher(session)
+
+
+Events = Annotated[EventPublisher, Depends(get_event_publisher)]

@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: fact_experiment_metrics
+    description: >
+      One row per metric observation with variant assignment context.
+      Core fact table for experiment analysis.
+    columns:
+      - name: metric_key
+        tests: [unique, not_null]
+      - name: experiment_id
+        tests: [not_null]
+      - name: subject_id
+        tests: [not_null]
+      - name: variant
+        tests: [not_null]
+      - name: metric_name
+        tests: [not_null]
+
+  - name: experiment_results_summary
+    description: >
+      Aggregated statistics per experiment, variant, and metric.
+      Provides mean, stddev, percentiles, and subject counts for
+      significance testing and dashboard reporting.
+    columns:
+      - name: result_key
+        tests: [unique, not_null]
+      - name: experiment_id
+        tests: [not_null]
+      - name: variant
+        tests: [not_null]
+      - name: metric_name
+        tests: [not_null]
+      - name: subject_count
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0

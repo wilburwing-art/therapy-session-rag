@@ -6,12 +6,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse
 
-from src.api.v1.dependencies import Auth
+from src.api.v1.dependencies import Auth, Events
 from src.core.config import get_settings
 from src.core.database import DbSession
 from src.core.exceptions import ValidationError
 from src.core.pagination import CursorPage
 from src.core.tenant import TenantContext
+from src.models.db.event import EventCategory
 from src.models.domain.session import (
     SessionCreate,
     SessionFilter,
@@ -80,13 +81,26 @@ TranscriptSvc = Annotated[TranscriptionService, Depends(get_transcription_servic
 async def create_session(
     create: SessionCreate,
     service: SessionSvc,
+    auth: Auth,
+    events: Events,
 ) -> SessionRead:
     """Create a new therapy session.
 
     Validates that the patient has granted recording consent before
     creating the session. Returns 403 Forbidden if consent is not granted.
     """
-    return await service.create_session(create)
+    result = await service.create_session(create)
+
+    await events.publish(
+        event_name="session.created",
+        category=EventCategory.USER_ACTION,
+        organization_id=auth.organization_id,
+        actor_id=create.therapist_id,
+        session_id=result.id,
+        properties={"patient_id": str(create.patient_id)},
+    )
+
+    return result
 
 
 @router.get("/{session_id}", response_model=SessionRead)
@@ -154,6 +168,8 @@ async def upload_recording(
     session_id: uuid.UUID,
     session_service: SessionSvc,
     storage_service: StorageSvc,
+    auth: Auth,
+    events: Events,
     file: Annotated[UploadFile, File(description="Audio file to upload")],
 ) -> SessionUploadResponse:
     """Upload a recording for a session.
@@ -206,12 +222,25 @@ async def upload_recording(
     )
     await session_service.update_session(session_id, update)
 
-    return SessionUploadResponse(
+    upload_response = SessionUploadResponse(
         session_id=session.id,
         recording_path=storage_key,
         file_size=file_size,
         status=DomainSessionStatus.UPLOADED,
     )
+
+    await events.publish(
+        event_name="session.recording_uploaded",
+        category=EventCategory.SYSTEM,
+        organization_id=auth.organization_id,
+        session_id=session_id,
+        properties={
+            "file_size": file_size,
+            "content_type": content_type,
+        },
+    )
+
+    return upload_response
 
 
 @router.get("/patient/{patient_id}", response_model=list[SessionSummary])
@@ -242,6 +271,8 @@ async def start_transcription(
     session_id: uuid.UUID,
     session_service: SessionSvc,
     transcription_service: TranscriptSvc,
+    auth: Auth,
+    events: Events,
 ) -> TranscriptionJobRead:
     """Start transcription for a session.
 
@@ -264,6 +295,14 @@ async def start_transcription(
 
     # Queue for background processing
     queue_transcription(job.id)
+
+    await events.publish(
+        event_name="session.transcription_started",
+        category=EventCategory.SYSTEM,
+        organization_id=auth.organization_id,
+        session_id=session_id,
+        properties={"job_id": str(job.id)},
+    )
 
     return job
 

@@ -71,6 +71,9 @@ dev = [
     "click>=8.1.0",
     "tomli>=2.0.0;python_version<'3.11'",
 ]
+analytics = [
+    "dbt-postgres>=1.7.0",
+]
 
 [project.scripts]
 therapyrag = "src.main:run"

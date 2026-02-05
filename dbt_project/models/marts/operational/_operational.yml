@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: fact_engagement
+    description: >
+      Daily patient engagement aggregation combining session, chat, and consent
+      activity. One row per patient per active day.
+    columns:
+      - name: engagement_id
+        description: "Surrogate key (patient_id + activity_date)"
+        tests: [unique, not_null]
+      - name: patient_id
+        tests: [not_null]
+      - name: activity_date
+        tests: [not_null]
+      - name: engagement_score
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: fact_system_events
+    description: >
+      System and performance events for pipeline monitoring.
+      Classifies events by pipeline stage and extracts request context.
+    columns:
+      - name: event_id
+        description: "Primary key"
+        tests: [unique, not_null]
+      - name: event_name
+        tests: [not_null]
+      - name: pipeline_stage
+        tests:
+          - accepted_values:
+              values:
+                - session_lifecycle
+                - transcription_pipeline
+                - embedding_pipeline
+                - api_request
+                - other
+
+  - name: dim_organizations
+    description: >
+      Organization dimension with user counts, session usage, and event activity.
+      One row per organization.
+    columns:
+      - name: organization_id
+        description: "Primary key"
+        tests: [unique, not_null]
+      - name: organization_name
+        tests: [not_null]
+      - name: total_users
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0

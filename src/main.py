@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.v1 import router as v1_router
 from src.core.config import get_settings
 from src.core.database import close_database, get_db_session, init_database
+from src.core.event_middleware import EventTrackingMiddleware
 from src.core.exceptions import setup_exception_handlers
 from src.core.health import HealthCheckService, HealthStatus
 from src.core.logging import setup_logging, setup_request_logging
@@ -52,6 +53,9 @@ def create_app() -> FastAPI:
 
     # Setup request logging middleware (must be added before CORS)
     setup_request_logging(app)
+
+    # Event tracking middleware (request timing and context)
+    app.add_middleware(EventTrackingMiddleware)
 
     # Configure CORS
     app.add_middleware(

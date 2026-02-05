@@ -107,6 +107,12 @@ class Settings(BaseSettings):
         description="Chat rate limit per hour per patient",
     )
 
+    # Safety
+    safety_enabled: bool = Field(
+        default=True,
+        description="Enable clinical AI safety guardrails",
+    )
+
     # File upload
     max_upload_size: int = Field(
         default=524288000,  # 500MB
