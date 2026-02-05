@@ -1,9 +1,8 @@
 """Integration test fixtures and configuration."""
 
-import asyncio
 import os
 import uuid
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -31,7 +30,7 @@ os.environ["ANTHROPIC_API_KEY"] = "test_anthropic_key"
 
 from src.core.config import get_settings
 from src.core.database import get_db_session
-from src.core.security import hash_api_key
+from src.core.security import generate_api_key, hash_api_key
 from src.main import app
 from src.models.db.api_key import ApiKey
 from src.models.db.base import Base
@@ -43,15 +42,7 @@ from src.models.db.user import User, UserRole
 TEST_AUDIO_PATH = "/Users/wilburpyn/Downloads/Wilbur-therapy-1-15-26.m4a"
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def db_engine():
     """Create test database engine."""
     settings = get_settings()
@@ -74,7 +65,7 @@ async def db_engine():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session with transaction rollback."""
     async_session_factory = sessionmaker(
@@ -89,7 +80,7 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
         await session.rollback()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_org(db_session: AsyncSession) -> Organization:
     """Create a test organization."""
     org = Organization(
@@ -102,7 +93,7 @@ async def test_org(db_session: AsyncSession) -> Organization:
     return org
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_therapist(db_session: AsyncSession, test_org: Organization) -> User:
     """Create a test therapist user."""
     user = User(
@@ -117,7 +108,7 @@ async def test_therapist(db_session: AsyncSession, test_org: Organization) -> Us
     return user
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_patient(db_session: AsyncSession, test_org: Organization) -> User:
     """Create a test patient user."""
     user = User(
@@ -132,10 +123,10 @@ async def test_patient(db_session: AsyncSession, test_org: Organization) -> User
     return user
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_api_key(db_session: AsyncSession, test_org: Organization) -> tuple[str, ApiKey]:
     """Create a test API key and return both plaintext and model."""
-    plaintext_key = f"tsr_test_{uuid.uuid4().hex}"
+    plaintext_key = generate_api_key()
     key_hash = hash_api_key(plaintext_key)
 
     api_key = ApiKey(
@@ -151,7 +142,7 @@ async def test_api_key(db_session: AsyncSession, test_org: Organization) -> tupl
     return plaintext_key, api_key
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_consent(
     db_session: AsyncSession,
     test_patient: User,
@@ -181,7 +172,7 @@ async def test_consent(
     return next(c for c in consents if c.consent_type == ConsentType.RECORDING)
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def async_client(
     db_session: AsyncSession,
     test_api_key: tuple[str, ApiKey],

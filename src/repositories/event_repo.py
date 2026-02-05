@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, func, select, text
+from sqlalchemy import Text, and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.db.event import AnalyticsEvent, EventCategory
@@ -141,7 +141,7 @@ class EventRepository:
         stmt = (
             select(
                 AnalyticsEvent.event_name,
-                func.cast(trunc_expr, type_=text("text")).label("period"),  # type: ignore[arg-type]
+                func.cast(trunc_expr, type_=Text()).label("period"),
                 func.count().label("count"),
             )
             .where(and_(*conditions))

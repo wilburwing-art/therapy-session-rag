@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TherapyRAG Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>TherapyRAG Analytics</h1>
+    <div id="connection-status" class="status-badge disconnected">Disconnected</div>
+    <div class="header-controls">
+      <input type="text" id="api-key" placeholder="API Key (X-API-Key)">
+      <input type="text" id="api-url" placeholder="API URL" value="http://localhost:8000">
+      <button onclick="Dashboard.connect()">Connect</button>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="overview" onclick="Dashboard.switchTab('overview')">Overview</button>
+    <button class="tab" data-tab="sessions" onclick="Dashboard.switchTab('sessions')">Sessions</button>
+    <button class="tab" data-tab="safety" onclick="Dashboard.switchTab('safety')">AI Safety</button>
+    <button class="tab" data-tab="experiments" onclick="Dashboard.switchTab('experiments')">Experiments</button>
+    <button class="tab" data-tab="events" onclick="Dashboard.switchTab('events')">Event Log</button>
+  </nav>
+
+  <main>
+    <!-- Overview Tab -->
+    <section id="tab-overview" class="tab-content active">
+      <div class="grid-4">
+        <div class="metric-card">
+          <span class="metric-label">Active Patients</span>
+          <span id="metric-active-patients" class="metric-value">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Sessions This Week</span>
+          <span id="metric-sessions-week" class="metric-value">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Pipeline Success</span>
+          <span id="metric-pipeline-success" class="metric-value">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Grounding Rate</span>
+          <span id="metric-grounding-rate" class="metric-value">--</span>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Therapist Utilization</h3>
+          <canvas id="chart-utilization"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Patient Engagement</h3>
+          <canvas id="chart-engagement"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sessions Tab -->
+    <section id="tab-sessions" class="tab-content">
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Session Outcomes</h3>
+          <canvas id="chart-outcomes"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Processing Pipeline</h3>
+          <canvas id="chart-pipeline"></canvas>
+        </div>
+      </div>
+      <div class="chart-card full-width">
+        <h3>Session Processing Time (P95)</h3>
+        <canvas id="chart-p95"></canvas>
+      </div>
+    </section>
+
+    <!-- Safety Tab -->
+    <section id="tab-safety" class="tab-content">
+      <div class="grid-4">
+        <div class="metric-card">
+          <span class="metric-label">Risk Detections</span>
+          <span id="metric-risk-detections" class="metric-value danger">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Guardrail Triggers</span>
+          <span id="metric-guardrail-triggers" class="metric-value warning">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Escalations</span>
+          <span id="metric-escalations" class="metric-value danger">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Grounded Responses</span>
+          <span id="metric-grounded" class="metric-value success">--</span>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Safety Events Over Time</h3>
+          <canvas id="chart-safety-trend"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>RAG Grounding</h3>
+          <canvas id="chart-grounding"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Experiments Tab -->
+    <section id="tab-experiments" class="tab-content">
+      <div class="toolbar">
+        <button onclick="Dashboard.refreshExperiments()">Refresh</button>
+        <select id="experiment-status-filter" onchange="Dashboard.refreshExperiments()">
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="running">Running</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+      <div id="experiments-list" class="card-list"></div>
+      <div id="experiment-detail" class="chart-card full-width" style="display:none">
+        <h3 id="experiment-detail-title">Experiment Results</h3>
+        <div class="grid-2">
+          <canvas id="chart-experiment-variants"></canvas>
+          <div id="experiment-stats"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Events Tab -->
+    <section id="tab-events" class="tab-content">
+      <div class="toolbar">
+        <input type="text" id="event-filter-name" placeholder="Filter by event name" oninput="Dashboard.refreshEvents()">
+        <select id="event-filter-category" onchange="Dashboard.refreshEvents()">
+          <option value="">All categories</option>
+          <option value="user_action">User Action</option>
+          <option value="system">System</option>
+          <option value="clinical">Clinical</option>
+          <option value="performance">Performance</option>
+        </select>
+        <button onclick="Dashboard.loadMoreEvents()">Load More</button>
+      </div>
+      <div class="chart-card full-width">
+        <h3>Event Volume</h3>
+        <canvas id="chart-event-volume"></canvas>
+      </div>
+      <table id="events-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Event</th>
+            <th>Category</th>
+            <th>Properties</th>
+          </tr>
+        </thead>
+        <tbody id="events-tbody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
