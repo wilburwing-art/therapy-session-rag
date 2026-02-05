@@ -97,10 +97,10 @@ module "compute" {
   alb_security_group_id = module.networking.alb_security_group_id
   ecs_security_group_id = module.networking.ecs_security_group_id
 
-  db_endpoint  = module.database.db_endpoint
-  db_port      = module.database.db_port
-  db_name      = var.db_name
-  db_username  = var.db_username
+  db_endpoint   = module.database.db_endpoint
+  db_port       = module.database.db_port
+  db_name       = var.db_name
+  db_username   = var.db_username
   db_secret_arn = module.database.db_master_user_secret_arn
 
   redis_endpoint = module.cache.redis_endpoint

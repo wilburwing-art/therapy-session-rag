@@ -137,3 +137,15 @@ recordings/
 # Dev pipeline data (cached transcripts, embeddings, etc.)
 dev_data/
 dev/dev_config.local.toml
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+.terraform.lock.hcl
+
+# dbt
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
