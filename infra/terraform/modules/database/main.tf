@@ -59,7 +59,7 @@ resource "aws_db_instance" "main" {
   multi_az            = false
   publicly_accessible = false
 
-  backup_retention_period = 7
+  backup_retention_period = 1  # Free tier limit
   backup_window           = "03:00-04:00"
   maintenance_window      = "Mon:04:00-Mon:05:00"
 

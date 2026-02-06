@@ -51,7 +51,7 @@ run_check "MyPy Type Check" uv run mypy src/ --ignore-missing-imports
 run_check "Unit Tests" uv run pytest tests/unit -v --tb=short -q 2>/dev/null || uv run pytest tests/ -v --tb=short -q --ignore=tests/integration
 
 # 4. Integration tests (only if services are running)
-if docker compose ps 2>/dev/null | grep -q "running"; then
+if docker compose ps 2>/dev/null | grep -qE "(healthy)|Up"; then
     run_check "Integration Tests" uv run pytest tests/integration -v --tb=short -q
 else
     echo_step "Integration Tests"

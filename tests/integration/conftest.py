@@ -317,26 +317,32 @@ def mock_deepgram_client(mock_deepgram_response):
 @pytest.fixture
 def mock_embedding_client(mock_embedding):
     """Mock the OpenAI embedding client."""
-    with patch("src.services.embedding_service.EmbeddingClient") as mock:
+    from src.services.embedding_client import EmbeddingResult
+
+    def make_result(text: str) -> EmbeddingResult:
+        return EmbeddingResult(
+            text=text,
+            embedding=mock_embedding,
+            model="text-embedding-3-small",
+            token_count=len(text) // 4,
+        )
+
+    def setup_mock(mock):
         client_instance = MagicMock()
         client_instance.embed_text = AsyncMock()
         client_instance.embed_batch = AsyncMock()
-
-        from src.services.embedding_client import EmbeddingResult
-
-        def make_result(text: str) -> EmbeddingResult:
-            return EmbeddingResult(
-                text=text,
-                embedding=mock_embedding,
-                model="text-embedding-3-small",
-                token_count=len(text) // 4,
-            )
-
         client_instance.embed_text.side_effect = lambda t: make_result(t)
         client_instance.embed_batch.side_effect = lambda texts: [make_result(t) for t in texts]
-
         mock.return_value = client_instance
-        yield mock
+
+    # Patch both locations where EmbeddingClient is imported
+    with (
+        patch("src.services.embedding_service.EmbeddingClient") as mock1,
+        patch("src.services.chat_service.EmbeddingClient") as mock2,
+    ):
+        setup_mock(mock1)
+        setup_mock(mock2)
+        yield mock1
 
 
 @pytest.fixture
