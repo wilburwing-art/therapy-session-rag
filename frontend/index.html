@@ -25,6 +25,7 @@
     <button class="tab" data-tab="experiments" onclick="Dashboard.switchTab('experiments')">Experiments</button>
     <button class="tab" data-tab="events" onclick="Dashboard.switchTab('events')">Event Log</button>
     <button class="tab" data-tab="chat" onclick="Dashboard.switchTab('chat')">Chat</button>
+    <button class="tab" data-tab="provider" onclick="Dashboard.switchTab('provider')">Provider</button>
   </nav>
 
   <main>
@@ -186,6 +187,116 @@
           onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); Dashboard.sendMessage(); }"
         ></textarea>
         <button id="chat-send" onclick="Dashboard.sendMessage()">Send</button>
+      </div>
+    </section>
+
+    <!-- Provider Tab -->
+    <section id="tab-provider" class="tab-content">
+      <div class="workflow-steps">
+        <div class="step active" data-step="1">1. Select Users</div>
+        <div class="step" data-step="2">2. Consent</div>
+        <div class="step" data-step="3">3. Session</div>
+        <div class="step" data-step="4">4. Upload</div>
+        <div class="step" data-step="5">5. Transcribe</div>
+      </div>
+
+      <div class="provider-panel">
+        <!-- Step 1: Select Users -->
+        <div id="provider-step-1" class="provider-step active">
+          <h3>Select Therapist and Patient</h3>
+          <div class="form-group">
+            <label for="provider-therapist">Therapist</label>
+            <select id="provider-therapist">
+              <option value="">Select a therapist...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="provider-patient">Patient</label>
+            <select id="provider-patient">
+              <option value="">Select a patient...</option>
+            </select>
+          </div>
+          <div class="step-actions">
+            <button onclick="Dashboard.providerNext()" id="provider-next-1">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Grant Consent -->
+        <div id="provider-step-2" class="provider-step">
+          <h3>Grant Consent</h3>
+          <p class="step-description">The following consents will be granted for this session:</p>
+          <div class="consent-list">
+            <label class="consent-item">
+              <input type="checkbox" checked disabled>
+              <span>Recording Consent</span>
+            </label>
+            <label class="consent-item">
+              <input type="checkbox" checked disabled>
+              <span>Transcription Consent</span>
+            </label>
+            <label class="consent-item">
+              <input type="checkbox" checked disabled>
+              <span>AI Analysis Consent</span>
+            </label>
+          </div>
+          <div id="provider-consent-status" class="status-message"></div>
+          <div class="step-actions">
+            <button onclick="Dashboard.providerBack()" class="btn-secondary">Back</button>
+            <button onclick="Dashboard.grantConsents()" id="provider-consent-btn">Grant All Consents</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Create Session -->
+        <div id="provider-step-3" class="provider-step">
+          <h3>Create Session</h3>
+          <div class="form-group">
+            <label for="provider-session-date">Session Date & Time</label>
+            <input type="datetime-local" id="provider-session-date">
+          </div>
+          <div id="provider-session-status" class="status-message"></div>
+          <div class="step-actions">
+            <button onclick="Dashboard.providerBack()" class="btn-secondary">Back</button>
+            <button onclick="Dashboard.createProviderSession()" id="provider-session-btn">Create Session</button>
+          </div>
+        </div>
+
+        <!-- Step 4: Upload Recording -->
+        <div id="provider-step-4" class="provider-step">
+          <h3>Upload Recording</h3>
+          <div class="upload-zone" id="provider-upload-zone">
+            <input type="file" id="provider-file" accept="audio/*" onchange="Dashboard.handleFileSelect()">
+            <div class="upload-content">
+              <p class="upload-icon">&#x1F3A4;</p>
+              <p>Drag & drop audio file here</p>
+              <p class="upload-hint">or click to browse</p>
+              <p id="provider-file-name" class="file-name"></p>
+            </div>
+          </div>
+          <div id="provider-upload-status" class="status-message"></div>
+          <div class="step-actions">
+            <button onclick="Dashboard.providerBack()" class="btn-secondary">Back</button>
+            <button onclick="Dashboard.uploadRecording()" id="provider-upload-btn" disabled>Upload Recording</button>
+          </div>
+        </div>
+
+        <!-- Step 5: Transcription -->
+        <div id="provider-step-5" class="provider-step">
+          <h3>Transcription</h3>
+          <div id="provider-transcription-status" class="transcription-status">
+            <p>Ready to start transcription</p>
+          </div>
+          <div class="progress-container">
+            <div id="provider-progress" class="progress-bar">
+              <div class="progress-fill" style="width: 0%"></div>
+            </div>
+            <span id="provider-progress-text"></span>
+          </div>
+          <div class="step-actions">
+            <button onclick="Dashboard.providerBack()" class="btn-secondary" id="provider-back-5">Back</button>
+            <button onclick="Dashboard.startTranscription()" id="provider-transcribe-btn">Start Transcription</button>
+            <button onclick="Dashboard.providerReset()" id="provider-done-btn" style="display:none">Start New Session</button>
+          </div>
+        </div>
       </div>
     </section>
   </main>

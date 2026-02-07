@@ -14,6 +14,16 @@ const Dashboard = (() => {
   let conversationId = null;
   let chatRateLimit = { remaining: 20, max: 20 };
 
+  // Provider state
+  let providerState = {
+    step: 1,
+    therapistId: null,
+    patientId: null,
+    consentIds: [],
+    sessionId: null,
+    pollingInterval: null,
+  };
+
   // ── API Client ──────────────────────────────────────────────────────
 
   async function api(path, options = {}) {
@@ -63,6 +73,7 @@ const Dashboard = (() => {
       badge.className = 'status-badge connected';
       loadAll();
       initChat();
+      loadProviderUsers();
     } catch {
       badge.textContent = 'Failed';
       badge.className = 'status-badge disconnected';
@@ -719,6 +730,353 @@ const Dashboard = (() => {
     if (indicator) indicator.remove();
   }
 
+  // ── Provider Functions ─────────────────────────────────────────────
+
+  async function loadProviderUsers() {
+    try {
+      const [therapists, patients] = await Promise.all([
+        api('/api/v1/users', { params: { role: 'therapist' } }),
+        api('/api/v1/users', { params: { role: 'patient' } }),
+      ]);
+
+      populateDropdown('provider-therapist', therapists, 'Select a therapist...');
+      populateDropdown('provider-patient', patients, 'Select a patient...');
+    } catch (e) {
+      console.error('Failed to load users:', e);
+      setStatusMessage('provider-consent-status', 'Failed to load users. Make sure API is connected.', 'error');
+    }
+  }
+
+  function populateDropdown(selectId, users, placeholder) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = `<option value="">${placeholder}</option>`;
+
+    if (users.length === 0) {
+      select.innerHTML += '<option value="" disabled>No users found</option>';
+      return;
+    }
+
+    users.forEach(user => {
+      const option = document.createElement('option');
+      option.value = user.id;
+      option.textContent = user.email;
+      select.appendChild(option);
+    });
+  }
+
+  function setProviderStep(step) {
+    providerState.step = step;
+
+    // Update step indicators
+    document.querySelectorAll('.workflow-steps .step').forEach((el, i) => {
+      el.classList.remove('active', 'completed');
+      if (i + 1 < step) el.classList.add('completed');
+      if (i + 1 === step) el.classList.add('active');
+    });
+
+    // Show/hide step panels
+    document.querySelectorAll('.provider-step').forEach(el => el.classList.remove('active'));
+    const panel = document.getElementById(`provider-step-${step}`);
+    if (panel) panel.classList.add('active');
+  }
+
+  function providerNext() {
+    if (providerState.step === 1) {
+      // Validate user selection
+      const therapistId = document.getElementById('provider-therapist').value;
+      const patientId = document.getElementById('provider-patient').value;
+
+      if (!therapistId || !patientId) {
+        alert('Please select both a therapist and a patient.');
+        return;
+      }
+
+      providerState.therapistId = therapistId;
+      providerState.patientId = patientId;
+    }
+
+    setProviderStep(providerState.step + 1);
+  }
+
+  function providerBack() {
+    if (providerState.step > 1) {
+      setProviderStep(providerState.step - 1);
+    }
+  }
+
+  async function grantConsents() {
+    const btn = document.getElementById('provider-consent-btn');
+    const statusEl = document.getElementById('provider-consent-status');
+
+    btn.disabled = true;
+    btn.textContent = 'Granting...';
+    statusEl.className = 'status-message';
+    statusEl.textContent = '';
+
+    const consentTypes = ['recording', 'transcription', 'ai_analysis'];
+    providerState.consentIds = [];
+
+    try {
+      for (const type of consentTypes) {
+        try {
+          const consent = await api('/api/v1/consent', {
+            method: 'POST',
+            body: {
+              patient_id: providerState.patientId,
+              therapist_id: providerState.therapistId,
+              consent_type: type,
+            },
+          });
+          providerState.consentIds.push(consent.id);
+        } catch (err) {
+          if (err.status === 409) {
+            // Consent already exists, try to get existing
+            setStatusMessage('provider-consent-status', `${type} consent already exists, continuing...`, 'info');
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      setStatusMessage('provider-consent-status', 'All consents granted successfully!', 'success');
+      setTimeout(() => providerNext(), 1000);
+
+    } catch (err) {
+      console.error('Consent error:', err);
+      setStatusMessage('provider-consent-status', 'Failed to grant consent. Please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Grant All Consents';
+    }
+  }
+
+  async function createProviderSession() {
+    const btn = document.getElementById('provider-session-btn');
+    const dateInput = document.getElementById('provider-session-date');
+
+    if (!dateInput.value) {
+      setStatusMessage('provider-session-status', 'Please select a session date and time.', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    try {
+      // Need to get the recording consent ID - if we didn't capture it, fetch active consents
+      let consentId = providerState.consentIds[0];
+
+      if (!consentId) {
+        // Fetch active consents to get the recording consent
+        const consents = await api(`/api/v1/consent/${providerState.patientId}/active`, {
+          params: { therapist_id: providerState.therapistId },
+        });
+        const recordingConsent = consents.find(c => c.consent_type === 'recording');
+        if (!recordingConsent) {
+          throw new Error('No active recording consent found');
+        }
+        consentId = recordingConsent.id;
+      }
+
+      const session = await api('/api/v1/sessions', {
+        method: 'POST',
+        body: {
+          patient_id: providerState.patientId,
+          therapist_id: providerState.therapistId,
+          consent_id: consentId,
+          session_date: new Date(dateInput.value).toISOString(),
+        },
+      });
+
+      providerState.sessionId = session.id;
+      setStatusMessage('provider-session-status', 'Session created successfully!', 'success');
+      setTimeout(() => providerNext(), 1000);
+
+    } catch (err) {
+      console.error('Session error:', err);
+      setStatusMessage('provider-session-status', 'Failed to create session. Please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Session';
+    }
+  }
+
+  function handleFileSelect() {
+    const fileInput = document.getElementById('provider-file');
+    const fileNameEl = document.getElementById('provider-file-name');
+    const uploadBtn = document.getElementById('provider-upload-btn');
+
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      fileNameEl.textContent = file.name;
+      uploadBtn.disabled = false;
+    } else {
+      fileNameEl.textContent = '';
+      uploadBtn.disabled = true;
+    }
+  }
+
+  async function uploadRecording() {
+    const fileInput = document.getElementById('provider-file');
+    const btn = document.getElementById('provider-upload-btn');
+
+    if (!fileInput.files.length) {
+      setStatusMessage('provider-upload-status', 'Please select a file to upload.', 'error');
+      return;
+    }
+
+    const file = fileInput.files[0];
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${apiUrl}/api/v1/sessions/${providerState.sessionId}/recording`, {
+        method: 'POST',
+        headers: { 'X-API-Key': apiKey },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      setStatusMessage('provider-upload-status', 'Recording uploaded successfully!', 'success');
+      setTimeout(() => providerNext(), 1000);
+
+    } catch (err) {
+      console.error('Upload error:', err);
+      setStatusMessage('provider-upload-status', 'Failed to upload recording. Please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Upload Recording';
+    }
+  }
+
+  async function startTranscription() {
+    const btn = document.getElementById('provider-transcribe-btn');
+    const backBtn = document.getElementById('provider-back-5');
+    const statusEl = document.getElementById('provider-transcription-status');
+
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    backBtn.disabled = true;
+
+    try {
+      await api(`/api/v1/sessions/${providerState.sessionId}/transcribe`, {
+        method: 'POST',
+      });
+
+      statusEl.innerHTML = '<p>Transcription in progress...</p>';
+      statusEl.className = 'transcription-status processing';
+      btn.style.display = 'none';
+
+      pollTranscriptionStatus();
+
+    } catch (err) {
+      console.error('Transcription error:', err);
+      statusEl.innerHTML = '<p>Failed to start transcription. Please try again.</p>';
+      statusEl.className = 'transcription-status failed';
+      btn.disabled = false;
+      btn.textContent = 'Start Transcription';
+      backBtn.disabled = false;
+    }
+  }
+
+  function pollTranscriptionStatus() {
+    const statusEl = document.getElementById('provider-transcription-status');
+    const progressFill = document.querySelector('#provider-progress .progress-fill');
+    const progressText = document.getElementById('provider-progress-text');
+
+    let progress = 0;
+
+    providerState.pollingInterval = setInterval(async () => {
+      try {
+        const status = await api(`/api/v1/sessions/${providerState.sessionId}/transcription-status`);
+
+        // Simulate progress
+        if (status.job_status === 'processing') {
+          progress = Math.min(progress + 10, 90);
+          progressFill.style.width = `${progress}%`;
+          progressText.textContent = `Processing... ${progress}%`;
+        }
+
+        if (status.job_status === 'completed') {
+          clearInterval(providerState.pollingInterval);
+          progressFill.style.width = '100%';
+          progressText.textContent = 'Complete!';
+          statusEl.innerHTML = '<p>Transcription completed successfully! The session is now ready for chat.</p>';
+          statusEl.className = 'transcription-status completed';
+
+          // Show done button
+          document.getElementById('provider-transcribe-btn').style.display = 'none';
+          document.getElementById('provider-back-5').style.display = 'none';
+          document.getElementById('provider-done-btn').style.display = 'inline-block';
+        }
+
+        if (status.job_status === 'failed') {
+          clearInterval(providerState.pollingInterval);
+          statusEl.innerHTML = `<p>Transcription failed: ${status.error_message || 'Unknown error'}</p>`;
+          statusEl.className = 'transcription-status failed';
+          document.getElementById('provider-back-5').disabled = false;
+        }
+
+      } catch (err) {
+        console.error('Status poll error:', err);
+      }
+    }, 2000);
+  }
+
+  function providerReset() {
+    // Clear state
+    providerState = {
+      step: 1,
+      therapistId: null,
+      patientId: null,
+      consentIds: [],
+      sessionId: null,
+      pollingInterval: null,
+    };
+
+    // Reset UI
+    setProviderStep(1);
+    document.getElementById('provider-therapist').value = '';
+    document.getElementById('provider-patient').value = '';
+    document.getElementById('provider-session-date').value = '';
+    document.getElementById('provider-file').value = '';
+    document.getElementById('provider-file-name').textContent = '';
+    document.getElementById('provider-upload-btn').disabled = true;
+
+    // Reset transcription UI
+    const statusEl = document.getElementById('provider-transcription-status');
+    statusEl.innerHTML = '<p>Ready to start transcription</p>';
+    statusEl.className = 'transcription-status';
+    document.querySelector('#provider-progress .progress-fill').style.width = '0%';
+    document.getElementById('provider-progress-text').textContent = '';
+    document.getElementById('provider-transcribe-btn').style.display = 'inline-block';
+    document.getElementById('provider-transcribe-btn').disabled = false;
+    document.getElementById('provider-transcribe-btn').textContent = 'Start Transcription';
+    document.getElementById('provider-back-5').style.display = 'inline-block';
+    document.getElementById('provider-back-5').disabled = false;
+    document.getElementById('provider-done-btn').style.display = 'none';
+
+    // Clear status messages
+    document.querySelectorAll('.status-message').forEach(el => {
+      el.textContent = '';
+      el.className = 'status-message';
+    });
+  }
+
+  function setStatusMessage(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.textContent = message;
+      el.className = `status-message ${type}`;
+    }
+  }
+
   // ── Public API ──────────────────────────────────────────────────────
 
   return {
@@ -729,5 +1087,14 @@ const Dashboard = (() => {
     refreshEvents,
     loadMoreEvents,
     sendMessage,
+    // Provider functions
+    providerNext,
+    providerBack,
+    grantConsents,
+    createProviderSession,
+    handleFileSelect,
+    uploadRecording,
+    startTranscription,
+    providerReset,
   };
 })();
