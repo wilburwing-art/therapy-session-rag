@@ -9,9 +9,9 @@ from src.api.v1.dependencies import Auth, Events
 from src.core.database import DbSession
 from src.core.exceptions import RateLimitError
 from src.models.db.event import EventCategory
-from src.models.domain.chat import ChatRequest, ChatResponse
+from src.models.domain.chat import ChatRequest, ChatResponse, ConversationRead, ConversationSummary
 from src.services.chat_service import ChatService
-from src.services.claude_client import Message
+from src.services.conversation_service import ConversationService
 from src.services.rate_limiter import ChatRateLimiter, RateLimitExceeded
 
 router = APIRouter()
@@ -22,12 +22,18 @@ def get_chat_service(session: DbSession) -> ChatService:
     return ChatService(session)
 
 
+def get_conversation_service(session: DbSession) -> ConversationService:
+    """Get conversation service instance."""
+    return ConversationService(session)
+
+
 def get_chat_rate_limiter() -> ChatRateLimiter:
     """Get chat rate limiter instance."""
     return ChatRateLimiter()
 
 
 ChatSvc = Annotated[ChatService, Depends(get_chat_service)]
+ConvSvc = Annotated[ConversationService, Depends(get_conversation_service)]
 RateLimiterDep = Annotated[ChatRateLimiter, Depends(get_chat_rate_limiter)]
 
 
@@ -37,6 +43,7 @@ async def chat(
     patient_id: uuid.UUID,
     auth: Auth,
     service: ChatSvc,
+    conversation_service: ConvSvc,
     rate_limiter: RateLimiterDep,
     events: Events,
 ) -> ChatResponse:
@@ -50,6 +57,7 @@ async def chat(
         patient_id: The patient's ID (query parameter)
         auth: Authentication context
         service: Chat service instance
+        conversation_service: Conversation service for history persistence
         rate_limiter: Rate limiter for enforcing request limits
 
     Returns:
@@ -70,20 +78,37 @@ async def chat(
             retry_after=e.reset_time,
         ) from e
 
-    # Build conversation history if this is a follow-up
-    conversation_history: list[Message] | None = None
-    if request.conversation_id:
-        # In a full implementation, we'd fetch history from a conversations table
-        # For now, we support stateless conversations where the client
-        # maintains and sends history
-        conversation_history = None
+    # Get or create conversation
+    conversation, is_new = await conversation_service.get_or_create_conversation(
+        conversation_id=request.conversation_id,
+        patient_id=patient_id,
+        organization_id=auth.organization_id,
+    )
+
+    # Build conversation history from persisted messages
+    conversation_history = conversation_service.get_history_for_claude(conversation)
+
+    # Add user message to conversation
+    await conversation_service.add_user_message(conversation, request.message)
+
+    # Generate title for new conversations
+    if is_new:
+        await conversation_service.generate_title(conversation.id, request.message)
 
     response = await service.chat(
         patient_id=patient_id,
         message=request.message,
-        conversation_history=conversation_history,
+        conversation_history=conversation_history if conversation_history else None,
         top_k=request.top_k,
     )
+
+    # Persist assistant response
+    await conversation_service.add_assistant_message(
+        conversation, response.response, response.sources
+    )
+
+    # Update response with the correct conversation_id
+    response.conversation_id = conversation.id
 
     await events.publish(
         event_name="chat.message_sent",
@@ -93,7 +118,8 @@ async def chat(
         properties={
             "top_k": request.top_k,
             "source_count": len(response.sources),
-            "has_conversation_id": request.conversation_id is not None,
+            "conversation_id": str(conversation.id),
+            "is_new_conversation": is_new,
             "message_length": len(request.message),
         },
     )
@@ -170,3 +196,56 @@ async def get_rate_limit_status(
         "remaining": remaining,
         "max_per_hour": rate_limiter.max_requests,
     }
+
+
+@router.get("/conversations", response_model=list[ConversationSummary])
+async def list_conversations(
+    patient_id: uuid.UUID,
+    auth: Auth,  # noqa: ARG001
+    conversation_service: ConvSvc,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[ConversationSummary]:
+    """List conversations for a patient.
+
+    Returns conversation summaries ordered by most recent first.
+
+    Args:
+        patient_id: The patient's ID
+        auth: Authentication context
+        conversation_service: Conversation service instance
+        limit: Maximum number of conversations to return
+        offset: Number of conversations to skip
+
+    Returns:
+        List of conversation summaries
+    """
+    return await conversation_service.list_conversations(
+        patient_id=patient_id,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/conversations/{conversation_id}", response_model=ConversationRead)
+async def get_conversation(
+    conversation_id: uuid.UUID,
+    patient_id: uuid.UUID,
+    auth: Auth,  # noqa: ARG001
+    conversation_service: ConvSvc,
+) -> ConversationRead:
+    """Get a specific conversation with all messages.
+
+    Args:
+        conversation_id: The conversation ID
+        patient_id: The patient's ID
+        auth: Authentication context
+        conversation_service: Conversation service instance
+
+    Returns:
+        The conversation with all messages
+    """
+    return await conversation_service.get_conversation(
+        conversation_id=conversation_id,
+        patient_id=patient_id,
+    )

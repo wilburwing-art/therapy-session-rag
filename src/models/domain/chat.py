@@ -38,13 +38,17 @@ class ChatMessageResponse(BaseModel):
     created_at: datetime
 
 
-class ConversationMessage(BaseModel):
+class ConversationMessageRead(BaseModel):
     """A message in a conversation history."""
 
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
     role: str  # "user" or "assistant"
     content: str
-    created_at: datetime
+    sequence_number: int
     sources: list[ChatSource] | None = None
+    created_at: datetime
 
 
 class ConversationRead(BaseModel):
@@ -54,7 +58,23 @@ class ConversationRead(BaseModel):
 
     id: UUID
     patient_id: UUID
-    messages: list[ConversationMessage]
+    organization_id: UUID
+    title: str | None = None
+    message_count: int
+    messages: list[ConversationMessageRead] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationSummary(BaseModel):
+    """Summary of a conversation for listing."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    patient_id: UUID
+    title: str | None = None
+    message_count: int
     created_at: datetime
     updated_at: datetime
 

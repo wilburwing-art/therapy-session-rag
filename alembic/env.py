@@ -14,6 +14,7 @@ from src.models.db.api_key import ApiKey  # noqa: F401
 # Import all models to ensure they are registered with Base.metadata
 from src.models.db.base import Base
 from src.models.db.consent import Consent  # noqa: F401
+from src.models.db.conversation import Conversation, ConversationMessage  # noqa: F401
 from src.models.db.event import AnalyticsEvent  # noqa: F401
 from src.models.db.experiment import (  # noqa: F401
     Experiment,

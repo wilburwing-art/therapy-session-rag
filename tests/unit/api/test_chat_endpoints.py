@@ -8,9 +8,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.v1.dependencies import get_api_key_auth, get_event_publisher
-from src.api.v1.endpoints.chat import get_chat_rate_limiter, get_chat_service, router
+from src.api.v1.endpoints.chat import (
+    get_chat_rate_limiter,
+    get_chat_service,
+    get_conversation_service,
+    router,
+)
 from src.core.database import get_db_session
 from src.core.exceptions import setup_exception_handlers
+from src.models.db.conversation import Conversation
 from src.models.domain.chat import ChatResponse, ChatSource
 from src.services.chat_service import ChatServiceError
 from src.services.rate_limiter import RateLimitExceeded
@@ -46,9 +52,33 @@ def mock_rate_limiter() -> MagicMock:
 
 
 @pytest.fixture
+def mock_conversation_service(mock_auth_context: MagicMock) -> MagicMock:
+    """Create a mock conversation service."""
+    service = MagicMock()
+    # Create a mock conversation
+    mock_conversation = MagicMock(spec=Conversation)
+    mock_conversation.id = uuid.uuid4()
+    mock_conversation.patient_id = uuid.uuid4()
+    mock_conversation.organization_id = mock_auth_context.organization_id
+    mock_conversation.messages = []
+
+    service.get_or_create_conversation = AsyncMock(
+        return_value=(mock_conversation, True)
+    )
+    service.get_history_for_claude = MagicMock(return_value=[])
+    service.add_user_message = AsyncMock()
+    service.add_assistant_message = AsyncMock()
+    service.generate_title = AsyncMock(return_value="Test conversation")
+    service.list_conversations = AsyncMock(return_value=[])
+    service.get_conversation = AsyncMock()
+    return service
+
+
+@pytest.fixture
 def app(
     mock_auth_context: MagicMock,
     mock_chat_service: MagicMock,
+    mock_conversation_service: MagicMock,
     mock_rate_limiter: MagicMock,
 ) -> FastAPI:
     """Create test app with mocked dependencies."""
@@ -62,6 +92,7 @@ def app(
     test_app.dependency_overrides[get_api_key_auth] = lambda: mock_auth_context
     test_app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     test_app.dependency_overrides[get_chat_service] = lambda: mock_chat_service
+    test_app.dependency_overrides[get_conversation_service] = lambda: mock_conversation_service
     test_app.dependency_overrides[get_chat_rate_limiter] = lambda: mock_rate_limiter
     test_app.dependency_overrides[get_event_publisher] = lambda: mock_events
 
