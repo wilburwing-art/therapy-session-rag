@@ -237,18 +237,25 @@ locals {
 
   common_environment = [
     { name = "ENVIRONMENT", value = var.environment },
-    { name = "POSTGRES_HOST", value = var.db_endpoint },
-    { name = "POSTGRES_PORT", value = tostring(var.db_port) },
-    { name = "POSTGRES_DB", value = var.db_name },
-    { name = "POSTGRES_USER", value = var.db_username },
-    { name = "REDIS_HOST", value = var.redis_endpoint },
-    { name = "REDIS_PORT", value = tostring(var.redis_port) },
+    { name = "APP_ENV", value = var.environment == "dev" ? "development" : var.environment },
+    { name = "REDIS_URL", value = "redis://${var.redis_endpoint}:${var.redis_port}/0" },
     { name = "MINIO_ENDPOINT", value = "s3.${var.aws_region}.amazonaws.com" },
     { name = "MINIO_BUCKET", value = var.s3_bucket_name },
-    { name = "MINIO_USE_SSL", value = "true" },
+    { name = "MINIO_ACCESS_KEY", value = "use-iam-role" },
+    { name = "MINIO_SECRET_KEY", value = "use-iam-role" },
+    { name = "MINIO_SECURE", value = "true" },
     { name = "AWS_REGION", value = var.aws_region },
   ]
+
+  common_secrets = [
+    { name = "DATABASE_URL", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/database/url" },
+    { name = "DEEPGRAM_API_KEY", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/api/deepgram" },
+    { name = "OPENAI_API_KEY", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/api/openai" },
+    { name = "ANTHROPIC_API_KEY", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/api/anthropic" },
+  ]
 }
+
+data "aws_caller_identity" "current" {}
 
 resource "aws_ecs_task_definition" "api" {
   family                   = "${var.project_name}-${var.environment}-api"
@@ -276,6 +283,7 @@ resource "aws_ecs_task_definition" "api" {
       ]
 
       environment = local.common_environment
+      secrets     = local.common_secrets
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -309,6 +317,7 @@ resource "aws_ecs_task_definition" "worker_transcription" {
       command = ["python", "-m", "rq.cli", "worker", "transcription", "--url", "redis://${var.redis_endpoint}:${var.redis_port}"]
 
       environment = local.common_environment
+      secrets     = local.common_secrets
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -342,6 +351,7 @@ resource "aws_ecs_task_definition" "worker_embedding" {
       command = ["python", "-m", "rq.cli", "worker", "embedding", "--url", "redis://${var.redis_endpoint}:${var.redis_port}"]
 
       environment = local.common_environment
+      secrets     = local.common_secrets
 
       logConfiguration = {
         logDriver = "awslogs"
