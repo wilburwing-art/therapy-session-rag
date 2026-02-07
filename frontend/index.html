@@ -24,6 +24,7 @@
     <button class="tab" data-tab="safety" onclick="Dashboard.switchTab('safety')">AI Safety</button>
     <button class="tab" data-tab="experiments" onclick="Dashboard.switchTab('experiments')">Experiments</button>
     <button class="tab" data-tab="events" onclick="Dashboard.switchTab('events')">Event Log</button>
+    <button class="tab" data-tab="chat" onclick="Dashboard.switchTab('chat')">Chat</button>
   </nav>
 
   <main>
@@ -158,6 +159,34 @@
         </thead>
         <tbody id="events-tbody"></tbody>
       </table>
+    </section>
+
+    <!-- Chat Tab -->
+    <section id="tab-chat" class="tab-content">
+      <div class="chat-header">
+        <div class="chat-patient-info">
+          <span class="patient-label">Patient:</span>
+          <span id="chat-patient-id" class="patient-id">Not set - add ?patient_id=UUID to URL</span>
+        </div>
+        <div id="chat-rate-limit" class="rate-limit-badge"></div>
+      </div>
+
+      <div id="chat-messages" class="chat-messages">
+        <div class="chat-welcome">
+          <h3>Welcome to TherapyRAG Chat</h3>
+          <p>Ask questions about your therapy sessions. Your responses are grounded in your actual session transcripts.</p>
+        </div>
+      </div>
+
+      <div class="chat-input-container">
+        <textarea
+          id="chat-input"
+          placeholder="Ask about your therapy sessions..."
+          rows="2"
+          onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); Dashboard.sendMessage(); }"
+        ></textarea>
+        <button id="chat-send" onclick="Dashboard.sendMessage()">Send</button>
+      </div>
     </section>
   </main>
 

@@ -3,11 +3,13 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1 import router as v1_router
@@ -112,6 +114,11 @@ def create_app() -> FastAPI:
 
     # Include API routers
     app.include_router(v1_router)
+
+    # Serve frontend static files
+    frontend_path = Path(__file__).parent.parent / "frontend"
+    if frontend_path.exists():
+        app.mount("/app", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
 
     return app
 

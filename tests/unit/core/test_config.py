@@ -49,8 +49,18 @@ class TestSettings:
         monkeypatch.setenv("DEEPGRAM_API_KEY", "test_deepgram_key")
         monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
         monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
+        # Clear optional vars to test defaults
+        monkeypatch.delenv("MINIO_BUCKET", raising=False)
+        monkeypatch.delenv("MINIO_SECURE", raising=False)
+        monkeypatch.delenv("OPENAI_EMBEDDING_MODEL", raising=False)
+        monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+        monkeypatch.delenv("APP_ENV", raising=False)
+        monkeypatch.delenv("APP_DEBUG", raising=False)
+        monkeypatch.delenv("API_RATE_LIMIT_PER_HOUR", raising=False)
+        monkeypatch.delenv("CHAT_RATE_LIMIT_PER_HOUR", raising=False)
+        monkeypatch.delenv("MAX_UPLOAD_SIZE", raising=False)
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
 
         assert settings.minio_bucket == "therapy-recordings"
         assert settings.minio_secure is False

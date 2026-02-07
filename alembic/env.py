@@ -9,10 +9,21 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.core.config import get_settings
+from src.models.db.api_key import ApiKey  # noqa: F401
 
 # Import all models to ensure they are registered with Base.metadata
 from src.models.db.base import Base
+from src.models.db.consent import Consent  # noqa: F401
+from src.models.db.event import AnalyticsEvent  # noqa: F401
+from src.models.db.experiment import (  # noqa: F401
+    Experiment,
+    ExperimentAssignment,
+    ExperimentMetric,
+)
 from src.models.db.organization import Organization  # noqa: F401
+from src.models.db.session import Session  # noqa: F401
+from src.models.db.session_chunk import SessionChunk  # noqa: F401
+from src.models.db.transcript import Transcript  # noqa: F401
 from src.models.db.user import User  # noqa: F401
 
 # this is the Alembic Config object, which provides

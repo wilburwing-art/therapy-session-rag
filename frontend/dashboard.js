@@ -9,19 +9,44 @@ const Dashboard = (() => {
   let charts = {};
   let eventCursor = null;
 
+  // Chat state
+  let patientId = null;
+  let conversationId = null;
+  let chatRateLimit = { remaining: 20, max: 20 };
+
   // ── API Client ──────────────────────────────────────────────────────
 
-  async function api(path, params = {}) {
+  async function api(path, options = {}) {
     const url = new URL(`${apiUrl}${path}`);
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, v);
-    });
+    const { method = 'GET', params = {}, body = null } = options;
 
-    const res = await fetch(url.toString(), {
+    // For backwards compatibility: if options is a plain object without method/body, treat as params
+    if (!options.method && !options.body && !options.params) {
+      Object.entries(options).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, v);
+      });
+    } else {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, v);
+      });
+    }
+
+    const fetchOptions = {
+      method,
       headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
-    });
+    };
 
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    if (body) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+
+    const res = await fetch(url.toString(), fetchOptions);
+
+    if (!res.ok) {
+      const err = new Error(`${res.status} ${res.statusText}`);
+      err.status = res.status;
+      throw err;
+    }
     return res.json();
   }
 
@@ -37,6 +62,7 @@ const Dashboard = (() => {
       badge.textContent = 'Connected';
       badge.className = 'status-badge connected';
       loadAll();
+      initChat();
     } catch {
       badge.textContent = 'Failed';
       badge.className = 'status-badge disconnected';
@@ -496,6 +522,203 @@ const Dashboard = (() => {
     return div.innerHTML;
   }
 
+  // ── Chat Functions ─────────────────────────────────────────────────
+
+  function initChat() {
+    const params = new URLSearchParams(window.location.search);
+    patientId = params.get('patient_id');
+
+    const patientIdEl = document.getElementById('chat-patient-id');
+    if (patientId) {
+      patientIdEl.textContent = patientId;
+      patientIdEl.classList.remove('error');
+      loadRateLimit();
+    } else {
+      patientIdEl.textContent = 'Not set - add ?patient_id=UUID to URL';
+      patientIdEl.classList.add('error');
+      updateRateLimitDisplay();
+    }
+  }
+
+  async function loadRateLimit() {
+    if (!patientId) return;
+    try {
+      const data = await api(`/api/v1/chat/rate-limit`, { params: { patient_id: patientId } });
+      chatRateLimit = { remaining: data.remaining, max: data.max_per_hour };
+    } catch (e) {
+      console.error('Failed to load rate limit:', e);
+    }
+    updateRateLimitDisplay();
+  }
+
+  function updateRateLimitDisplay() {
+    const badge = document.getElementById('chat-rate-limit');
+    if (!patientId) {
+      badge.textContent = '';
+      return;
+    }
+
+    badge.textContent = `${chatRateLimit.remaining}/${chatRateLimit.max} messages`;
+
+    badge.classList.remove('warning', 'danger');
+    if (chatRateLimit.remaining <= 0) {
+      badge.classList.add('danger');
+    } else if (chatRateLimit.remaining <= 5) {
+      badge.classList.add('warning');
+    }
+
+    // Disable/enable input
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send');
+    if (chatRateLimit.remaining <= 0) {
+      input.disabled = true;
+      sendBtn.disabled = true;
+    } else {
+      input.disabled = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+
+    if (!message || !patientId) return;
+    if (chatRateLimit.remaining <= 0) {
+      appendMessage('system', 'Rate limit exceeded. Please try again later.');
+      return;
+    }
+
+    // Clear welcome message on first send
+    const welcome = document.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+
+    // Add user message to UI
+    appendMessage('user', message);
+    input.value = '';
+    input.focus();
+
+    // Show typing indicator
+    showTypingIndicator();
+
+    try {
+      const response = await api(`/api/v1/chat`, {
+        method: 'POST',
+        params: { patient_id: patientId },
+        body: {
+          message,
+          conversation_id: conversationId,
+          top_k: 5,
+        },
+      });
+
+      conversationId = response.conversation_id;
+      appendMessage('assistant', response.response, response.sources);
+
+      // Update rate limit
+      chatRateLimit.remaining = Math.max(0, chatRateLimit.remaining - 1);
+      updateRateLimitDisplay();
+
+    } catch (err) {
+      if (err.status === 429) {
+        appendMessage('system', 'Rate limit exceeded. Please try again later.');
+        chatRateLimit.remaining = 0;
+        updateRateLimitDisplay();
+      } else {
+        appendMessage('system', 'Error sending message. Please try again.');
+        console.error('Chat error:', err);
+      }
+    } finally {
+      hideTypingIndicator();
+    }
+  }
+
+  function appendMessage(role, content, sources = null) {
+    const container = document.getElementById('chat-messages');
+
+    const messageEl = document.createElement('div');
+    messageEl.className = `message ${role}`;
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'message-content';
+    contentEl.textContent = content;
+    messageEl.appendChild(contentEl);
+
+    // Add sources for assistant messages
+    if (role === 'assistant' && sources && sources.length > 0) {
+      const sourcesEl = renderSources(sources);
+      messageEl.appendChild(sourcesEl);
+    }
+
+    container.appendChild(messageEl);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderSources(sources) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-sources';
+
+    const toggle = document.createElement('div');
+    toggle.className = 'sources-toggle';
+    toggle.innerHTML = `<span>&#9654;</span> ${sources.length} source${sources.length > 1 ? 's' : ''}`;
+
+    const list = document.createElement('div');
+    list.className = 'sources-list';
+
+    sources.forEach(src => {
+      const item = document.createElement('div');
+      item.className = 'source-item';
+
+      const meta = document.createElement('div');
+      meta.className = 'source-meta';
+      meta.innerHTML = `
+        <span class="source-score">Score: ${(src.relevance_score * 100).toFixed(0)}%</span>
+        ${src.speaker ? `<span>Speaker: ${esc(src.speaker)}</span>` : ''}
+        ${src.start_time ? `<span>Time: ${formatTime(src.start_time)}</span>` : ''}
+      `;
+
+      const preview = document.createElement('div');
+      preview.className = 'source-preview';
+      preview.textContent = src.content_preview;
+
+      item.appendChild(meta);
+      item.appendChild(preview);
+      list.appendChild(item);
+    });
+
+    toggle.addEventListener('click', () => {
+      list.classList.toggle('expanded');
+      toggle.querySelector('span').innerHTML = list.classList.contains('expanded') ? '&#9660;' : '&#9654;';
+    });
+
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(list);
+    return wrapper;
+  }
+
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  function showTypingIndicator() {
+    const container = document.getElementById('chat-messages');
+    const existing = container.querySelector('.typing-indicator');
+    if (existing) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.innerHTML = '<span></span><span></span><span></span>';
+    container.appendChild(indicator);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function hideTypingIndicator() {
+    const indicator = document.querySelector('.typing-indicator');
+    if (indicator) indicator.remove();
+  }
+
   // ── Public API ──────────────────────────────────────────────────────
 
   return {
@@ -505,5 +728,6 @@ const Dashboard = (() => {
     showExperiment,
     refreshEvents,
     loadMoreEvents,
+    sendMessage,
   };
 })();
