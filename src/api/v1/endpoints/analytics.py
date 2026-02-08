@@ -145,6 +145,7 @@ async def get_event_aggregates(
         AggregationPeriod.DAY, description="Aggregation period"
     ),
     event_name: str | None = Query(None, description="Filter by event name"),
+    event_category: EventCategory | None = Query(None, description="Filter by event category"),
     from_date: datetime | None = Query(None, description="Start of date range"),
     to_date: datetime | None = Query(None, description="End of date range"),
 ) -> EventAggregateResponse:
@@ -156,6 +157,7 @@ async def get_event_aggregates(
         organization_id=auth.organization_id,
         period=period.value,
         event_name=event_name,
+        event_category=event_category,
         from_date=from_date,
         to_date=to_date,
     )

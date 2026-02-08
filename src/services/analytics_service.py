@@ -218,6 +218,7 @@ class AnalyticsService:
         organization_id: uuid.UUID,
         period: str = "day",
         event_name: str | None = None,
+        event_category: EventCategory | None = None,
         from_date: datetime | None = None,
         to_date: datetime | None = None,
     ) -> EventAggregateResponse:
@@ -225,6 +226,7 @@ class AnalyticsService:
         rows = await self._event_repo.aggregate_by_period(
             organization_id=organization_id,
             event_name=event_name,
+            event_category=event_category,
             period=period,
             from_timestamp=from_date,
             to_timestamp=to_date,

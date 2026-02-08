@@ -110,6 +110,7 @@ class EventRepository:
         self,
         organization_id: uuid.UUID,
         event_name: str | None = None,
+        event_category: EventCategory | None = None,
         period: str = "day",
         from_timestamp: datetime | None = None,
         to_timestamp: datetime | None = None,
@@ -119,6 +120,7 @@ class EventRepository:
         Args:
             organization_id: Organization to filter by
             event_name: Optional event name filter
+            event_category: Optional event category filter
             period: Aggregation period ('hour', 'day', 'week', 'month')
             from_timestamp: Start of time range
             to_timestamp: End of time range
@@ -131,6 +133,8 @@ class EventRepository:
         ]
         if event_name is not None:
             conditions.append(AnalyticsEvent.event_name == event_name)
+        if event_category is not None:
+            conditions.append(AnalyticsEvent.event_category == event_category)
         if from_timestamp is not None:
             conditions.append(AnalyticsEvent.event_timestamp >= from_timestamp)
         if to_timestamp is not None:
