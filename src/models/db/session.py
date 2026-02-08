@@ -29,6 +29,13 @@ class SessionStatus(enum.StrEnum):
     FAILED = "failed"
 
 
+class SessionType(enum.StrEnum):
+    """Type of session recording method."""
+
+    UPLOAD = "upload"  # Traditional file upload
+    VIDEO_CALL = "video_call"  # Live video call recorded client-side
+
+
 class Session(Base, TimestampMixin):
     """Session model for tracking therapy session recordings.
 
@@ -70,6 +77,11 @@ class Session(Base, TimestampMixin):
         Enum(SessionStatus, name="session_status"),
         nullable=False,
         default=SessionStatus.PENDING,
+    )
+    session_type: Mapped[SessionType] = mapped_column(
+        Enum(SessionType, name="session_type"),
+        nullable=False,
+        default=SessionType.UPLOAD,
     )
     error_message: Mapped[str | None] = mapped_column(
         Text,

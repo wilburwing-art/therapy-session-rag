@@ -24,5 +24,26 @@ class OrganizationRead(OrganizationBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Organization unique identifier")
+    video_chat_enabled: bool = Field(
+        default=False, description="Whether video chat is enabled for this org"
+    )
     created_at: datetime = Field(..., description="When the organization was created")
     updated_at: datetime = Field(..., description="When the organization was last updated")
+
+
+class OrganizationSettingsRead(BaseModel):
+    """Schema for reading organization settings."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    video_chat_enabled: bool = Field(
+        ..., description="Whether video chat is enabled for this org"
+    )
+
+
+class OrganizationSettingsUpdate(BaseModel):
+    """Schema for updating organization settings."""
+
+    video_chat_enabled: bool | None = Field(
+        None, description="Enable/disable video chat for this org"
+    )

@@ -9,6 +9,7 @@ import pytest
 from src.core.exceptions import ForbiddenError, NotFoundError
 from src.models.db.consent import ConsentType
 from src.models.db.session import Session, SessionStatus
+from src.models.db.session import SessionType as DbSessionType
 from src.models.domain.session import (
     SessionCreate,
     SessionFilter,
@@ -56,6 +57,7 @@ def create_mock_session(
     therapist_id: uuid.UUID,
     consent_id: uuid.UUID,
     status: SessionStatus = SessionStatus.PENDING,
+    session_type: DbSessionType = DbSessionType.UPLOAD,
     recording_path: str | None = None,
     recording_duration_seconds: int | None = None,
     error_message: str | None = None,
@@ -70,6 +72,7 @@ def create_mock_session(
     session.recording_path = recording_path
     session.recording_duration_seconds = recording_duration_seconds
     session.status = status
+    session.session_type = session_type
     session.error_message = error_message
     session.session_metadata = {}
     session.created_at = datetime.utcnow()

@@ -17,6 +17,9 @@ from src.models.domain.session import (
     SessionUpdate,
 )
 from src.models.domain.session import SessionStatus as DomainSessionStatus
+from src.models.domain.session import (
+    SessionType as DomainSessionType,
+)
 from src.repositories.consent_repo import ConsentRepository
 from src.repositories.session_repo import SessionRepository
 
@@ -281,6 +284,7 @@ class SessionService:
             recording_path=session.recording_path,
             recording_duration_seconds=session.recording_duration_seconds,
             status=DomainSessionStatus(session.status.value),
+            session_type=DomainSessionType(session.session_type.value),
             error_message=session.error_message,
             session_metadata=session.session_metadata,
             created_at=session.created_at,
@@ -295,6 +299,7 @@ class SessionService:
             therapist_id=session.therapist_id,
             session_date=session.session_date,
             status=DomainSessionStatus(session.status.value),
+            session_type=DomainSessionType(session.session_type.value),
             recording_duration_seconds=session.recording_duration_seconds,
             created_at=session.created_at,
         )

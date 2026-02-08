@@ -15,6 +15,7 @@ from src.models.domain.session import (
     SessionFilter,
     SessionRead,
     SessionSummary,
+    SessionType,
     SessionUpdate,
     SessionUploadResponse,
 )
@@ -188,6 +189,7 @@ class TestSessionRead:
             "recording_path": "recordings/session.mp3",
             "recording_duration_seconds": 1800,
             "status": DomainSessionStatus.READY,
+            "session_type": SessionType.UPLOAD,
             "error_message": None,
             "session_metadata": {"notes": "Good session"},
             "created_at": now,
@@ -198,6 +200,7 @@ class TestSessionRead:
 
         assert schema.status == DomainSessionStatus.READY
         assert schema.recording_duration_seconds == 1800
+        assert schema.session_type == SessionType.UPLOAD
 
 
 class TestSessionSummary:
@@ -212,6 +215,7 @@ class TestSessionSummary:
             "therapist_id": uuid.uuid4(),
             "session_date": now,
             "status": DomainSessionStatus.READY,
+            "session_type": SessionType.UPLOAD,
             "recording_duration_seconds": 3600,
             "created_at": now,
         }
@@ -219,6 +223,7 @@ class TestSessionSummary:
         schema = SessionSummary.model_validate(data)
 
         assert schema.recording_duration_seconds == 3600
+        assert schema.session_type == SessionType.UPLOAD
 
 
 class TestSessionUploadResponse:

@@ -119,6 +119,20 @@ class Settings(BaseSettings):
         description="Maximum upload file size in bytes",
     )
 
+    # Video Chat (Metered.ca TURN server)
+    turn_enabled: bool = Field(
+        default=False,
+        description="Enable video chat TURN server",
+    )
+    metered_turn_username: str = Field(
+        default="",
+        description="Metered.ca TURN username",
+    )
+    metered_turn_credential: str = Field(
+        default="",
+        description="Metered.ca TURN credential",
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS origins into a list."""

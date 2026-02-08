@@ -19,6 +19,13 @@ class SessionStatus(StrEnum):
     FAILED = "failed"
 
 
+class SessionType(StrEnum):
+    """Type of session recording method."""
+
+    UPLOAD = "upload"
+    VIDEO_CALL = "video_call"
+
+
 class SessionCreate(BaseModel):
     """Schema for creating a new session."""
 
@@ -26,6 +33,9 @@ class SessionCreate(BaseModel):
     therapist_id: UUID = Field(..., description="ID of the therapist")
     consent_id: UUID = Field(..., description="ID of the active consent record")
     session_date: datetime = Field(..., description="Date and time of the session")
+    session_type: SessionType = Field(
+        default=SessionType.UPLOAD, description="Type of session recording"
+    )
     session_metadata: dict[str, Any] | None = Field(
         default=None, description="Optional metadata about the session"
     )
@@ -56,6 +66,7 @@ class SessionRead(BaseModel):
     recording_path: str | None = Field(None, description="S3 key of the recording")
     recording_duration_seconds: int | None = Field(None, description="Duration in seconds")
     status: SessionStatus = Field(..., description="Current processing status")
+    session_type: SessionType = Field(..., description="Type of session recording")
     error_message: str | None = Field(None, description="Error message if failed")
     session_metadata: dict[str, Any] | None = Field(None, description="Session metadata")
     created_at: datetime = Field(..., description="When the session was created")
@@ -72,6 +83,7 @@ class SessionSummary(BaseModel):
     therapist_id: UUID = Field(..., description="ID of the therapist")
     session_date: datetime = Field(..., description="Date and time of the session")
     status: SessionStatus = Field(..., description="Current processing status")
+    session_type: SessionType = Field(..., description="Type of session recording")
     recording_duration_seconds: int | None = Field(None, description="Duration in seconds")
     created_at: datetime = Field(..., description="When the session was created")
 

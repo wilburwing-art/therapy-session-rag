@@ -24,6 +24,24 @@ const Dashboard = (() => {
     pollingInterval: null,
   };
 
+  // Video call state
+  let videoState = {
+    localStream: null,
+    remoteStream: null,
+    peerConnection: null,
+    mediaRecorder: null,
+    recordedChunks: [],
+    signalingSocket: null,
+    participantId: null,
+    iceServers: [],
+    recordingMethod: 'upload', // 'upload' or 'video'
+  };
+
+  // Organization settings
+  let orgSettings = {
+    videoChatEnabled: false,
+  };
+
   // ── API Client ──────────────────────────────────────────────────────
 
   async function api(path, options = {}) {
@@ -73,6 +91,7 @@ const Dashboard = (() => {
       badge.className = 'status-badge connected';
       loadAll();
       initChat();
+      await loadOrgSettings();
       loadProviderUsers();
     } catch {
       badge.textContent = 'Failed';
@@ -1074,6 +1093,9 @@ const Dashboard = (() => {
       pollingInterval: null,
     };
 
+    // Clean up any video call state
+    cleanupVideoCall();
+
     // Reset UI
     setProviderStep(1);
     document.getElementById('provider-therapist').value = '';
@@ -1082,6 +1104,13 @@ const Dashboard = (() => {
     document.getElementById('provider-file').value = '';
     document.getElementById('provider-file-name').textContent = '';
     document.getElementById('provider-upload-btn').disabled = true;
+
+    // Reset video UI
+    videoState.recordingMethod = 'upload';
+    selectRecordingMethod('upload');
+    document.getElementById('video-status').textContent = '';
+    document.getElementById('video-status').className = 'status-message';
+    document.getElementById('recording-indicator').style.display = 'none';
 
     // Reset transcription UI
     const statusEl = document.getElementById('provider-transcription-status');
@@ -1111,6 +1140,352 @@ const Dashboard = (() => {
     }
   }
 
+  // ── Organization Settings ─────────────────────────────────────────────
+
+  async function loadOrgSettings() {
+    try {
+      const settings = await api('/api/v1/organization/settings');
+      orgSettings.videoChatEnabled = settings.video_chat_enabled;
+
+      // Show/hide video method selector based on org setting
+      const methodSelect = document.getElementById('recording-method-select');
+      if (methodSelect) {
+        methodSelect.style.display = orgSettings.videoChatEnabled ? 'flex' : 'none';
+      }
+    } catch (e) {
+      console.error('Failed to load org settings:', e);
+      orgSettings.videoChatEnabled = false;
+    }
+  }
+
+  // ── Video Call Functions ─────────────────────────────────────────────
+
+  function selectRecordingMethod(method) {
+    videoState.recordingMethod = method;
+
+    // Update button states
+    document.querySelectorAll('.method-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.method === method);
+    });
+
+    // Show/hide panels
+    const uploadPanel = document.getElementById('upload-panel');
+    const videoPanel = document.getElementById('video-panel');
+
+    if (method === 'upload') {
+      uploadPanel.style.display = 'block';
+      videoPanel.style.display = 'none';
+    } else {
+      uploadPanel.style.display = 'none';
+      videoPanel.style.display = 'block';
+    }
+  }
+
+  async function startVideoCall() {
+    const startBtn = document.getElementById('start-call-btn');
+    const endBtn = document.getElementById('end-call-btn');
+    const backBtn = document.getElementById('video-back-btn');
+    const statusEl = document.getElementById('video-status');
+
+    startBtn.disabled = true;
+    statusEl.textContent = 'Starting video call...';
+    statusEl.className = 'status-message';
+
+    try {
+      // Get TURN credentials from server
+      const turnCreds = await api('/api/v1/video/turn-credentials');
+      videoState.iceServers = turnCreds.ice_servers;
+
+      // Get local media
+      videoState.localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      const localVideo = document.getElementById('local-video');
+      localVideo.srcObject = videoState.localStream;
+
+      // Generate participant ID
+      videoState.participantId = `therapist-${Date.now()}`;
+
+      // Connect to signaling server
+      const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
+      const wsHost = apiUrl.replace(/^https?:\/\//, '');
+      const signalingUrl = `${wsProtocol}://${wsHost}/api/v1/video/sessions/${providerState.sessionId}/signal?api_key=${encodeURIComponent(apiKey)}&participant_id=${encodeURIComponent(videoState.participantId)}`;
+
+      videoState.signalingSocket = new WebSocket(signalingUrl);
+
+      videoState.signalingSocket.onopen = () => {
+        statusEl.textContent = 'Waiting for patient to join...';
+        statusEl.className = 'status-message info';
+        startBtn.style.display = 'none';
+        endBtn.style.display = 'inline-block';
+        backBtn.disabled = true;
+
+        // Start recording immediately
+        startRecording();
+      };
+
+      videoState.signalingSocket.onmessage = (event) => {
+        handleSignalingMessage(JSON.parse(event.data));
+      };
+
+      videoState.signalingSocket.onerror = (err) => {
+        console.error('Signaling error:', err);
+        statusEl.textContent = 'Connection error. Please try again.';
+        statusEl.className = 'status-message error';
+        cleanupVideoCall();
+        startBtn.disabled = false;
+        backBtn.disabled = false;
+      };
+
+      videoState.signalingSocket.onclose = () => {
+        if (videoState.peerConnection) {
+          statusEl.textContent = 'Call ended';
+          statusEl.className = 'status-message info';
+        }
+      };
+
+    } catch (err) {
+      console.error('Failed to start video call:', err);
+      statusEl.textContent = `Failed to start: ${err.message}`;
+      statusEl.className = 'status-message error';
+      startBtn.disabled = false;
+      backBtn.disabled = false;
+    }
+  }
+
+  async function handleSignalingMessage(msg) {
+    const statusEl = document.getElementById('video-status');
+
+    switch (msg.type) {
+      case 'peer_joined':
+        statusEl.textContent = 'Patient joined! Connecting...';
+        statusEl.className = 'status-message success';
+        await createPeerConnection(true); // We're the caller
+        break;
+
+      case 'peer_left':
+        statusEl.textContent = 'Patient left the call';
+        statusEl.className = 'status-message warning';
+        break;
+
+      case 'offer':
+        // If we receive an offer, we're the callee
+        await createPeerConnection(false);
+        await videoState.peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: msg.sdp }));
+        const answer = await videoState.peerConnection.createAnswer();
+        await videoState.peerConnection.setLocalDescription(answer);
+        sendSignal({ type: 'answer', sdp: answer.sdp });
+        break;
+
+      case 'answer':
+        await videoState.peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: msg.sdp }));
+        break;
+
+      case 'ice':
+        if (videoState.peerConnection && msg.candidate) {
+          await videoState.peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+        break;
+    }
+  }
+
+  async function createPeerConnection(isCaller) {
+    const statusEl = document.getElementById('video-status');
+
+    videoState.peerConnection = new RTCPeerConnection({
+      iceServers: videoState.iceServers,
+    });
+
+    // Add local tracks
+    videoState.localStream.getTracks().forEach(track => {
+      videoState.peerConnection.addTrack(track, videoState.localStream);
+    });
+
+    // Handle remote tracks
+    videoState.peerConnection.ontrack = (event) => {
+      const remoteVideo = document.getElementById('remote-video');
+      if (!videoState.remoteStream) {
+        videoState.remoteStream = new MediaStream();
+        remoteVideo.srcObject = videoState.remoteStream;
+      }
+      videoState.remoteStream.addTrack(event.track);
+
+      statusEl.textContent = 'Connected!';
+      statusEl.className = 'status-message success';
+
+      // Show recording indicator
+      document.getElementById('recording-indicator').style.display = 'flex';
+    };
+
+    // Handle ICE candidates
+    videoState.peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendSignal({ type: 'ice', candidate: event.candidate.toJSON() });
+      }
+    };
+
+    // Handle connection state
+    videoState.peerConnection.onconnectionstatechange = () => {
+      const state = videoState.peerConnection.connectionState;
+      if (state === 'disconnected' || state === 'failed') {
+        statusEl.textContent = 'Connection lost';
+        statusEl.className = 'status-message error';
+      }
+    };
+
+    // If we're the caller, create and send offer
+    if (isCaller) {
+      const offer = await videoState.peerConnection.createOffer();
+      await videoState.peerConnection.setLocalDescription(offer);
+      sendSignal({ type: 'offer', sdp: offer.sdp });
+    }
+  }
+
+  function sendSignal(msg) {
+    if (videoState.signalingSocket && videoState.signalingSocket.readyState === WebSocket.OPEN) {
+      videoState.signalingSocket.send(JSON.stringify(msg));
+    }
+  }
+
+  function startRecording() {
+    if (!videoState.localStream) return;
+
+    videoState.recordedChunks = [];
+
+    // Record local audio and video
+    const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options.mimeType = 'video/webm';
+    }
+
+    videoState.mediaRecorder = new MediaRecorder(videoState.localStream, options);
+
+    videoState.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        videoState.recordedChunks.push(event.data);
+      }
+    };
+
+    videoState.mediaRecorder.start(1000); // Capture every second
+  }
+
+  async function endVideoCall() {
+    const endBtn = document.getElementById('end-call-btn');
+    const statusEl = document.getElementById('video-status');
+
+    endBtn.disabled = true;
+    endBtn.textContent = 'Ending...';
+    statusEl.textContent = 'Ending call and uploading recording...';
+    statusEl.className = 'status-message';
+
+    // Hide recording indicator
+    document.getElementById('recording-indicator').style.display = 'none';
+
+    // Stop recording
+    if (videoState.mediaRecorder && videoState.mediaRecorder.state !== 'inactive') {
+      videoState.mediaRecorder.stop();
+    }
+
+    // Wait a bit for final chunks
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Upload recording
+    try {
+      await uploadRecordedVideo();
+      statusEl.textContent = 'Recording uploaded successfully!';
+      statusEl.className = 'status-message success';
+
+      // Clean up and move to next step
+      cleanupVideoCall();
+      setTimeout(() => providerNext(), 1000);
+
+    } catch (err) {
+      console.error('Upload failed:', err);
+      statusEl.textContent = 'Failed to upload recording. Please try again.';
+      statusEl.className = 'status-message error';
+      endBtn.disabled = false;
+      endBtn.textContent = 'End Call & Upload';
+    }
+  }
+
+  async function uploadRecordedVideo() {
+    if (videoState.recordedChunks.length === 0) {
+      throw new Error('No recording data');
+    }
+
+    const blob = new Blob(videoState.recordedChunks, { type: 'video/webm' });
+    const formData = new FormData();
+    formData.append('file', blob, `session-${providerState.sessionId}.webm`);
+
+    const response = await fetch(`${apiUrl}/api/v1/sessions/${providerState.sessionId}/recording`, {
+      method: 'POST',
+      headers: { 'X-API-Key': apiKey },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  function cleanupVideoCall() {
+    // Stop local stream
+    if (videoState.localStream) {
+      videoState.localStream.getTracks().forEach(track => track.stop());
+      videoState.localStream = null;
+    }
+
+    // Stop remote stream
+    if (videoState.remoteStream) {
+      videoState.remoteStream.getTracks().forEach(track => track.stop());
+      videoState.remoteStream = null;
+    }
+
+    // Close peer connection
+    if (videoState.peerConnection) {
+      videoState.peerConnection.close();
+      videoState.peerConnection = null;
+    }
+
+    // Close signaling socket
+    if (videoState.signalingSocket) {
+      videoState.signalingSocket.close();
+      videoState.signalingSocket = null;
+    }
+
+    // Clear video elements
+    const localVideo = document.getElementById('local-video');
+    const remoteVideo = document.getElementById('remote-video');
+    if (localVideo) localVideo.srcObject = null;
+    if (remoteVideo) remoteVideo.srcObject = null;
+
+    // Reset state
+    videoState.recordedChunks = [];
+    videoState.participantId = null;
+
+    // Reset UI
+    const startBtn = document.getElementById('start-call-btn');
+    const endBtn = document.getElementById('end-call-btn');
+    const backBtn = document.getElementById('video-back-btn');
+
+    if (startBtn) {
+      startBtn.style.display = 'inline-block';
+      startBtn.disabled = false;
+    }
+    if (endBtn) {
+      endBtn.style.display = 'none';
+      endBtn.disabled = false;
+      endBtn.textContent = 'End Call & Upload';
+    }
+    if (backBtn) {
+      backBtn.disabled = false;
+    }
+  }
+
   // ── Public API ──────────────────────────────────────────────────────
 
   return {
@@ -1130,5 +1505,9 @@ const Dashboard = (() => {
     uploadRecording,
     startTranscription,
     providerReset,
+    // Video call functions
+    selectRecordingMethod,
+    startVideoCall,
+    endVideoCall,
   };
 })();

@@ -22,6 +22,7 @@ from src.models.domain.session import (
     SessionRead,
     SessionStatus,
     SessionSummary,
+    SessionType,
 )
 from src.models.domain.transcript import (
     TranscriptionJobRead,
@@ -124,6 +125,7 @@ def create_session_read(
     therapist_id: uuid.UUID,
     consent_id: uuid.UUID,
     status: SessionStatus = SessionStatus.PENDING,
+    session_type: SessionType = SessionType.UPLOAD,
 ) -> SessionRead:
     """Create a SessionRead for testing."""
     return SessionRead(
@@ -135,6 +137,7 @@ def create_session_read(
         recording_path=None,
         recording_duration_seconds=None,
         status=status,
+        session_type=session_type,
         error_message=None,
         session_metadata=None,
         created_at=datetime.utcnow(),
@@ -147,6 +150,7 @@ def create_session_summary(
     patient_id: uuid.UUID,
     therapist_id: uuid.UUID,
     status: SessionStatus = SessionStatus.PENDING,
+    session_type: SessionType = SessionType.UPLOAD,
 ) -> SessionSummary:
     """Create a SessionSummary for testing."""
     return SessionSummary(
@@ -155,6 +159,7 @@ def create_session_summary(
         therapist_id=therapist_id,
         session_date=datetime.utcnow(),
         status=status,
+        session_type=session_type,
         recording_duration_seconds=None,
         created_at=datetime.utcnow(),
     )

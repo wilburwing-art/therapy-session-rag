@@ -260,22 +260,59 @@
           </div>
         </div>
 
-        <!-- Step 4: Upload Recording -->
+        <!-- Step 4: Record Session -->
         <div id="provider-step-4" class="provider-step">
-          <h3>Upload Recording</h3>
-          <div class="upload-zone" id="provider-upload-zone">
-            <input type="file" id="provider-file" accept="audio/*" onchange="Dashboard.handleFileSelect()">
-            <div class="upload-content">
-              <p class="upload-icon">&#x1F3A4;</p>
-              <p>Drag & drop audio file here</p>
-              <p class="upload-hint">or click to browse</p>
-              <p id="provider-file-name" class="file-name"></p>
+          <h3>Record Session</h3>
+
+          <!-- Method Selection (shown if video_chat_enabled) -->
+          <div id="recording-method-select" class="method-select" style="display:none">
+            <button class="method-btn active" data-method="upload" onclick="Dashboard.selectRecordingMethod('upload')">
+              Upload Recording
+            </button>
+            <button class="method-btn" data-method="video" onclick="Dashboard.selectRecordingMethod('video')">
+              Start Video Call
+            </button>
+          </div>
+
+          <!-- Upload Panel -->
+          <div id="upload-panel">
+            <div class="upload-zone" id="provider-upload-zone">
+              <input type="file" id="provider-file" accept="audio/*" onchange="Dashboard.handleFileSelect()">
+              <div class="upload-content">
+                <p class="upload-icon">&#x1F3A4;</p>
+                <p>Drag & drop audio file here</p>
+                <p class="upload-hint">or click to browse</p>
+                <p id="provider-file-name" class="file-name"></p>
+              </div>
+            </div>
+            <div id="provider-upload-status" class="status-message"></div>
+            <div class="step-actions">
+              <button onclick="Dashboard.providerBack()" class="btn-secondary">Back</button>
+              <button onclick="Dashboard.uploadRecording()" id="provider-upload-btn" disabled>Upload Recording</button>
             </div>
           </div>
-          <div id="provider-upload-status" class="status-message"></div>
-          <div class="step-actions">
-            <button onclick="Dashboard.providerBack()" class="btn-secondary">Back</button>
-            <button onclick="Dashboard.uploadRecording()" id="provider-upload-btn" disabled>Upload Recording</button>
+
+          <!-- Video Call Panel -->
+          <div id="video-panel" style="display:none">
+            <div class="video-container">
+              <div class="video-wrapper">
+                <video id="local-video" autoplay muted playsinline></video>
+                <span class="video-label">You</span>
+              </div>
+              <div class="video-wrapper">
+                <video id="remote-video" autoplay playsinline></video>
+                <span class="video-label">Remote</span>
+              </div>
+            </div>
+            <div id="video-status" class="status-message"></div>
+            <div id="recording-indicator" class="recording-indicator" style="display:none">
+              <span class="recording-dot"></span> Recording...
+            </div>
+            <div class="step-actions">
+              <button onclick="Dashboard.providerBack()" class="btn-secondary" id="video-back-btn">Back</button>
+              <button onclick="Dashboard.startVideoCall()" id="start-call-btn">Start Call</button>
+              <button onclick="Dashboard.endVideoCall()" id="end-call-btn" style="display:none">End Call & Upload</button>
+            </div>
           </div>
         </div>
 
