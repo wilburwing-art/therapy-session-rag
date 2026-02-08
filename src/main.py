@@ -19,6 +19,7 @@ from src.core.event_middleware import EventTrackingMiddleware
 from src.core.exceptions import setup_exception_handlers
 from src.core.health import HealthCheckService, HealthStatus
 from src.core.logging import setup_logging, setup_request_logging
+from src.models import db as _models  # noqa: F401  # Import to register models
 
 logger = logging.getLogger("therapy_rag")
 

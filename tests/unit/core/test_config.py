@@ -37,7 +37,8 @@ class TestSettings:
         monkeypatch.delenv("MINIO_ENDPOINT", raising=False)
 
         with pytest.raises(ValidationError):
-            Settings()
+            # Skip loading from .env file to ensure env vars are truly missing
+            Settings(_env_file=None)
 
     def test_settings_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that default values are applied correctly."""
