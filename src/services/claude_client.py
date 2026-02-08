@@ -110,6 +110,11 @@ class ClaudeClient:
         Raises:
             ClaudeError: If chat completion fails
         """
+        # Use mock response in demo mode (placeholder API key)
+        if self.settings.anthropic_api_key == "placeholder":
+            logger.warning("Using mock chat response (placeholder API key)")
+            return self._generate_mock_response(messages, system_prompt)
+
         request = ChatRequest(
             messages=messages,
             system_prompt=system_prompt,
@@ -117,6 +122,40 @@ class ClaudeClient:
             temperature=temperature,
         )
         return await self._chat_with_retry(request)
+
+    def _generate_mock_response(
+        self, messages: list[Message], system_prompt: str | None
+    ) -> ChatResponse:
+        """Generate a mock response for demo mode.
+
+        Extracts context from system prompt and generates a relevant response.
+        """
+        user_message = messages[-1].content if messages else "Hello"
+
+        # Extract context chunks from system prompt if available
+        context_preview = ""
+        if system_prompt and "CONTEXT FROM THERAPY SESSIONS:" in system_prompt:
+            context_start = system_prompt.find("CONTEXT FROM THERAPY SESSIONS:")
+            context_text = system_prompt[context_start + 30:context_start + 500]
+            context_preview = context_text[:200] + "..." if len(context_text) > 200 else context_text
+
+        mock_response = f"""Based on your therapy session records, I can see some relevant information.
+
+{context_preview}
+
+**Note:** This is a demo response. To get AI-powered responses based on your actual session content, please configure valid API keys for OpenAI (embeddings) and Anthropic (chat).
+
+Your question was: "{user_message[:100]}..."
+
+In a production environment, I would analyze your sessions to provide personalized, grounded responses about your therapy journey."""
+
+        return ChatResponse(
+            content=mock_response,
+            model="mock-claude",
+            input_tokens=len(user_message) // 4,
+            output_tokens=len(mock_response) // 4,
+            stop_reason="end_turn",
+        )
 
     async def _chat_with_retry(self, request: ChatRequest) -> ChatResponse:
         """Execute chat with retry logic.

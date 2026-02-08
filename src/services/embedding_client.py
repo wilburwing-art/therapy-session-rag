@@ -102,6 +102,11 @@ class EmbeddingClient:
         if not texts:
             return []
 
+        # Use mock embeddings in demo mode (placeholder API key)
+        if self.settings.openai_api_key == "placeholder":
+            logger.warning("Using mock embeddings (placeholder API key)")
+            return self._generate_mock_embeddings(texts)
+
         # Split into batches if needed
         if len(texts) > self.MAX_BATCH_SIZE:
             results: list[EmbeddingResult] = []
@@ -112,6 +117,42 @@ class EmbeddingClient:
             return results
 
         return await self._embed_batch_with_retry(texts)
+
+    def _generate_mock_embeddings(self, texts: list[str]) -> list[EmbeddingResult]:
+        """Generate deterministic mock embeddings for demo mode.
+
+        Uses a hash of the text to generate consistent embeddings.
+        """
+        import hashlib
+
+        results: list[EmbeddingResult] = []
+        for text in texts:
+            # Generate deterministic embedding from text hash
+            text_hash = hashlib.sha256(text.encode()).digest()
+            # Expand hash to 1536 dimensions using repeated hashing
+            embedding: list[float] = []
+            seed_data = text_hash
+            while len(embedding) < self.EMBEDDING_DIMENSION:
+                seed_data = hashlib.sha256(seed_data).digest()
+                # Convert bytes to floats in range [-1, 1]
+                for byte in seed_data:
+                    if len(embedding) >= self.EMBEDDING_DIMENSION:
+                        break
+                    embedding.append((byte / 127.5) - 1.0)
+
+            # Normalize the vector
+            magnitude = sum(x * x for x in embedding) ** 0.5
+            embedding = [x / magnitude for x in embedding]
+
+            results.append(
+                EmbeddingResult(
+                    text=text,
+                    embedding=embedding,
+                    model="mock-embedding",
+                    token_count=len(text) // 4,
+                )
+            )
+        return results
 
     async def _embed_batch_with_retry(
         self, texts: list[str]

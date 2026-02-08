@@ -139,4 +139,10 @@ def process_embedding_job_sync(session_id: str) -> dict[str, Any]:
     """
     import asyncio
 
+    from src.core.database import init_database
+
+    # Initialize database for this worker process
+    settings = get_settings()
+    init_database(settings)
+
     return asyncio.run(process_embedding_job(session_id))

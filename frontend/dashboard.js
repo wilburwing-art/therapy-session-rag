@@ -87,6 +87,13 @@ const Dashboard = (() => {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
     document.getElementById(`tab-${tab}`).classList.add('active');
+
+    // When switching to Chat tab, use provider's patient if no URL param
+    if (tab === 'chat' && !patientId && providerState.patientId) {
+      patientId = providerState.patientId;
+      updatePatientDisplay();
+      loadRateLimit();
+    }
   }
 
   // ── Data Loading ────────────────────────────────────────────────────
@@ -230,6 +237,7 @@ const Dashboard = (() => {
         }),
         api('/api/v1/analytics/events/aggregate', {
           event_name: eventName || undefined,
+          event_category: category || undefined,
           period: 'day',
         }),
       ]);
@@ -539,15 +547,41 @@ const Dashboard = (() => {
     const params = new URLSearchParams(window.location.search);
     patientId = params.get('patient_id');
 
-    const patientIdEl = document.getElementById('chat-patient-id');
+    // Fall back to provider's selected patient
+    if (!patientId && providerState.patientId) {
+      patientId = providerState.patientId;
+    }
+
+    updatePatientDisplay();
     if (patientId) {
-      patientIdEl.textContent = patientId;
-      patientIdEl.classList.remove('error');
       loadRateLimit();
     } else {
-      patientIdEl.textContent = 'Not set - add ?patient_id=UUID to URL';
-      patientIdEl.classList.add('error');
       updateRateLimitDisplay();
+    }
+  }
+
+  async function updatePatientDisplay() {
+    const patientIdEl = document.getElementById('chat-patient-id');
+
+    if (!patientId) {
+      patientIdEl.textContent = 'Not set - add ?patient_id=UUID to URL or select in Provider tab';
+      patientIdEl.classList.add('error');
+      return;
+    }
+
+    patientIdEl.classList.remove('error');
+
+    // Try to look up patient email
+    try {
+      const patients = await api('/api/v1/users', { params: { role: 'patient' } });
+      const patient = patients.find(p => p.id === patientId);
+      if (patient) {
+        patientIdEl.textContent = patient.email;
+      } else {
+        patientIdEl.textContent = patientId;
+      }
+    } catch {
+      patientIdEl.textContent = patientId;
     }
   }
 

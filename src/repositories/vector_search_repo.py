@@ -3,7 +3,7 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select, text
+from sqlalchemy import ColumnElement, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.db.session import Session
@@ -51,18 +51,19 @@ class VectorSearchRepository:
         Returns:
             List of ChunkSearchResult ordered by similarity (highest first)
         """
-        # Convert embedding to pgvector format
+        # Convert embedding to pgvector format string and cast to vector type
         embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
-        # Build the query with cosine distance
+        # Build the query with cosine distance using literal_column for the similarity
         # pgvector uses <=> for cosine distance (1 - similarity)
         # We compute similarity as 1 - distance
+        similarity_expr: ColumnElement[float] = literal_column(
+            f"(1 - (session_chunks.embedding <=> '{embedding_str}'::vector))"
+        ).label("similarity")
         query = (
             select(
                 SessionChunk,
-                (1 - SessionChunk.embedding.cosine_distance(embedding_str)).label(
-                    "similarity"
-                ),
+                similarity_expr,
             )
             .join(Session, SessionChunk.session_id == Session.id)
             .where(Session.patient_id == patient_id)

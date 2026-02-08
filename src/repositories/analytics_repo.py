@@ -13,7 +13,7 @@ from sqlalchemy.types import Date, Float, Integer, Numeric
 from src.models.db.event import AnalyticsEvent, EventCategory
 from src.models.db.session import Session
 from src.models.db.transcript import Transcript
-from src.models.db.user import User
+from src.models.db.user import User, UserRole
 
 
 class AnalyticsRepository:
@@ -153,7 +153,7 @@ class AnalyticsRepository:
             .where(
                 and_(
                     User.organization_id == organization_id,
-                    User.role == "patient",
+                    User.role == UserRole.PATIENT,
                 )
             )
             .scalar_subquery()

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(terraform *)",
+      "Bash(aws *)",
+      "Bash(docker *)",
+      "Bash(curl *)",
+      "Bash(brew *)",
+      "Bash(sleep *)"
+    ]
+  }
+}
