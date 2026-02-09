@@ -79,7 +79,7 @@ class Session(Base, TimestampMixin):
         default=SessionStatus.PENDING,
     )
     session_type: Mapped[SessionType] = mapped_column(
-        Enum(SessionType, name="session_type"),
+        Enum(SessionType, name="session_type", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=SessionType.UPLOAD,
     )
