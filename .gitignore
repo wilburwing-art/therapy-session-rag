@@ -131,6 +131,10 @@ data/
 uploads/
 recordings/
 
+# AI assistants
+.claude/
+.ralph/
+
 # Ralph loop state (optional - may want to track)
 # .ralph/logs/
 

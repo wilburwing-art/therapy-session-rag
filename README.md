@@ -1,10 +1,12 @@
 # TherapyRAG
 
-**Session Recording -> Transcription -> Patient-Facing RAG Chatbot**
+[![CI](https://github.com/wilburwing-art/therapy-session-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/wilburwing-art/therapy-session-rag/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A demo-ready backend platform that enables therapy providers to record sessions (with consent), transcribe them, and power a patient-facing chatbot that can answer questions like "What homework did we discuss last week?"
+**Session Recording → Transcription → Patient-Facing RAG Chatbot**
 
-> Built for pitching to existing telehealth platforms and investors.
+A production-ready backend platform that enables therapy providers to record sessions (with consent), automatically transcribe them, and power a patient-facing chatbot that can answer questions like *"What homework did we discuss last week?"*
 
 ## Features
 
