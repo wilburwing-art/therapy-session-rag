@@ -1,0 +1,52 @@
+# AI Ignore - Files AI assistants should not access
+# Works with Claude Code, Cursor, and other AI tools
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Test fixtures with sensitive data
+tests/fixtures/phi/
+tests/fixtures/recordings/
+
+# Generated files (too large, not useful)
+*.jsonl
+*.log
+coverage/
+htmlcov/
+.coverage
+
+# Dependencies (AI should use documentation, not source)
+.venv/
+node_modules/
+__pycache__/
+
+# IDE and tool configs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Database files
+*.db
+*.sqlite
+
+# Large binary files
+*.mp3
+*.mp4
+*.wav
+*.m4a
+
+# Alembic versions (auto-generated)
+alembic/versions/
