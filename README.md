@@ -6,33 +6,66 @@
 
 **Session Recording → Transcription → Patient-Facing RAG Chatbot**
 
-A production-ready backend platform that enables therapy providers to record sessions (with consent), automatically transcribe them, and power a patient-facing chatbot that can answer questions like *"What homework did we discuss last week?"*
+Therapy providers want to give patients access to their session content between appointments — but manual transcription is a nonstarter, and generic chatbots have no patient context. TherapyRAG closes that gap: therapists upload recordings (with consent), the pipeline auto-transcribes and indexes them, and patients get a chatbot that answers questions like *"What homework did we discuss last week?"* with cited, relevant excerpts from their own sessions.
 
-## Features
-
-- **HIPAA-Critical Consent Management** - Full audit trail, immutable records
-- **Recording Ingestion** - Accept audio/video uploads with async processing
-- **Automatic Transcription** - Deepgram integration with speaker diarization
-- **Semantic Search** - pgvector embeddings for relevant context retrieval
-- **RAG Chatbot** - Claude-powered responses with session citations
-- **API Key Authentication** - Simple auth for platform integration
-- **Row-Level Security** - Multi-tenant isolation via TenantContext
-- **Cursor-Based Pagination** - Efficient pagination for large datasets
-- **Rate Limiting** - Redis-backed rate limiting per patient
+Built as a production-ready backend targeting telehealth platform integration.
 
 ## Architecture
 
 ```
-+------------------+     +-------------------+     +------------------+
-|  Recording UI    |---->|  Transcription    |---->|  Vector Store    |
-|  + Consent       |     |  Pipeline         |     |  (pgvector)      |
-+------------------+     +-------------------+     +--------+---------+
-                                                           |
-+------------------+     +-------------------+              |
-|  Patient Chat    |<--->|  RAG Chatbot      |<------------+
-|  Interface       |     |  (Claude)         |
-+------------------+     +-------------------+
+                           INGESTION PIPELINE
+  ┌───────────┐    ┌───────────┐    ┌──────────────┐    ┌──────────────┐
+  │  Upload   │───>│   MinIO   │───>│   Deepgram   │───>│   OpenAI     │
+  │  Audio    │    │   (S3)    │    │   ASR +      │    │   Embeddings │
+  │           │    │           │    │   Diarize    │    │   (1536-dim) │
+  └───────────┘    └───────────┘    └──────────────┘    └──────┬───────┘
+       │                                                       │
+       │  consent check                              chunk + store
+       v                                                       v
+  ┌───────────┐                                    ┌───────────────────┐
+  │  Consent  │                                    │   PostgreSQL      │
+  │  Audit    │                                    │   + pgvector      │
+  │  (append- │                                    │                   │
+  │   only)   │                                    │  sessions         │
+  └───────────┘                                    │  transcripts      │
+                                                   │  chunks + vectors │
+                                                   └─────────┬─────────┘
+                           QUERY PATH                        │
+  ┌───────────┐    ┌──────────────────────────┐              │
+  │  Patient  │<──>│  Claude RAG Chat         │<─── semantic search
+  │  Chat UI  │    │  + citations             │    (cosine similarity,
+  └───────────┘    │  + safety guardrails     │     patient-scoped)
+                   └──────────────────────────┘
+                              │
+                   ┌──────────┴──────────┐
+                   │  Redis              │
+                   │  rate limits + jobs  │
+                   └─────────────────────┘
 ```
+
+### Component Breakdown
+
+| Layer | Tech | Role |
+|-------|------|------|
+| **API** | FastAPI (async) | 30+ endpoints across consent, sessions, chat, admin |
+| **Database** | PostgreSQL 16 + pgvector | Relational data + vector similarity search |
+| **Queue** | Redis 7 + RQ | Async transcription and embedding jobs |
+| **Storage** | MinIO (S3-compatible) | Audio/video recording files |
+| **Transcription** | Deepgram | Speech-to-text with speaker diarization |
+| **Embeddings** | OpenAI (text-embedding-3-small) | 1536-dimensional chunk vectors |
+| **Chat LLM** | Claude (claude-sonnet-4) | RAG responses with session citations |
+| **Safety** | Custom guardrails | Crisis detection, input/output filtering |
+
+### Data Isolation Model
+
+Every query is scoped to the authenticated organization via `TenantContext`. Patient A never sees Patient B's data — enforced at the repository layer, not just the API layer.
+
+```
+API Key (X-API-Key) → Organization → TenantContext
+  └── All queries filtered: WHERE patient_id IN (SELECT id FROM users WHERE org_id = ?)
+```
+
+Consent is append-only: grants and revocations create new immutable records. No UPDATE, no DELETE. Full audit trail with IP, user-agent, and timestamps.
 
 ## Quick Start
 
@@ -40,148 +73,71 @@ A production-ready backend platform that enables therapy providers to record ses
 
 - Python 3.12+
 - Docker and Docker Compose
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- API keys: [Deepgram](https://deepgram.com), [OpenAI](https://platform.openai.com), [Anthropic](https://console.anthropic.com)
 
-### 1. Clone and Setup
+### Setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/wilburwing-art/therapy-session-rag.git
 cd therapy-session-rag
 
-# Install dependencies with uv (recommended)
+# Install dependencies
 uv sync
 
-# Or with pip
-pip install -e ".[dev]"
-
-# Copy environment file
+# Configure environment
 cp .env.example .env
-# Edit .env with your API keys (Deepgram, OpenAI, Anthropic)
-```
+# Add your API keys to .env
 
-### 2. Start Services
-
-```bash
-# Start PostgreSQL (with pgvector), Redis, MinIO
+# Start infrastructure
 docker compose up -d postgres redis minio minio-setup
 
-# Wait for services to be healthy
-docker compose ps
-```
-
-### 3. Run Migrations
-
-```bash
+# Run migrations
 uv run alembic upgrade head
-```
 
-### 4. Start the API
-
-```bash
-# Development mode with auto-reload
+# Start API server
 uv run uvicorn src.main:app --reload
 
-# Or run via Docker
-docker compose up api
-```
-
-Visit http://localhost:8000/docs for the interactive API documentation.
-
-### 5. Start Background Workers (for transcription/embedding)
-
-```bash
-# In separate terminals:
+# Start background workers (separate terminals)
 uv run python -m rq.cli worker transcription --url redis://localhost:6379
 uv run python -m rq.cli worker embedding --url redis://localhost:6379
-
-# Or via Docker
-docker compose up worker-transcription worker-embedding
 ```
 
-## Development
-
-### Validation Commands
-
+Or run the full stack via Docker:
 ```bash
-# Run full e2e test suite (recommended)
-./scripts/e2e_test.sh
-
-# Individual commands:
-uv run ruff check src/ tests/           # Lint
-uv run mypy src/                         # Type check
-uv run pytest tests/unit -v              # Unit tests
-uv run pytest tests/integration -v       # Integration tests (requires docker)
+docker compose up
 ```
 
-### Test Status
+API docs at http://localhost:8000/docs
 
-- **Unit tests**: 407 passing
-- **Lint**: Clean (ruff)
-- **Type check**: Clean (mypy strict mode)
+## API
 
-## API Overview
+All endpoints (except `/health*`) require `X-API-Key` header.
 
-### Authentication
-All endpoints (except `/health*`) require an API key in the `X-API-Key` header.
-
-### Health Endpoints
+### Consent
 
 ```
-GET  /health           # Simple liveness check
-GET  /health/live      # Kubernetes liveness probe
-GET  /health/ready     # Kubernetes readiness probe (checks DB, Redis)
-GET  /health/detailed  # Full component status
+POST   /api/v1/consent                      # Grant recording consent
+DELETE /api/v1/consent                      # Revoke consent (creates revocation record)
+GET    /api/v1/consent/{patient_id}/check   # Check active consent
+GET    /api/v1/consent/{patient_id}/audit   # Full immutable audit trail
 ```
 
-### Consent Endpoints
-
-```
-POST   /api/v1/consent                    # Grant recording consent
-DELETE /api/v1/consent                    # Revoke consent
-GET    /api/v1/consent/{patient_id}/check # Check consent status
-GET    /api/v1/consent/{patient_id}/active # Get all active consents
-GET    /api/v1/consent/{patient_id}/audit  # Get consent audit log
-```
-
-### Session Endpoints
+### Sessions
 
 ```
 POST   /api/v1/sessions                       # Create session
-GET    /api/v1/sessions/{id}                  # Get session details
-PATCH  /api/v1/sessions/{id}                  # Update session
-GET    /api/v1/sessions                       # List sessions (cursor pagination)
-POST   /api/v1/sessions/{id}/recording        # Upload recording
-POST   /api/v1/sessions/{id}/transcribe       # Start transcription
+POST   /api/v1/sessions/{id}/recording        # Upload audio/video
+POST   /api/v1/sessions/{id}/transcribe       # Queue transcription job
 GET    /api/v1/sessions/{id}/transcript       # Get transcript
-GET    /api/v1/sessions/{id}/transcription-status # Check transcription status
+GET    /api/v1/sessions                       # List (cursor pagination)
 ```
 
-### Chat Endpoints
+### Chat
 
 ```
-POST   /api/v1/chat?patient_id=uuid     # Send message to RAG chatbot
-GET    /api/v1/chat/sessions-count      # Get indexed session count
-GET    /api/v1/chat/chunks-count        # Get indexed chunk count
-GET    /api/v1/chat/rate-limit          # Check rate limit status
-```
-
-### Example: List Sessions with Cursor Pagination
-
-```bash
-# First page
-curl "http://localhost:8000/api/v1/sessions?limit=10" \
-  -H "X-API-Key: your_key"
-
-# Response includes next_cursor for pagination
-{
-  "items": [...],
-  "next_cursor": "eyJzb3J0X3ZhbHVlIjoiMjAyNC...",
-  "has_more": true
-}
-
-# Next page
-curl "http://localhost:8000/api/v1/sessions?limit=10&cursor=eyJzb3J0X3ZhbHVlIjoiMjAyNC..." \
-  -H "X-API-Key: your_key"
+POST   /api/v1/chat?patient_id=uuid     # Send message → RAG response with citations
+GET    /api/v1/chat/rate-limit           # Check remaining quota (20/hr per patient)
+GET    /api/v1/chat/conversations        # List conversation threads
 ```
 
 ### Example: Chat Request
@@ -190,21 +146,17 @@ curl "http://localhost:8000/api/v1/sessions?limit=10&cursor=eyJzb3J0X3ZhbHVlIjoi
 curl -X POST "http://localhost:8000/api/v1/chat?patient_id=<uuid>" \
   -H "X-API-Key: your_key" \
   -H "Content-Type: application/json" \
-  -d '{
-    "message": "What did we discuss about managing anxiety?",
-    "top_k": 5
-  }'
+  -d '{"message": "What did we discuss about managing anxiety?", "top_k": 5}'
 ```
 
-Response:
 ```json
 {
-  "response": "In your session, you discussed several techniques for managing anxiety including breathing exercises and cognitive reframing...",
-  "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "response": "In your session, you discussed several techniques for managing anxiety...",
+  "conversation_id": "550e8400-...",
   "sources": [
     {
-      "session_id": "550e8400-e29b-41d4-a716-446655440001",
-      "chunk_id": "550e8400-e29b-41d4-a716-446655440002",
+      "session_id": "...",
+      "chunk_id": "...",
       "content_preview": "Patient discussed feeling anxious about...",
       "relevance_score": 0.89,
       "start_time": 120.5,
@@ -214,83 +166,56 @@ Response:
 }
 ```
 
-### Rate Limiting
-
-The chat endpoint is rate-limited to 20 messages per hour per patient. When exceeded, you'll receive a 429 response with `retry_after` indicating seconds until reset.
-
-## Tech Stack
-
-- **Python 3.12+** / FastAPI
-- **PostgreSQL 16** with pgvector extension
-- **Redis 7** + RQ for job queues and rate limiting
-- **MinIO** for S3-compatible object storage
-- **Deepgram** for transcription with speaker diarization
-- **OpenAI** for text embeddings (text-embedding-3-small)
-- **Claude** (claude-sonnet-4) for RAG chat responses
-
 ## Project Structure
 
 ```
 src/
-├── api/v1/          # FastAPI endpoints
-│   └── endpoints/   # Consent, Sessions, Chat
-├── core/            # Config, database, exceptions, logging, health
-│   ├── pagination.py    # Cursor-based pagination utilities
-│   └── tenant.py        # Row-level security (TenantContext)
+├── api/v1/endpoints/     # Consent, Sessions, Chat, Users, Organizations
+├── core/                 # Config, database, security, tenant isolation, pagination
 ├── models/
-│   ├── db/          # SQLAlchemy models
-│   └── domain/      # Pydantic schemas
-├── repositories/    # Database access layer
-├── services/        # Business logic
-│   ├── chat_service.py
-│   ├── claude_client.py
-│   ├── deepgram_client.py
-│   ├── embedding_client.py
-│   ├── embedding_service.py
-│   ├── rate_limiter.py
+│   ├── db/               # SQLAlchemy ORM (12 models)
+│   └── domain/           # Pydantic DTOs (API contracts)
+├── repositories/         # Data access layer (10 repos, including vector search)
+├── services/             # Business logic (21 service modules)
+│   ├── chat_service.py       # RAG orchestration: embed → search → Claude
+│   ├── deepgram_client.py    # ASR with speaker diarization
+│   ├── embedding_service.py  # Chunking + OpenAI embeddings
+│   ├── claude_client.py      # LLM integration
+│   ├── safety/               # Guardrails, risk detection, audit
 │   └── ...
-└── workers/         # RQ background workers
+├── workers/              # RQ background job processors
+└── evaluation/           # RAG quality metrics
 
 tests/
-├── unit/            # 407 unit tests
-└── integration/     # Full pipeline tests
+├── unit/                 # 407 tests (all passing)
+└── integration/          # Full pipeline tests
+```
+
+## Validation
+
+```bash
+uv run ruff check src/ tests/    # Lint
+uv run mypy src/                 # Type check (strict mode)
+uv run pytest tests/unit -v      # 407 unit tests
+./scripts/e2e_test.sh            # Full E2E flow
 ```
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | required |
-| `REDIS_URL` | Redis connection string | required |
-| `MINIO_ENDPOINT` | MinIO server endpoint | required |
-| `MINIO_ACCESS_KEY` | MinIO access key | required |
-| `MINIO_SECRET_KEY` | MinIO secret key | required |
-| `DEEPGRAM_API_KEY` | Deepgram API key | required |
-| `OPENAI_API_KEY` | OpenAI API key | required |
-| `ANTHROPIC_API_KEY` | Anthropic API key | required |
-| `APP_ENV` | Environment (development/staging/production/test) | development |
-| `APP_LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) | INFO |
-| `CHAT_RATE_LIMIT_PER_HOUR` | Chat messages per hour per patient | 20 |
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL async connection string |
+| `REDIS_URL` | Redis for job queue + rate limiting |
+| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | S3-compatible storage |
+| `DEEPGRAM_API_KEY` | Transcription service |
+| `OPENAI_API_KEY` | Embedding generation |
+| `ANTHROPIC_API_KEY` | Claude chat responses |
+| `CHAT_RATE_LIMIT_PER_HOUR` | Per-patient chat limit (default: 20) |
+| `SAFETY_ENABLED` | Clinical AI guardrails (default: true) |
 
-## Security Features
+## Tech Stack
 
-### Row-Level Security (Multi-Tenant Isolation)
-
-All session queries are scoped to the authenticated organization via `TenantContext`:
-
-```python
-# Automatically validates user belongs to tenant's organization
-tenant = TenantContext(organization_id=auth.organization_id, db_session=session)
-await tenant.validate_session_access(session_id)
-```
-
-### Database Indexes
-
-Composite indexes optimize common query patterns:
-- `ix_sessions_patient_status` - Patient + status queries
-- `ix_sessions_therapist_status` - Therapist + status queries
-- `ix_sessions_patient_date` - Patient + date range queries
-- `ix_consents_patient_therapist_type_granted` - Consent lookups
+Python 3.12+ / FastAPI / PostgreSQL 16 + pgvector / Redis 7 + RQ / MinIO / Deepgram / OpenAI Embeddings / Claude / SQLAlchemy 2.0 (async) / Alembic / mypy (strict) / ruff / structlog
 
 ## License
 
