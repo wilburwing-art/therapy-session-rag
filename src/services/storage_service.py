@@ -1,6 +1,7 @@
 """Storage service for S3-compatible (MinIO) file storage."""
 
 import io
+import logging
 import uuid
 from datetime import timedelta
 
@@ -9,6 +10,8 @@ from minio.error import S3Error
 
 from src.core.config import Settings, get_settings
 from src.core.exceptions import AppError
+
+logger = logging.getLogger(__name__)
 
 
 class StorageError(AppError):
@@ -34,10 +37,27 @@ class StorageService:
         """
         self.settings = settings or get_settings()
         self._client: Minio | None = None
+        self._disabled = self.settings.minio_endpoint == "placeholder"
+        if self._disabled:
+            logger.warning("MinIO storage disabled (placeholder endpoint)")
+
+    def _require_client(self) -> Minio:
+        """Get the MinIO client, raising if storage is not configured."""
+        if self._disabled:
+            raise StorageError(
+                detail="Storage not configured (MinIO endpoint is placeholder)",
+                operation="init",
+            )
+        return self.client
 
     @property
     def client(self) -> Minio:
         """Get or create MinIO client (lazy initialization)."""
+        if self._disabled:
+            raise StorageError(
+                detail="Storage not configured (MinIO endpoint is placeholder)",
+                operation="init",
+            )
         if self._client is None:
             self._client = Minio(
                 endpoint=self.settings.minio_endpoint,

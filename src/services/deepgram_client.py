@@ -140,6 +140,10 @@ class DeepgramClient:
         Raises:
             DeepgramError: If transcription fails
         """
+        if self.settings.deepgram_api_key == "placeholder":
+            logger.warning("Using mock transcription (placeholder API key)")
+            return self._generate_mock_transcription()
+
         params = {
             "model": "nova-2",
             "language": language,
@@ -355,4 +359,78 @@ class DeepgramClient:
             language=detected_language,
             confidence=confidence,
             word_count=len(words),
+        )
+
+    def _generate_mock_transcription(self) -> TranscriptionResult:
+        """Generate a mock transcription result for demo mode."""
+        segments = [
+            Segment(
+                text="So, how have you been feeling since our last session?",
+                start_time=0.0,
+                end_time=3.5,
+                speaker="Speaker 0",
+                confidence=0.98,
+            ),
+            Segment(
+                text=(
+                    "Honestly, it's been a mixed week. I had a couple of good days "
+                    "where I felt more like myself, but then the anxiety crept back "
+                    "in around Wednesday."
+                ),
+                start_time=4.0,
+                end_time=12.0,
+                speaker="Speaker 1",
+                confidence=0.97,
+            ),
+            Segment(
+                text="Can you tell me more about what happened on Wednesday?",
+                start_time=12.5,
+                end_time=15.0,
+                speaker="Speaker 0",
+                confidence=0.98,
+            ),
+            Segment(
+                text=(
+                    "I had a presentation at work, and the night before I couldn't "
+                    "sleep at all. My mind kept racing about everything that could "
+                    "go wrong. I tried the breathing exercises we talked about, "
+                    "and they helped a little."
+                ),
+                start_time=15.5,
+                end_time=28.0,
+                speaker="Speaker 1",
+                confidence=0.96,
+            ),
+            Segment(
+                text=(
+                    "That's actually a significant step — recognizing the anxiety "
+                    "and using your coping tools in the moment. How did the "
+                    "presentation go?"
+                ),
+                start_time=28.5,
+                end_time=35.0,
+                speaker="Speaker 0",
+                confidence=0.97,
+            ),
+            Segment(
+                text=(
+                    "It went better than I expected. I stumbled a bit at the start, "
+                    "but once I got going, I felt more confident. My manager even "
+                    "said I did a good job afterward."
+                ),
+                start_time=35.5,
+                end_time=45.0,
+                speaker="Speaker 1",
+                confidence=0.97,
+            ),
+        ]
+
+        full_text = " ".join(s.text for s in segments)
+        return TranscriptionResult(
+            full_text=full_text,
+            segments=segments,
+            duration_seconds=45.0,
+            language="en",
+            confidence=0.97,
+            word_count=len(full_text.split()),
         )

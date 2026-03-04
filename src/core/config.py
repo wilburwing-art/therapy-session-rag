@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, RedisDsn
+from pydantic import Field, PostgresDsn, RedisDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,15 +31,15 @@ class Settings(BaseSettings):
 
     # MinIO (S3-compatible storage)
     minio_endpoint: str = Field(
-        default=...,
+        default="placeholder",
         description="MinIO server endpoint (host:port)",
     )
     minio_access_key: str = Field(
-        default=...,
+        default="placeholder",
         description="MinIO access key",
     )
     minio_secret_key: str = Field(
-        default=...,
+        default="placeholder",
         description="MinIO secret key",
     )
     minio_bucket: str = Field(
@@ -53,13 +53,13 @@ class Settings(BaseSettings):
 
     # Deepgram (Transcription)
     deepgram_api_key: str = Field(
-        default=...,
+        default="placeholder",
         description="Deepgram API key for transcription",
     )
 
     # OpenAI (Embeddings)
     openai_api_key: str = Field(
-        default=...,
+        default="placeholder",
         description="OpenAI API key for embeddings",
     )
     openai_embedding_model: str = Field(
@@ -69,13 +69,24 @@ class Settings(BaseSettings):
 
     # Anthropic (Claude Chat)
     anthropic_api_key: str = Field(
-        default=...,
+        default="placeholder",
         description="Anthropic API key for Claude",
     )
     anthropic_model: str = Field(
         default="claude-sonnet-4-20250514",
         description="Claude model to use for chat",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _rewrite_database_url(cls, values: dict) -> dict:  # type: ignore[type-arg]
+        """Rewrite postgresql:// to postgresql+asyncpg:// for Railway compatibility."""
+        url = values.get("database_url")
+        if isinstance(url, str) and url.startswith("postgresql://"):
+            values["database_url"] = url.replace(
+                "postgresql://", "postgresql+asyncpg://", 1
+            )
+        return values
 
     # Application
     app_env: Literal["development", "staging", "production", "test"] = Field(
