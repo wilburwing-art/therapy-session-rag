@@ -9,6 +9,7 @@ import type {
 } from "@/lib/types";
 import { AssessmentPanel } from "./AssessmentPanel";
 import { ConsentPanel } from "./ConsentPanel";
+import { DataRights } from "./DataRights";
 import { GenerateThemesButton } from "./GenerateThemesButton";
 import { MagicLinkButton } from "./MagicLinkButton";
 import { NewSessionButton } from "./NewSessionButton";
@@ -164,6 +165,10 @@ export default async function PatientDetailPage({
           </ul>
         )}
       </section>
+
+      {patient?.email && (
+        <DataRights patientId={id} patientEmail={patient.email} />
+      )}
     </div>
   );
 }

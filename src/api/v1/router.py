@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from src.api.v1.endpoints import (
+    admin,
     analytics,
     auth,
     billing,
@@ -24,6 +25,9 @@ router = APIRouter(prefix="/api/v1")
 # - /auth: sign up, log in, reset password (can't pay if you can't log in)
 # - /billing: manage or restore the subscription
 # - /organization, /users: account bookkeeping
+# - /admin: the operator panel must reach a suspended org, so it is
+#   intentionally not behind the entitlement gate
+router.include_router(admin.router, prefix="/admin", tags=["admin"])
 router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(billing.router, prefix="/billing", tags=["billing"])

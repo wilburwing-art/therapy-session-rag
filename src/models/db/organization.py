@@ -60,6 +60,10 @@ class Organization(Base, TimestampMixin):
         DateTime(timezone=True),
         nullable=True,
     )
+    disabled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     # Relationships
     users: Mapped[list["User"]] = relationship(
@@ -72,7 +76,13 @@ class Organization(Base, TimestampMixin):
     )
 
     def is_entitled(self) -> bool:
-        """Return True if the practice's subscription is in good standing."""
+        """Return True if the practice's subscription is in good standing.
+
+        An admin-disabled organization is never entitled, regardless of
+        subscription status.
+        """
+        if self.disabled_at is not None:
+            return False
         return self.subscription_status in {
             SubscriptionStatus.TRIALING,
             SubscriptionStatus.ACTIVE,

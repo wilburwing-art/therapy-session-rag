@@ -1,18 +1,21 @@
 """Therapist-facing patient endpoints.
 
-Patient themes and chatbot conversation review. These are distinct from
-/users/ which handles user CRUD; this router exposes clinical views
-that are only meaningful in the context of an authenticated therapist
-reviewing their patient.
+Patient themes and chatbot conversation review, plus HIPAA data-rights
+endpoints (export and hard delete). These are distinct from /users/
+which handles user CRUD; this router exposes clinical views that are
+only meaningful in the context of an authenticated therapist reviewing
+their patient.
 """
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import Auth, Events
 from src.core.database import DbSession
+from src.core.exceptions import ValidationError
 from src.models.db.event import EventCategory
 from src.models.domain.assessment import (
     AssessmentCreate,
@@ -22,7 +25,9 @@ from src.models.domain.assessment import (
 from src.models.domain.chat import ConversationRead, ConversationSummary
 from src.models.domain.patient_themes import PatientThemesRead
 from src.services.assessment_service import AssessmentService
+from src.services.auth_service import AuthService
 from src.services.conversation_service import ConversationService
+from src.services.data_export_service import DataExportService
 from src.services.themes_service import ThemesService
 
 router = APIRouter()
@@ -40,9 +45,34 @@ def get_assessment_service(session: DbSession) -> AssessmentService:
     return AssessmentService(session)
 
 
+def get_data_export_service(session: DbSession) -> DataExportService:
+    return DataExportService(session)
+
+
+def get_auth_service(session: DbSession) -> AuthService:
+    return AuthService(session)
+
+
 ThemesSvc = Annotated[ThemesService, Depends(get_themes_service)]
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
 AssessmentSvc = Annotated[AssessmentService, Depends(get_assessment_service)]
+DataExportSvc = Annotated[DataExportService, Depends(get_data_export_service)]
+AuthSvc = Annotated[AuthService, Depends(get_auth_service)]
+
+
+class PatientDeleteConfirm(BaseModel):
+    """Body for DELETE /patients/{id} — confirms the patient's email to
+    guard against fat-fingering the wrong patient id."""
+
+    confirm_email: str = Field(..., min_length=3, max_length=255)
+
+
+class PatientDeleteResponse(BaseModel):
+    patient_id: str
+    session_count_deleted: int
+    transcript_count_deleted: int
+    conversation_count_deleted: int
+    deleted_at: str
 
 
 @router.get(
@@ -194,3 +224,62 @@ async def list_patient_assessments(
         instrument=instrument,
         limit=limit,
     )
+
+
+@router.get("/{patient_id}/export")
+async def export_patient_data(
+    patient_id: uuid.UUID,
+    service: DataExportSvc,
+    auth: Auth,
+    events: Events,
+) -> dict[str, Any]:
+    """HIPAA right-to-access: return every piece of patient data as JSON.
+
+    Scoped to the authenticated therapist's organization. Publishes a
+    ``patient.data_exported`` event so the export is discoverable in the
+    audit log.
+    """
+    bundle = await service.export_patient(
+        patient_id=patient_id,
+        org_id=auth.organization_id,
+    )
+    await events.publish(
+        event_name="patient.data_exported",
+        category=EventCategory.SYSTEM,
+        organization_id=auth.organization_id,
+        actor_id=auth.api_key_id,
+        properties={
+            "patient_id": str(patient_id),
+            "session_count": len(bundle.get("sessions", [])),
+            "conversation_count": len(bundle.get("conversations", [])),
+        },
+    )
+    return bundle
+
+
+@router.delete("/{patient_id}", response_model=PatientDeleteResponse)
+async def delete_patient_data(
+    patient_id: uuid.UUID,
+    payload: PatientDeleteConfirm,
+    service: DataExportSvc,
+    auth_service: AuthSvc,
+    auth: Auth,
+) -> PatientDeleteResponse:
+    """HIPAA right-to-deletion: hard-delete a patient and cascade data.
+
+    Requires a confirmation body echoing the patient's email so the
+    therapist can't fat-finger the wrong id. The service writes a
+    tombstone analytics event before cascading the delete.
+    """
+    patient = await auth_service.get_user_by_id(patient_id)
+    if patient.email.strip().lower() != payload.confirm_email.strip().lower():
+        raise ValidationError(
+            detail="confirm_email does not match the patient's email address",
+        )
+
+    summary = await service.delete_patient(
+        patient_id=patient_id,
+        org_id=auth.organization_id,
+        therapist_id=auth.api_key_id,
+    )
+    return PatientDeleteResponse(**summary)
