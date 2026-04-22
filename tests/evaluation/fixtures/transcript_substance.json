@@ -1,0 +1,42 @@
+{
+  "disclaimer": "FIXTURE_ID=transcript_substance. This transcript is fictional. All content synthesized for evaluation purposes only and does not represent any real clinical encounter or patient.",
+  "topic_label": "alcohol use and moderation",
+  "full_text": "Patient has been drinking four to five glasses of wine most weeknights and is ambivalent about cutting back. Session used motivational interviewing framing to explore the ambivalence rather than push change. Therapist proposed tracking drinks daily and one alcohol-free night as an experiment.",
+  "segments": [
+    {"text": "I'm drinking more than I want to be. Four or five glasses of wine most nights. I'm not hiding it from my wife but I'm hiding how much from myself.", "start_time": 0.0, "end_time": 9.4, "speaker": "Speaker 0"},
+    {"text": "Thank you for naming that. It's a hard thing to say out loud. What brought it into focus this week?", "start_time": 9.7, "end_time": 15.8, "speaker": "Speaker 1"},
+    {"text": "My watch flagged my liver enzymes in last month's bloodwork. Mildly elevated. My doctor said to cut back.", "start_time": 16.1, "end_time": 23.6, "speaker": "Speaker 0"},
+    {"text": "So there's a medical nudge, and there's your own internal sense that it's more than you want. Where are you with it, honestly?", "start_time": 23.9, "end_time": 30.8, "speaker": "Speaker 1"},
+    {"text": "Honestly? Ambivalent. I don't want to drink this much. And I also really like the feeling of the first glass at six and I don't want to give that up.", "start_time": 31.1, "end_time": 41.4, "speaker": "Speaker 0"},
+    {"text": "That ambivalence is actually where change work starts. Let's not rush past it. What does the first glass at six do for you?", "start_time": 41.7, "end_time": 49.8, "speaker": "Speaker 1"},
+    {"text": "It marks the end of the work day. It's a ritual. It signals that I'm off duty.", "start_time": 50.1, "end_time": 55.6, "speaker": "Speaker 0"},
+    {"text": "A transition ritual. That's a real function and a legitimate need. So any change plan has to preserve that function or the plan collapses.", "start_time": 55.9, "end_time": 65.8, "speaker": "Speaker 1"},
+    {"text": "I hadn't thought about it like that.", "start_time": 66.1, "end_time": 68.4, "speaker": "Speaker 0"},
+    {"text": "In motivational interviewing we talk about change talk — the patient saying the reasons for change in their own voice. Can you say the reasons you'd want to cut back, without me pushing you there?", "start_time": 68.7, "end_time": 82.0, "speaker": "Speaker 1"},
+    {"text": "My liver. My sleep is worse. I'm foggy until ten in the morning. I don't like the example I'm setting for my kids. I don't like that I can't take one weeknight off if I tried.", "start_time": 82.3, "end_time": 96.4, "speaker": "Speaker 0"},
+    {"text": "That's a full, clear list in your own words. I'm not going to add to it.", "start_time": 96.7, "end_time": 101.2, "speaker": "Speaker 1"},
+    {"text": "Okay. So what do I do?", "start_time": 101.5, "end_time": 103.8, "speaker": "Speaker 0"},
+    {"text": "Two small experiments this week, if you're willing. One: track every drink in a simple log. No judgment, no goal, just data. Two: pick one weeknight and make it alcohol-free — and notice what comes up.", "start_time": 104.1, "end_time": 119.2, "speaker": "Speaker 1"},
+    {"text": "Track drinks and one alcohol-free night. That's manageable. Probably Tuesday.", "start_time": 119.5, "end_time": 124.4, "speaker": "Speaker 0"},
+    {"text": "Good. The point of the alcohol-free night isn't to demonstrate control — it's to notice what the transition feels like without the glass, so we know what we're replacing.", "start_time": 124.7, "end_time": 137.0, "speaker": "Speaker 1"},
+    {"text": "Right. Data, not willpower.", "start_time": 137.3, "end_time": 139.8, "speaker": "Speaker 0"},
+    {"text": "Exactly. We'll use next session to look at the log and the Tuesday debrief together.", "start_time": 140.1, "end_time": 146.2, "speaker": "Speaker 1"},
+    {"text": "Thanks. This didn't feel like I was being lectured, which I appreciate.", "start_time": 146.5, "end_time": 150.8, "speaker": "Speaker 0"},
+    {"text": "You don't need a lecture. You already know the terrain.", "start_time": 151.1, "end_time": 154.4, "speaker": "Speaker 1"}
+  ],
+  "expected_recap": {
+    "key_topics_any_of": ["alcohol", "drinking", "substance", "moderation"],
+    "emotional_tone_contains_any": ["ambivalent", "reflective", "conflicted"],
+    "expected_risk_flags": false
+  },
+  "test_queries": [
+    {
+      "query": "What homework did we agree on around drinking?",
+      "expected_chunk_substring_any": ["track every drink", "alcohol-free night", "Tuesday", "log"]
+    },
+    {
+      "query": "What does the first glass of wine do for me according to what I said?",
+      "expected_chunk_substring_any": ["transition ritual", "end of the work day", "off duty", "signals"]
+    }
+  ]
+}

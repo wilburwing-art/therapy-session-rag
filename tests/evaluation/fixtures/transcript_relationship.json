@@ -1,0 +1,42 @@
+{
+  "disclaimer": "FIXTURE_ID=transcript_relationship. This transcript is fictional. All content synthesized for evaluation purposes only and does not represent any real clinical encounter or patient.",
+  "topic_label": "relationship conflict",
+  "full_text": "Patient discussed ongoing conflict with their partner over household labor and emotional availability. Therapist introduced an 'I-statement' framework and proposed a weekly 20-minute check-in ritual. Patient agreed to draft one I-statement before the next conversation and propose the check-in to their partner.",
+  "segments": [
+    {"text": "We had another fight on Sunday. Same one we always have — the dishes, or really, everything the dishes represent.", "start_time": 0.0, "end_time": 6.8, "speaker": "Speaker 0"},
+    {"text": "Same one you always have. What do the dishes represent for you?", "start_time": 7.1, "end_time": 11.2, "speaker": "Speaker 1"},
+    {"text": "That I'm doing the emotional labor of the household while he's doing his job and checking out at five. The dishes are a stand-in.", "start_time": 11.5, "end_time": 19.8, "speaker": "Speaker 0"},
+    {"text": "That's a pretty specific theme — uneven emotional labor. Have you named that with him in those words?", "start_time": 20.1, "end_time": 26.4, "speaker": "Speaker 1"},
+    {"text": "No. I accuse him of being lazy about the dishes and we go around on that for an hour.", "start_time": 26.7, "end_time": 32.0, "speaker": "Speaker 0"},
+    {"text": "Okay. So the dishes become the surface — and neither of you ever gets to the thing underneath.", "start_time": 32.3, "end_time": 38.2, "speaker": "Speaker 1"},
+    {"text": "Yeah. He gets defensive, I get shrill, we disengage. Classic.", "start_time": 38.5, "end_time": 42.8, "speaker": "Speaker 0"},
+    {"text": "I want to introduce a tool. It's called an I-statement. The structure is: when X happens, I feel Y, because Z. It sounds formulaic but it consistently de-escalates conflict by moving from blame to experience.", "start_time": 43.1, "end_time": 57.4, "speaker": "Speaker 1"},
+    {"text": "So instead of 'you never do the dishes,' it's like 'when the dishes sit for three days, I feel unseen, because it signals to me that the household isn't a shared project.'", "start_time": 57.7, "end_time": 68.2, "speaker": "Speaker 0"},
+    {"text": "Exactly. That's a really good one on the first try. Notice how it actually says what you need instead of attacking him.", "start_time": 68.5, "end_time": 75.4, "speaker": "Speaker 1"},
+    {"text": "He still won't like it, but at least it's more accurate.", "start_time": 75.7, "end_time": 79.6, "speaker": "Speaker 0"},
+    {"text": "The other thing I want to suggest is a weekly check-in ritual. Twenty minutes, on a set night. Not during conflict — the point is preventive.", "start_time": 79.9, "end_time": 89.2, "speaker": "Speaker 1"},
+    {"text": "Like scheduled relationship maintenance?", "start_time": 89.5, "end_time": 91.8, "speaker": "Speaker 0"},
+    {"text": "Yes. Structured: each person shares one appreciation, one irritation framed as an I-statement, one request. Twenty minutes, no interrupting.", "start_time": 92.1, "end_time": 102.0, "speaker": "Speaker 1"},
+    {"text": "Weekly check-in, twenty minutes, appreciation plus I-statement irritation plus request. Okay.", "start_time": 102.3, "end_time": 108.4, "speaker": "Speaker 0"},
+    {"text": "Would you be willing to draft one I-statement about the dishes before your next conversation, and also propose the check-in to him?", "start_time": 108.7, "end_time": 116.6, "speaker": "Speaker 1"},
+    {"text": "Yeah. I'll draft one this week. The check-in I'll pitch to him Friday.", "start_time": 116.9, "end_time": 121.8, "speaker": "Speaker 0"},
+    {"text": "Great. Let's also flag for follow-up — you mentioned he checks out at five. We should come back to what his inner experience might be, rather than just yours.", "start_time": 122.1, "end_time": 133.0, "speaker": "Speaker 1"},
+    {"text": "Fair. I've been pretty one-sided in how I frame him.", "start_time": 133.3, "end_time": 137.2, "speaker": "Speaker 0"},
+    {"text": "That's useful awareness. We'll revisit that.", "start_time": 137.5, "end_time": 140.0, "speaker": "Speaker 1"}
+  ],
+  "expected_recap": {
+    "key_topics_any_of": ["relationship", "conflict", "communication", "partner"],
+    "emotional_tone_contains_any": ["frustrated", "resentful", "tense", "hurt"],
+    "expected_risk_flags": false
+  },
+  "test_queries": [
+    {
+      "query": "What communication tool did we learn for fights with my partner?",
+      "expected_chunk_substring_any": ["I-statement", "when X happens, I feel", "de-escalates"]
+    },
+    {
+      "query": "What weekly ritual did the therapist suggest?",
+      "expected_chunk_substring_any": ["weekly check-in", "twenty minutes", "appreciation", "request"]
+    }
+  ]
+}

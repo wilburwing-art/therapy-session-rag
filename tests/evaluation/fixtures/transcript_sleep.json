@@ -1,0 +1,42 @@
+{
+  "disclaimer": "FIXTURE_ID=transcript_sleep. This transcript is fictional. All content synthesized for evaluation purposes only and does not represent any real clinical encounter or patient.",
+  "topic_label": "sleep and insomnia",
+  "full_text": "Patient reported persistent insomnia over the past six weeks with difficulty falling asleep and frequent middle-of-night waking. Therapist introduced sleep hygiene guidelines including consistent wake times and a screen curfew, plus a brief CBT-I stimulus control framing. Patient agreed to track sleep for the week and implement a 10pm screen curfew.",
+  "segments": [
+    {"text": "I haven't slept properly in six weeks. It takes me an hour to fall asleep and then I'm wide awake at two or three.", "start_time": 0.0, "end_time": 7.2, "speaker": "Speaker 0"},
+    {"text": "Six weeks is long enough that we should treat it seriously. What does your typical evening look like right now?", "start_time": 7.5, "end_time": 12.8, "speaker": "Speaker 1"},
+    {"text": "I work until maybe ten, watch TV in bed for another hour, scroll my phone when I can't sleep. Sometimes I just give up and work more.", "start_time": 13.1, "end_time": 21.4, "speaker": "Speaker 0"},
+    {"text": "Okay. Let's talk about sleep hygiene first — it sounds basic but the evidence is really strong. The two biggest levers are consistent wake time and a screen curfew.", "start_time": 21.7, "end_time": 30.8, "speaker": "Speaker 1"},
+    {"text": "Consistent wake time even on weekends?", "start_time": 31.1, "end_time": 33.6, "speaker": "Speaker 0"},
+    {"text": "Yes. Especially on weekends. Within thirty minutes of the same time every day anchors your circadian rhythm.", "start_time": 33.9, "end_time": 40.8, "speaker": "Speaker 1"},
+    {"text": "That's going to be hard. I sleep in on Saturdays.", "start_time": 41.1, "end_time": 44.0, "speaker": "Speaker 0"},
+    {"text": "I know. And the screen curfew — ideally ninety minutes before bed, no screens. Tonight we can aim for a 10pm curfew and see how that lands.", "start_time": 44.3, "end_time": 53.0, "speaker": "Speaker 1"},
+    {"text": "10pm screen curfew. Okay. What do I do instead?", "start_time": 53.3, "end_time": 56.2, "speaker": "Speaker 0"},
+    {"text": "Read a physical book. Take a warm shower. Low lights. The goal is signaling to your nervous system that sleep is coming.", "start_time": 56.5, "end_time": 64.6, "speaker": "Speaker 1"},
+    {"text": "And for the middle-of-night waking?", "start_time": 64.9, "end_time": 67.4, "speaker": "Speaker 0"},
+    {"text": "This is from CBT-I, cognitive behavioral therapy for insomnia. The rule is: if you're awake for more than twenty minutes, get out of bed. Go to another room. Read something boring in dim light. Only return to bed when sleepy.", "start_time": 67.7, "end_time": 81.2, "speaker": "Speaker 1"},
+    {"text": "Get out of bed? That feels counterintuitive.", "start_time": 81.5, "end_time": 84.0, "speaker": "Speaker 0"},
+    {"text": "It is. But staying in bed awake teaches your brain that bed is a place for wakefulness. This is called stimulus control — we want bed to mean only sleep.", "start_time": 84.3, "end_time": 95.0, "speaker": "Speaker 1"},
+    {"text": "Huh. Okay. Stimulus control. I'll try the twenty-minute rule.", "start_time": 95.3, "end_time": 98.8, "speaker": "Speaker 0"},
+    {"text": "Would you be willing to track your sleep for the week? Just a quick log of bedtime, wake time, and any middle-of-night waking?", "start_time": 99.1, "end_time": 107.0, "speaker": "Speaker 1"},
+    {"text": "Yeah, I can do a sleep log. I have an app for that already.", "start_time": 107.3, "end_time": 111.2, "speaker": "Speaker 0"},
+    {"text": "Perfect. So this week: consistent wake time, 10pm screen curfew, twenty-minute rule, sleep log. That's a lot, but they're all one-dial changes.", "start_time": 111.5, "end_time": 122.0, "speaker": "Speaker 1"},
+    {"text": "Noted. And if it's not helping after a week?", "start_time": 122.3, "end_time": 125.4, "speaker": "Speaker 0"},
+    {"text": "Then we revisit. We might look at whether anxiety is driving the waking, which is a different conversation.", "start_time": 125.7, "end_time": 132.6, "speaker": "Speaker 1"}
+  ],
+  "expected_recap": {
+    "key_topics_any_of": ["sleep", "insomnia", "sleep hygiene"],
+    "emotional_tone_contains_any": ["exhausted", "tired", "frustrated", "fatigued"],
+    "expected_risk_flags": false
+  },
+  "test_queries": [
+    {
+      "query": "What sleep hygiene rules did we set up?",
+      "expected_chunk_substring_any": ["screen curfew", "10pm", "consistent wake time", "sleep hygiene"]
+    },
+    {
+      "query": "What do I do when I can't sleep in the middle of the night?",
+      "expected_chunk_substring_any": ["twenty minutes", "out of bed", "stimulus control", "CBT-I"]
+    }
+  ]
+}
