@@ -52,6 +52,7 @@ dependencies = [
     "resend>=2.29.0",
     "sentry-sdk[fastapi]>=2.58.0",
     "pyotp>=2.9.0",
+    "reportlab>=4.4.10",
 ]
 
 [project.optional-dependencies]
@@ -81,6 +82,7 @@ analytics = [
 
 [project.scripts]
 therapyrag = "src.main:run"
+therapyrag-admin = "src.cli.admin:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -149,6 +151,11 @@ module = [
 ]
 ignore_missing_imports = true
 follow_untyped_imports = true
+
+[[tool.mypy.overrides]]
+module = ["reportlab.*"]
+ignore_missing_imports = true
+follow_untyped_imports = false
 
 [tool.coverage.run]
 source = ["src"]

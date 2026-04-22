@@ -10,6 +10,8 @@ import type {
 import { AssessmentPanel } from "./AssessmentPanel";
 import { ConsentPanel } from "./ConsentPanel";
 import { DataRights } from "./DataRights";
+import { DownloadRecordButton } from "./DownloadRecordButton";
+import { DownloadThemesButton } from "./DownloadThemesButton";
 import { GenerateThemesButton } from "./GenerateThemesButton";
 import { MagicLinkButton } from "./MagicLinkButton";
 import { NewSessionButton } from "./NewSessionButton";
@@ -83,7 +85,10 @@ export default async function PatientDetailPage({
       <section>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Themes across sessions</h2>
-          <GenerateThemesButton patientId={id} hasExisting={!!themes} />
+          <div className="flex items-start gap-3">
+            {themes && <DownloadThemesButton patientId={id} />}
+            <GenerateThemesButton patientId={id} hasExisting={!!themes} />
+          </div>
         </div>
         {themes ? (
           <ThemesView themes={themes} />
@@ -164,6 +169,17 @@ export default async function PatientDetailPage({
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="text-lg font-semibold">Documents</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Generate a styled PDF for the chart, a records request, or a
+          referral.
+        </p>
+        <div className="mt-4">
+          <DownloadRecordButton patientId={id} />
+        </div>
       </section>
 
       {patient?.email && (

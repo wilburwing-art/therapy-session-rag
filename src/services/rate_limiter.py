@@ -409,3 +409,34 @@ class AuthRateLimiter:
             identifier=email_key,
             max_requests=self.PASSWORD_RESET_EMAIL_MAX,
         )
+
+    async def check(
+        self,
+        ip: str,
+        scope: str,
+        limit: int,
+        window: int,
+    ) -> None:
+        """Generic per-IP counter for any scope + window.
+
+        Useful for bolting a coarse rate limit onto a non-auth endpoint
+        (e.g. admin panel routes) without threading a new limiter type
+        through the service. Lazily constructs a ``RateLimiter`` with
+        the given window — one per scope — so multiple callers with
+        different windows don't clobber each other.
+        """
+        if not hasattr(self, "_scoped_limiters"):
+            self._scoped_limiters: dict[tuple[str, int], RateLimiter] = {}
+        cache_key = (scope, window)
+        limiter = self._scoped_limiters.get(cache_key)
+        if limiter is None:
+            limiter = RateLimiter(
+                settings=self.settings,
+                window_seconds=window,
+            )
+            self._scoped_limiters[cache_key] = limiter
+        await limiter.check_and_increment(
+            key_type=scope,
+            identifier=ip,
+            max_requests=limit,
+        )

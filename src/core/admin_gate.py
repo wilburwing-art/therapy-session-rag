@@ -15,15 +15,16 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Cookie, Depends, Header
+from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.auth import AuthError, decode_access_token
 from src.core.config import Settings, get_settings
 from src.core.database import get_db_session
-from src.core.exceptions import ForbiddenError, UnauthorizedError
+from src.core.exceptions import ForbiddenError, RateLimitError, UnauthorizedError
 from src.models.db.user import User, UserRole
+from src.services.rate_limiter import AuthRateLimiter, RateLimitExceeded
 
 
 async def require_admin(
@@ -63,3 +64,47 @@ async def require_admin(
     if user.role != UserRole.ADMIN:
         raise ForbiddenError("Admin privileges required")
     return user
+
+
+# 60 requests per minute per IP across the entire admin panel. Enough
+# for the heaviest dashboard refresh (org list + detail + audit page in
+# one tick), tight enough to catch someone scripting the admin API.
+ADMIN_RATE_LIMIT_MAX_REQUESTS = 60
+ADMIN_RATE_LIMIT_WINDOW_SECONDS = 60
+
+
+def _admin_rate_limit_ip(request: Request) -> str:
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def _get_admin_rate_limiter() -> AuthRateLimiter:
+    """Factory dep so FastAPI doesn't introspect ``AuthRateLimiter.__init__``.
+
+    Using ``Depends(AuthRateLimiter)`` forces FastAPI to build a Pydantic
+    field for the ``redis_client: Redis | None`` init param, which it
+    can't serialize. A plain factory sidesteps that.
+    """
+    return AuthRateLimiter()
+
+
+async def require_admin_rate_limit(
+    request: Request,
+    rate_limiter: AuthRateLimiter = Depends(_get_admin_rate_limiter),
+) -> None:
+    """Coarse per-IP rate limit applied to every /admin/* route.
+
+    Uses the shared ``AuthRateLimiter``'s generic scope API so the counter
+    lives in Redis alongside the other auth buckets. The dep is attached
+    at the admin include-router level in ``src.api.v1.router``.
+    """
+    try:
+        await rate_limiter.check(
+            ip=_admin_rate_limit_ip(request),
+            scope="admin_panel_ip",
+            limit=ADMIN_RATE_LIMIT_MAX_REQUESTS,
+            window=ADMIN_RATE_LIMIT_WINDOW_SECONDS,
+        )
+    except RateLimitExceeded as exc:
+        raise RateLimitError(detail=str(exc), retry_after=exc.reset_time) from exc

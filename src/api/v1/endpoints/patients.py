@@ -7,13 +7,16 @@ only meaningful in the context of an authenticated therapist reviewing
 their patient.
 """
 
+import io
 import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import Auth, Events
+from src.core.data_access_audit import log_data_access
 from src.core.database import DbSession
 from src.core.exceptions import ValidationError
 from src.models.db.event import EventCategory
@@ -28,6 +31,7 @@ from src.services.assessment_service import AssessmentService
 from src.services.auth_service import AuthService
 from src.services.conversation_service import ConversationService
 from src.services.data_export_service import DataExportService
+from src.services.pdf_service import PdfService
 from src.services.themes_service import ThemesService
 
 router = APIRouter()
@@ -53,11 +57,16 @@ def get_auth_service(session: DbSession) -> AuthService:
     return AuthService(session)
 
 
+def get_pdf_service(session: DbSession) -> PdfService:
+    return PdfService(session)
+
+
 ThemesSvc = Annotated[ThemesService, Depends(get_themes_service)]
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
 AssessmentSvc = Annotated[AssessmentService, Depends(get_assessment_service)]
 DataExportSvc = Annotated[DataExportService, Depends(get_data_export_service)]
 AuthSvc = Annotated[AuthService, Depends(get_auth_service)]
+PdfSvc = Annotated[PdfService, Depends(get_pdf_service)]
 
 
 class PatientDeleteConfirm(BaseModel):
@@ -82,13 +91,26 @@ class PatientDeleteResponse(BaseModel):
 async def get_patient_themes(
     patient_id: uuid.UUID,
     service: ThemesSvc,
+    auth: Auth,
+    events: Events,
 ) -> PatientThemesRead:
     """Get the most recent synthesized theme document for a patient.
 
     Returns 404 if themes haven't been generated yet. Use POST to
     generate or refresh.
     """
-    return await service.get_themes(patient_id)
+    themes = await service.get_themes(patient_id)
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="patient",
+        event_name="patient.themes_viewed",
+        properties={"patient_id": str(patient_id)},
+    )
+
+    return themes
 
 
 @router.post(
@@ -129,6 +151,7 @@ async def list_patient_conversations(
     patient_id: uuid.UUID,
     service: ConversationSvc,
     auth: Auth,
+    events: Events,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[ConversationSummary]:
@@ -137,12 +160,26 @@ async def list_patient_conversations(
     Returns conversation summaries (no message bodies) sorted by most
     recently updated. Scoped to the authenticated therapist's org.
     """
-    return await service.list_for_therapist(
+    conversations = await service.list_for_therapist(
         patient_id=patient_id,
         organization_id=auth.organization_id,
         limit=limit,
         offset=offset,
     )
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="patient",
+        event_name="patient.conversations_viewed",
+        properties={
+            "patient_id": str(patient_id),
+            "result_count": len(conversations),
+        },
+    )
+
+    return conversations
 
 
 @router.get(
@@ -150,10 +187,11 @@ async def list_patient_conversations(
     response_model=ConversationRead,
 )
 async def get_patient_conversation(
-    patient_id: uuid.UUID,  # noqa: ARG001  # path param; access control via org_id
+    patient_id: uuid.UUID,  # path param, used for audit tagging only
     conversation_id: uuid.UUID,
     service: ConversationSvc,
     auth: Auth,
+    events: Events,
 ) -> ConversationRead:
     """Get a single conversation with all messages, for therapist review.
 
@@ -161,10 +199,24 @@ async def get_patient_conversation(
     the authenticated therapist's org. The patient_id in the path is
     informational only — access control is via organization_id.
     """
-    return await service.get_for_therapist(
+    conversation = await service.get_for_therapist(
         conversation_id=conversation_id,
         organization_id=auth.organization_id,
     )
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="patient",
+        event_name="patient.conversation_viewed",
+        properties={
+            "patient_id": str(patient_id),
+            "conversation_id": str(conversation_id),
+        },
+    )
+
+    return conversation
 
 
 @router.post(
@@ -212,6 +264,8 @@ async def record_patient_assessment(
 async def list_patient_assessments(
     patient_id: uuid.UUID,
     service: AssessmentSvc,
+    auth: Auth,
+    events: Events,
     instrument: Annotated[
         AssessmentInstrument | None,
         Query(description="Filter by instrument"),
@@ -219,11 +273,26 @@ async def list_patient_assessments(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[AssessmentRead]:
     """List a patient's assessments, newest first."""
-    return await service.list_for_patient(
+    assessments = await service.list_for_patient(
         patient_id=patient_id,
         instrument=instrument,
         limit=limit,
     )
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="patient",
+        event_name="patient.assessments_viewed",
+        properties={
+            "patient_id": str(patient_id),
+            "instrument": instrument.value if instrument else None,
+            "result_count": len(assessments),
+        },
+    )
+
+    return assessments
 
 
 @router.get("/{patient_id}/export")
@@ -283,3 +352,62 @@ async def delete_patient_data(
         therapist_id=auth.api_key_id,
     )
     return PatientDeleteResponse(**summary)
+
+
+@router.get(
+    "/{patient_id}/record.pdf",
+    responses={
+        200: {"content": {"application/pdf": {}}},
+        404: {"description": "Patient not found"},
+    },
+)
+async def download_patient_record_pdf(
+    patient_id: uuid.UUID,
+    pdf_service: PdfSvc,
+    auth: Auth,
+) -> StreamingResponse:
+    """Download a multi-page PDF of the patient's full record.
+
+    Includes a cover page, per-session recaps, cross-session themes, and
+    an assessment trend table. 404 if the patient does not exist. 403
+    if the patient belongs to another organization.
+    """
+    pdf_bytes = await pdf_service.render_patient_record_pdf(
+        patient_id=patient_id,
+        organization_id=auth.organization_id,
+    )
+    filename = f"patient-{patient_id}-record.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/{patient_id}/themes.pdf",
+    responses={
+        200: {"content": {"application/pdf": {}}},
+        404: {"description": "Patient or themes not found"},
+    },
+)
+async def download_patient_themes_pdf(
+    patient_id: uuid.UUID,
+    pdf_service: PdfSvc,
+    auth: Auth,
+) -> StreamingResponse:
+    """Download a PDF of the patient's cross-session themes document.
+
+    404 if the patient doesn't exist or if no themes have been synthesized
+    yet. 403 if the patient belongs to another organization.
+    """
+    pdf_bytes = await pdf_service.render_themes_pdf(
+        patient_id=patient_id,
+        organization_id=auth.organization_id,
+    )
+    filename = f"patient-{patient_id}-themes.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

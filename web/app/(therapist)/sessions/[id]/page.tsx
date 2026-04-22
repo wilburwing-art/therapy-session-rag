@@ -6,6 +6,7 @@ import type {
   SessionRecap,
   TranscriptSegment,
 } from "@/lib/types";
+import { DownloadRecapButton } from "./DownloadRecapButton";
 import { NotesEditor } from "./NotesEditor";
 import { RecapActions } from "./RecapActions";
 
@@ -52,7 +53,10 @@ export default async function SessionDetailPage({
       <section className="prose-surface">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Recap</h2>
-          <RecapActions sessionId={id} hasExisting={!!recap} />
+          <div className="flex items-start gap-3">
+            <DownloadRecapButton sessionId={id} />
+            <RecapActions sessionId={id} hasExisting={!!recap} />
+          </div>
         </div>
         {recap ? (
           <div className="mt-4 space-y-4">

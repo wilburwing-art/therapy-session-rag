@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 
-from src.api.v1.dependencies import CurrentPatient, CurrentTherapist
+from src.api.v1.dependencies import CurrentPatient, CurrentTherapist, Events
 from src.core.config import Settings, get_settings
 from src.core.csrf import (
     clear_csrf_cookie,
@@ -14,6 +14,7 @@ from src.core.csrf import (
 )
 from src.core.database import DbSession
 from src.core.exceptions import RateLimitError
+from src.models.db.event import EventCategory
 from src.models.domain.auth import (
     Challenge2FARequest,
     CurrentUser,
@@ -121,6 +122,7 @@ async def login(
     auth_service: AuthSvc,
     rate_limiter: AuthLimiter,
     settings: SettingsDep,
+    events: Events,
 ) -> LoginResponse | LoginChallengeResponse:
     """Authenticate a therapist and either set a JWT session cookie or
     start a 2FA challenge.
@@ -147,6 +149,20 @@ async def login(
         )
 
     _set_session_cookie(response, token, settings)
+
+    # Stamp the successful login. The access-review CLI looks for the
+    # most recent instance of this event per user to compute last-login.
+    await events.publish(
+        event_name="auth.login_succeeded",
+        category=EventCategory.USER_ACTION,
+        organization_id=user.organization_id,
+        actor_id=user.id,
+        properties={
+            "role": user.role.value,
+            "ip": _client_ip(request),
+        },
+    )
+
     return LoginResponse(
         user_id=user.id,
         organization_id=user.organization_id,
@@ -159,9 +175,11 @@ async def login(
 @router.post("/2fa/challenge", response_model=LoginResponse)
 async def complete_2fa_challenge(
     payload: Challenge2FARequest,
+    request: Request,
     response: Response,
     auth_service: AuthSvc,
     settings: SettingsDep,
+    events: Events,
 ) -> LoginResponse:
     """Complete a 2FA login by verifying a TOTP code against the
     challenge token issued during /auth/login."""
@@ -170,6 +188,21 @@ async def complete_2fa_challenge(
         code=payload.code,
     )
     _set_session_cookie(response, token, settings)
+
+    # Mirror the non-2FA branch so the access-review CLI's "most recent
+    # login" query catches 2FA-gated accounts too.
+    await events.publish(
+        event_name="auth.login_succeeded",
+        category=EventCategory.USER_ACTION,
+        organization_id=user.organization_id,
+        actor_id=user.id,
+        properties={
+            "role": user.role.value,
+            "ip": _client_ip(request),
+            "two_factor": True,
+        },
+    )
+
     return LoginResponse(
         user_id=user.id,
         organization_id=user.organization_id,
@@ -476,6 +509,7 @@ async def disable_2fa(
     payload: Disable2FARequest,
     totp_service: TotpSvc,
     current_user: CurrentTherapist,
+    events: Events,
 ) -> dict[str, bool]:
     """Disable 2FA after verifying the current password AND a TOTP code.
 
@@ -492,4 +526,15 @@ async def disable_2fa(
         raise UnauthorizedError("Invalid password")
 
     await totp_service.disable(current_user.id, payload.code)
+
+    # SOC 2 CC6.6: disabling MFA is a material auth-posture change.
+    # Flagged retain_forever so the audit survives the retention purge.
+    await events.publish(
+        event_name="auth.2fa_disabled",
+        category=EventCategory.USER_ACTION,
+        organization_id=current_user.organization_id,
+        actor_id=current_user.id,
+        retain_forever=True,
+    )
+
     return {"enabled": False}

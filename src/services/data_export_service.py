@@ -304,6 +304,9 @@ class DataExportService:
             },
             event_timestamp=datetime.now(UTC),
             received_at=datetime.now(UTC),
+            # HIPAA: the record of the deletion must survive the retention
+            # purge even after the underlying patient row is gone.
+            retain_forever=True,
         )
         self.db_session.add(tombstone)
         await self.db_session.flush()

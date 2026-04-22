@@ -15,6 +15,7 @@ class EventCategory(StrEnum):
     SYSTEM = "system"
     CLINICAL = "clinical"
     PERFORMANCE = "performance"
+    DATA_ACCESS = "data_access"
 
 
 class EventCreate(BaseModel):

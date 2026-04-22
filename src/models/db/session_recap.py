@@ -10,8 +10,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from src.models.db.base import Base, TimestampMixin
 
@@ -71,6 +71,15 @@ class SessionRecap(Base, TimestampMixin):
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+    )
+    # Generated tsvector column computed by Postgres from `brief` plus the
+    # JSON-serialized `key_topics`. Read-only from Python.
+    search_vector: Mapped[str | None] = deferred(
+        mapped_column(
+            TSVECTOR,
+            nullable=True,
+            server_default=None,
+        )
     )
 
     session: Mapped["Session"] = relationship(

@@ -255,6 +255,15 @@ class Settings(BaseSettings):
         description="Maximum upload file size in bytes",
     )
 
+    # Disclosure / security.txt
+    security_contact_email: str = Field(
+        default="security@therapyrag.local",
+        description=(
+            "Contact shown in /.well-known/security.txt and the /security "
+            "disclosure page. Override per-env via SECURITY_CONTACT_EMAIL."
+        ),
+    )
+
     # Video Chat (Metered.ca TURN server)
     turn_enabled: bool = Field(
         default=False,

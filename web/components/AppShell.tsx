@@ -22,8 +22,16 @@ export function AppShell({
             <Link href="/dashboard" className="hover:text-slate-900">
               Patients
             </Link>
+            {/* search-engineer: session full-text search */}
+            <Link href="/search" className="hover:text-slate-900">
+              Search
+            </Link>
             <Link href="/settings/team" className="hover:text-slate-900">
               Team
+            </Link>
+            {/* analytics-engineer: practice dashboard */}
+            <Link href="/analytics" className="hover:text-slate-900">
+              Analytics
             </Link>
             <Link href="/billing" className="hover:text-slate-900">
               Billing

@@ -1,15 +1,17 @@
 """Session API endpoints."""
 
+import io
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import Auth, Events
 from src.core.config import get_settings
+from src.core.data_access_audit import log_data_access
 from src.core.database import DbSession
 from src.core.exceptions import NotFoundError, ValidationError
 from src.core.pagination import CursorPage
@@ -31,6 +33,7 @@ from src.models.domain.transcript import (
     TranscriptionStatusResponse,
     TranscriptRead,
 )
+from src.services.pdf_service import PdfService
 from src.services.session_service import SessionService
 from src.services.storage_service import StorageService
 from src.services.summarization_service import SummarizationService
@@ -93,10 +96,16 @@ def get_summarization_service(session: DbSession) -> SummarizationService:
     return SummarizationService(session)
 
 
+def get_pdf_service(session: DbSession) -> PdfService:
+    """Get PDF service instance."""
+    return PdfService(session)
+
+
 SessionSvc = Annotated[SessionService, Depends(get_session_service)]
 StorageSvc = Annotated[StorageService, Depends(get_storage_service)]
 TranscriptSvc = Annotated[TranscriptionService, Depends(get_transcription_service)]
 SummarySvc = Annotated[SummarizationService, Depends(get_summarization_service)]
+PdfSvc = Annotated[PdfService, Depends(get_pdf_service)]
 
 
 @router.post("", response_model=SessionRead, status_code=201)
@@ -374,6 +383,8 @@ async def get_transcript(
     session_id: uuid.UUID,
     session_service: SessionSvc,
     transcription_service: TranscriptSvc,
+    auth: Auth,
+    events: Events,
 ) -> TranscriptRead:
     """Get the transcript for a session.
 
@@ -382,7 +393,18 @@ async def get_transcript(
     """
     # Validate session access via tenant context
     await session_service.get_session(session_id)
-    return await transcription_service.get_transcript(session_id)
+    transcript = await transcription_service.get_transcript(session_id)
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="session",
+        event_name="session.transcript_viewed",
+        properties={"session_id": str(session_id)},
+    )
+
+    return transcript
 
 
 @router.get("/{session_id}/recap", response_model=SessionRecapRead)
@@ -390,6 +412,8 @@ async def get_session_recap(
     session_id: uuid.UUID,
     session_service: SessionSvc,
     summarization_service: SummarySvc,
+    auth: Auth,
+    events: Events,
 ) -> SessionRecapRead:
     """Get the LLM-generated recap for a session.
 
@@ -398,7 +422,18 @@ async def get_session_recap(
     few seconds to appear. Use POST to regenerate.
     """
     await session_service.get_session(session_id)
-    return await summarization_service.get_recap(session_id)
+    recap = await summarization_service.get_recap(session_id)
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="session",
+        event_name="session.recap_viewed",
+        properties={"session_id": str(session_id)},
+    )
+
+    return recap
 
 
 @router.post(
@@ -468,4 +503,37 @@ async def get_transcription_status(
     return JSONResponse(
         status_code=200,
         content=status.model_dump(mode="json"),
+    )
+
+
+@router.get(
+    "/{session_id}/recap.pdf",
+    responses={
+        200: {"content": {"application/pdf": {}}},
+        404: {"description": "Session or recap not found"},
+    },
+)
+async def download_session_recap_pdf(
+    session_id: uuid.UUID,
+    pdf_service: PdfSvc,
+    auth: Auth,
+) -> StreamingResponse:
+    """Download a styled PDF of the session's recap.
+
+    Returns a letter-size PDF with the practice name in the header and
+    the session date in the filename. 404 if the session or its recap
+    does not exist. 403 if the session belongs to another organization.
+    """
+    session = await pdf_service.session_repo.get_by_id(session_id)
+    if session is None:
+        raise NotFoundError(resource="Session", resource_id=str(session_id))
+    pdf_bytes = await pdf_service.render_session_recap_pdf(
+        session_id=session_id,
+        organization_id=auth.organization_id,
+    )
+    filename = f"session-{session.session_date.strftime('%Y-%m-%d')}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

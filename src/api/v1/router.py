@@ -13,10 +13,12 @@ from src.api.v1.endpoints import (
     invites,
     organizations,
     patients,
+    search,
     sessions,
     users,
     video,
 )
+from src.core.admin_gate import require_admin_rate_limit
 from src.core.billing_gate import require_entitled_subscription
 
 router = APIRouter(prefix="/api/v1")
@@ -27,7 +29,12 @@ router = APIRouter(prefix="/api/v1")
 # - /organization, /users: account bookkeeping
 # - /admin: the operator panel must reach a suspended org, so it is
 #   intentionally not behind the entitlement gate
-router.include_router(admin.router, prefix="/admin", tags=["admin"])
+router.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin_rate_limit)],
+)
 router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(billing.router, prefix="/billing", tags=["billing"])
@@ -54,6 +61,9 @@ router.include_router(
     prefix="/patients",
     tags=["patients"],
     dependencies=_gated_dependency,
+)
+router.include_router(
+    search.router, prefix="/search", tags=["search"], dependencies=_gated_dependency
 )
 router.include_router(
     sessions.router,

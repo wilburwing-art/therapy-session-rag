@@ -13,7 +13,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
+from src.api.v1.dependencies import Events
 from src.core.admin_gate import require_admin
+from src.core.data_access_audit import log_data_access
 from src.core.database import DbSession
 from src.models.db.event import EventCategory
 from src.models.db.user import User
@@ -48,32 +50,70 @@ async def list_orgs(
 async def get_org_detail(
     org_id: uuid.UUID,
     service: AdminSvc,
-    _admin: AdminUser,
+    admin: AdminUser,
+    events: Events,
 ) -> OrganizationAdminDetail:
     """Full admin detail for one organization."""
-    return await service.get_organization_detail(org_id)
+    detail = await service.get_organization_detail(org_id)
+
+    await log_data_access(
+        events,
+        actor_id=admin.id,
+        organization_id=org_id,
+        subject="admin_org",
+        event_name="admin.org_viewed",
+        properties={"org_id": str(org_id)},
+    )
+
+    return detail
 
 
 @router.post("/orgs/{org_id}/disable", status_code=200)
 async def disable_org(
     org_id: uuid.UUID,
     service: AdminSvc,
-    _admin: AdminUser,
+    admin: AdminUser,
+    events: Events,
 ) -> OrganizationAdminDetail:
     """Suspend an organization. Idempotent."""
     await service.disable_organization(org_id)
-    return await service.get_organization_detail(org_id)
+    detail = await service.get_organization_detail(org_id)
+
+    # SOC 2 CC6.1 / CC7.4: admin disabling a tenant is an irreversible
+    # operator action for audit purposes. Retain indefinitely.
+    await events.publish(
+        event_name="admin.org_disabled",
+        category=EventCategory.SYSTEM,
+        organization_id=org_id,
+        actor_id=admin.id,
+        properties={"org_id": str(org_id)},
+        retain_forever=True,
+    )
+
+    return detail
 
 
 @router.post("/orgs/{org_id}/enable", status_code=200)
 async def enable_org(
     org_id: uuid.UUID,
     service: AdminSvc,
-    _admin: AdminUser,
+    admin: AdminUser,
+    events: Events,
 ) -> OrganizationAdminDetail:
     """Clear an organization's suspension. Idempotent."""
     await service.enable_organization(org_id)
-    return await service.get_organization_detail(org_id)
+    detail = await service.get_organization_detail(org_id)
+
+    await events.publish(
+        event_name="admin.org_enabled",
+        category=EventCategory.SYSTEM,
+        organization_id=org_id,
+        actor_id=admin.id,
+        properties={"org_id": str(org_id)},
+        retain_forever=True,
+    )
+
+    return detail
 
 
 @router.get("/events", response_model=AdminAuditEventPage)

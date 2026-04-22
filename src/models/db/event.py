@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +19,7 @@ class EventCategory(enum.StrEnum):
     SYSTEM = "system"
     CLINICAL = "clinical"
     PERFORMANCE = "performance"
+    DATA_ACCESS = "data_access"
 
 
 class AnalyticsEvent(Base):
@@ -70,6 +71,16 @@ class AnalyticsEvent(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+    # When True, the retention-purge job leaves this row in place past the
+    # normal 7-year horizon. Used for compliance tombstones that must
+    # survive indefinitely: patient deletions, bulk consent actions, 2FA
+    # disable, admin org disable.
+    retain_forever: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
     )
 
     __table_args__ = (

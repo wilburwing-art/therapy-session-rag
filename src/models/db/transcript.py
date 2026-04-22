@@ -6,8 +6,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from src.models.db.base import Base, TimestampMixin
 
@@ -129,6 +129,16 @@ class Transcript(Base, TimestampMixin):
         JSONB,
         nullable=True,
         default=dict,
+    )
+    # Generated tsvector column computed by Postgres from `full_text`. Populated
+    # by the database; never set from Python. Deferred so list queries don't
+    # drag the payload across the wire.
+    search_vector: Mapped[str | None] = deferred(
+        mapped_column(
+            TSVECTOR,
+            nullable=True,
+            server_default=None,
+        )
     )
 
     # Relationships

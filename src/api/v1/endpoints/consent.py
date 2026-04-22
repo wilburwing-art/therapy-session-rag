@@ -141,6 +141,9 @@ async def grant_all_consents(
             "patient_id": str(payload.patient_id),
             "consent_types": [c.value for c in DomainConsentType],
         },
+        # HIPAA: bulk consent grants anchor every session, transcript,
+        # and chatbot message that follows. Never eligible for purge.
+        retain_forever=True,
     )
     return created
 
