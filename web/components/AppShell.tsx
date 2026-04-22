@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CurrentUser } from "@/lib/types";
+import { MobileNav } from "./MobileNav";
 
 export function AppShell({
   currentUser,
@@ -11,14 +12,18 @@ export function AppShell({
   subscriptionBanner?: ReactNode;
   children: ReactNode;
 }) {
+  const userLabel = currentUser.full_name ?? currentUser.email;
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
-          <Link href="/dashboard" className="text-lg font-semibold text-slate-900">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:gap-6 sm:px-6 sm:py-4">
+          <Link
+            href="/dashboard"
+            className="text-lg font-semibold text-slate-900"
+          >
             TherapyRAG
           </Link>
-          <nav className="flex gap-4 text-sm text-slate-600">
+          <nav className="hidden gap-4 text-sm text-slate-600 sm:flex">
             <Link href="/dashboard" className="hover:text-slate-900">
               Patients
             </Link>
@@ -37,8 +42,8 @@ export function AppShell({
               Billing
             </Link>
           </nav>
-          <div className="ml-auto flex items-center gap-3 text-sm text-slate-500">
-            <span>{currentUser.full_name ?? currentUser.email}</span>
+          <div className="ml-auto hidden items-center gap-3 text-sm text-slate-500 sm:flex">
+            <span>{userLabel}</span>
             <form action="/logout" method="POST">
               <button
                 type="submit"
@@ -48,10 +53,15 @@ export function AppShell({
               </button>
             </form>
           </div>
+          <div className="ml-auto sm:hidden">
+            <MobileNav userLabel={userLabel} />
+          </div>
         </div>
       </header>
       {subscriptionBanner}
-      <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+        {children}
+      </main>
     </div>
   );
 }

@@ -120,11 +120,11 @@ function DeleteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-2 sm:p-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-full overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:max-w-md sm:p-6">
         <h3 className="text-xl font-semibold text-slate-900">
           Delete patient?
         </h3>
@@ -146,12 +146,12 @@ function DeleteModal({
           placeholder="patient@example.com"
         />
         {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 flex flex-col justify-end gap-2 sm:flex-row sm:gap-3">
           <button
             type="button"
             onClick={onClose}
             disabled={pending}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:w-auto sm:py-2"
           >
             Cancel
           </button>
@@ -159,7 +159,7 @@ function DeleteModal({
             type="button"
             onClick={handleDelete}
             disabled={!emailMatches || pending}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+            className="w-full rounded-md bg-red-600 px-4 py-3 text-sm text-white hover:bg-red-700 disabled:opacity-50 sm:w-auto sm:py-2"
           >
             {pending ? "Deleting…" : "Delete permanently"}
           </button>

@@ -40,7 +40,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-semibold">Analytics</h1>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Analytics</h1>
         <p className="mt-1 text-slate-600">
           Practice activity and patient outcomes over time.
         </p>

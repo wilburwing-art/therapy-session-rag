@@ -118,10 +118,15 @@ class EmailService:
         patient_name: str | None = None,
     ) -> EmailResult:
         greeting = f"Hi {patient_name}," if patient_name else "Hi,"
+        # Mobile users tap the therapyrag:// link to open the patient
+        # app directly; the web URL above is the fallback for anyone
+        # reading email in a browser or without the app installed.
+        mobile_deep_link = f"therapyrag://chat?t={magic_link_url.rsplit('t=', 1)[-1]}"
         html = f"""
         <p>{greeting}</p>
         <p>{therapist_name} has opened a chat with your session history. Use the link below to start it — it expires in 15 minutes and can only be used once.</p>
         <p><a href="{magic_link_url}">Open your chat</a></p>
+        <p>On a phone with the TherapyRAG app installed? <a href="{mobile_deep_link}">Open in the app</a>.</p>
         <p>If you didn't expect this, you can ignore it — the link will expire automatically.</p>
         <p>— TherapyRAG</p>
         """
@@ -205,5 +210,34 @@ class EmailService:
         return self._send(
             to=to_email,
             subject=f"Join {practice_name} on TherapyRAG",
+            html=html,
+        )
+
+    def send_intake_invitation(
+        self,
+        *,
+        to_email: str,
+        practice_name: str,
+        therapist_name: str,
+        intake_url: str,
+        patient_name: str | None = None,
+    ) -> EmailResult:
+        """Email a prospective patient the intake form link.
+
+        The link is a single-use token; the patient submits answers
+        through a public page before their first session.
+        """
+        greeting = f"Hi {patient_name}," if patient_name else "Hi,"
+        html = f"""
+        <p>{greeting}</p>
+        <p>{therapist_name} at <strong>{practice_name}</strong> has asked you to fill out an intake form before your first session.</p>
+        <p>It should take a few minutes. The link expires in 14 days and can only be submitted once.</p>
+        <p><a href="{intake_url}">Open your intake form</a></p>
+        <p>If you weren't expecting this, you can ignore this email.</p>
+        <p>— TherapyRAG</p>
+        """
+        return self._send(
+            to=to_email,
+            subject=f"Intake form from {practice_name}",
             html=html,
         )

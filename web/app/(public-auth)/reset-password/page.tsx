@@ -43,7 +43,7 @@ function ResetPasswordInner() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-20">
+    <main className="mx-auto max-w-md px-4 py-12 sm:px-6 sm:py-20">
       <h1 className="text-2xl font-semibold">Choose a new password</h1>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <label className="block">
@@ -79,7 +79,7 @@ function ResetPasswordInner() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+          className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
         >
           {submitting ? "Saving…" : "Set new password"}
         </button>

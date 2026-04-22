@@ -194,7 +194,7 @@ export function AudioRecorder({
           <button
             onClick={start}
             disabled={disabled}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+            className="w-full rounded-md bg-red-600 px-4 py-3 text-sm text-white hover:bg-red-700 disabled:opacity-50 sm:w-auto"
           >
             ● Start recording
           </button>
@@ -206,13 +206,13 @@ export function AudioRecorder({
           <>
             <button
               onClick={pause}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
+              className="flex-1 rounded-md border border-slate-300 px-4 py-3 text-sm hover:bg-slate-50 sm:flex-none"
             >
               ‖ Pause
             </button>
             <button
               onClick={stop}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-700"
+              className="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm text-white hover:bg-slate-700 sm:flex-none"
             >
               ■ Stop
             </button>
@@ -222,13 +222,13 @@ export function AudioRecorder({
           <>
             <button
               onClick={resume}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+              className="flex-1 rounded-md bg-red-600 px-4 py-3 text-sm text-white hover:bg-red-700 sm:flex-none"
             >
               ● Resume
             </button>
             <button
               onClick={stop}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-700"
+              className="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm text-white hover:bg-slate-700 sm:flex-none"
             >
               ■ Stop
             </button>
@@ -241,7 +241,7 @@ export function AudioRecorder({
               src={URL.createObjectURL(blob)}
               className="w-full"
             />
-            <div className="flex w-full items-center justify-between text-sm text-slate-600">
+            <div className="flex w-full flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
               <span>
                 {formatDuration(duration)} · {sizeMB.toFixed(1)} MB
               </span>
@@ -251,18 +251,18 @@ export function AudioRecorder({
                 </span>
               )}
             </div>
-            <div className="flex w-full gap-2">
+            <div className="flex w-full flex-col gap-2 sm:flex-row">
               <button
                 onClick={discard}
                 disabled={disabled}
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-50"
+                className="w-full rounded-md border border-slate-300 px-4 py-3 text-sm hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
               >
                 Discard
               </button>
               <button
                 onClick={submit}
                 disabled={disabled || tooBig}
-                className="rounded-md bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-700 disabled:opacity-50"
+                className="w-full rounded-md bg-brand-600 px-4 py-3 text-sm text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto"
               >
                 Upload recording
               </button>

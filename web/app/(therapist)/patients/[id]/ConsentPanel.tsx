@@ -64,7 +64,7 @@ export function ConsentPanel({
     <div
       className={`rounded-xl border p-4 ${allGranted ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
     >
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div>
           <p
             className={`text-sm font-semibold ${allGranted ? "text-emerald-900" : "text-amber-900"}`}
@@ -83,7 +83,7 @@ export function ConsentPanel({
         {!allGranted && (
           <button
             onClick={() => setOpen((o) => !o)}
-            className="rounded-md bg-amber-900 px-3 py-1.5 text-sm text-white hover:bg-amber-950"
+            className="w-full shrink-0 rounded-md bg-amber-900 px-3 py-3 text-sm text-white hover:bg-amber-950 sm:w-auto sm:py-1.5"
           >
             Record consent
           </button>
@@ -113,17 +113,17 @@ export function ConsentPanel({
             className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
           />
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col justify-end gap-2 sm:flex-row">
             <button
               onClick={() => setOpen(false)}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm hover:bg-slate-50 sm:w-auto sm:py-1.5"
             >
               Cancel
             </button>
             <button
               onClick={submit}
               disabled={submitting || !attested}
-              className="rounded-md bg-emerald-700 px-3 py-1.5 text-sm text-white hover:bg-emerald-800 disabled:opacity-50"
+              className="w-full rounded-md bg-emerald-700 px-3 py-3 text-sm text-white hover:bg-emerald-800 disabled:opacity-50 sm:w-auto sm:py-1.5"
             >
               {submitting ? "Saving…" : "Save consent"}
             </button>

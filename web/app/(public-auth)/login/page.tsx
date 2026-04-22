@@ -90,7 +90,7 @@ export default function LoginPage() {
 
   if (challengeToken) {
     return (
-      <main className="mx-auto max-w-md px-6 py-20">
+      <main className="mx-auto max-w-md px-4 py-12 sm:px-6 sm:py-20">
         <h1 className="text-2xl font-semibold">Enter your 2FA code</h1>
         <p className="mt-2 text-sm text-slate-600">
           Open your authenticator app and enter the 6-digit code for this
@@ -121,14 +121,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting || code.length < 6}
-            className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+            className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {submitting ? "Verifying…" : "Verify and sign in"}
           </button>
           <button
             type="button"
             onClick={cancelChallenge}
-            className="w-full text-sm text-slate-500 hover:text-slate-700"
+            className="w-full py-2 text-sm text-slate-500 hover:text-slate-700"
           >
             Cancel and sign in again
           </button>
@@ -138,7 +138,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-20">
+    <main className="mx-auto max-w-md px-4 py-12 sm:px-6 sm:py-20">
       <h1 className="text-2xl font-semibold">Therapist login</h1>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>
@@ -171,7 +171,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+          className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
         >
           {submitting ? "Signing in…" : "Sign in"}
         </button>

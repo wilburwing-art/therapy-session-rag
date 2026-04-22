@@ -27,11 +27,11 @@ export function MagicLinkButton({ patientId }: { patientId: string }) {
   }
 
   return (
-    <div className="text-right">
+    <div className="text-left sm:text-right">
       <button
         onClick={issue}
         disabled={loading}
-        className="rounded-md bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-700 disabled:opacity-50"
+        className="w-full rounded-md bg-brand-600 px-4 py-3 text-sm text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:py-2"
       >
         {loading ? "Issuing…" : "Send chatbot link"}
       </button>

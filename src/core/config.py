@@ -191,6 +191,18 @@ class Settings(BaseSettings):
         default="placeholder",
         description="Stripe Price ID for the $149/mo therapist plan",
     )
+    stripe_price_id_starter: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the Starter tier (1 seat, base quota)",
+    )
+    stripe_price_id_pro: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the Pro tier (up to 5 seats, expanded quota)",
+    )
+    stripe_price_id_scale: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the Scale tier (metered usage + seats)",
+    )
     stripe_trial_days: int = Field(
         default=14,
         description="Free trial length in days on new subscriptions",

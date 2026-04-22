@@ -53,7 +53,7 @@ function AcceptInviteInner() {
 
   if (token === null) {
     return (
-      <main className="mx-auto max-w-md px-6 py-16">
+      <main className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-16">
         <p className="text-slate-600">Loading…</p>
       </main>
     );
@@ -61,7 +61,7 @@ function AcceptInviteInner() {
 
   if (token === "") {
     return (
-      <main className="mx-auto max-w-md px-6 py-16">
+      <main className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="text-2xl font-semibold">Invite link is missing a token</h1>
         <p className="mt-4 text-sm text-slate-600">
           Double-check the link in your invite email or ask the person who
@@ -78,7 +78,7 @@ function AcceptInviteInner() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
+    <main className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-16">
       <h1 className="text-2xl font-semibold">Accept your invite</h1>
       <p className="mt-2 text-sm text-slate-600">
         Set a password to finish joining the practice. We&apos;ll sign you in
@@ -119,7 +119,7 @@ function AcceptInviteInner() {
         <button
           type="submit"
           disabled={state.kind === "submitting"}
-          className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+          className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
         >
           {state.kind === "submitting" ? "Setting up…" : "Accept invite"}
         </button>

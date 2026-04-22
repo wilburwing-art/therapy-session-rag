@@ -17,6 +17,7 @@ from src.services.summarization_service import (
     SummarizationService,
     SummarizationServiceError,
 )
+from src.services.webhook_dispatcher import WebhookDispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +50,15 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
     therapist_email: str | None = None
     therapist_name: str | None = None
     session_date_str: str | None = None
+    organization_id: uuid.UUID | None = None
+    patient_id: uuid.UUID | None = None
+    recap_id: uuid.UUID | None = None
 
     async with session_factory() as db_session:
         service = SummarizationService(db_session)
         try:
             recap = await service.generate_recap(session_uuid)
+            recap_id = recap.id
 
             # Capture therapist contact before the transaction closes so we
             # can email after commit without holding the DB session open.
@@ -72,6 +77,8 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
                 if therapist is not None:
                     therapist_email = therapist.email
                     therapist_name = therapist.full_name
+                    organization_id = therapist.organization_id
+                patient_id = session_row.patient_id
                 session_date_str = session_row.session_date.strftime("%b %d, %Y")
 
             await db_session.commit()
@@ -105,6 +112,44 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
             logger.warning(
                 "Recap email failed for session %s: %s", session_id, exc
             )
+
+    # Dispatch session.completed + recap.ready webhooks after the recap
+    # has been committed and the therapist email has been sent. We open
+    # a fresh session here so webhook dispatch cannot hold an
+    # in-flight transaction open on the summarization path.
+    if organization_id is not None and recap_id is not None:
+        async with session_factory() as webhook_session:
+            try:
+                dispatcher = WebhookDispatcher(webhook_session)
+                await dispatcher.dispatch(
+                    organization_id=organization_id,
+                    event_type="session.completed",
+                    data={
+                        "session_id": session_id,
+                        "patient_id": (
+                            str(patient_id) if patient_id is not None else None
+                        ),
+                    },
+                )
+                await dispatcher.dispatch(
+                    organization_id=organization_id,
+                    event_type="recap.ready",
+                    data={
+                        "session_id": session_id,
+                        "recap_id": str(recap_id),
+                        "patient_id": (
+                            str(patient_id) if patient_id is not None else None
+                        ),
+                    },
+                )
+                await webhook_session.commit()
+            except Exception:
+                logger.warning(
+                    "Webhook dispatch failed for session %s",
+                    session_id,
+                    exc_info=True,
+                )
+                await webhook_session.rollback()
 
     logger.info("Summarization job completed for session %s", session_id)
     return {

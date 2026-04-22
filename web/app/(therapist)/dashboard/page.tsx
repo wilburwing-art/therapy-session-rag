@@ -67,16 +67,16 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-semibold">Patients</h1>
+          <h1 className="text-2xl font-semibold sm:text-3xl">Patients</h1>
           <p className="mt-1 text-slate-600">
             {patients.length} active patient{patients.length === 1 ? "" : "s"}
           </p>
         </div>
         <Link
           href="/patients/new"
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-700"
+          className="w-full rounded-md bg-brand-600 px-4 py-3 text-center text-sm text-white hover:bg-brand-700 sm:w-auto sm:py-2"
         >
           + Add patient
         </Link>

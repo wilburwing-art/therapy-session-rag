@@ -36,7 +36,7 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
+    <main className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-16">
       <h1 className="text-2xl font-semibold">Start your 14-day trial</h1>
       <p className="mt-2 text-sm text-slate-600">
         No credit card needed today. $149/mo when your trial ends.
@@ -89,7 +89,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+          className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
         >
           {submitting ? "Creating your account…" : "Create account"}
         </button>

@@ -10,6 +10,7 @@ from src.api.v1.endpoints import (
     chat,
     consent,
     experiments,
+    intake,
     invites,
     organizations,
     patients,
@@ -17,6 +18,7 @@ from src.api.v1.endpoints import (
     sessions,
     users,
     video,
+    webhooks,
 )
 from src.core.admin_gate import require_admin_rate_limit
 from src.core.billing_gate import require_entitled_subscription
@@ -38,9 +40,14 @@ router.include_router(
 router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(billing.router, prefix="/billing", tags=["billing"])
+router.include_router(intake.router, prefix="/intake", tags=["intake"])
 router.include_router(invites.router, prefix="/invites", tags=["invites"])
 router.include_router(organizations.router, prefix="/organization", tags=["organization"])
 router.include_router(users.router, prefix="/users", tags=["users"])
+# /webhooks stays unprotected so a customer with a lapsed subscription
+# can still manage (or rotate) webhook endpoints to recover integrations
+# without reactivating billing first.
+router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 
 # Product endpoints require an entitled subscription when billing_enforced=true.
 _gated_dependency = [Depends(require_entitled_subscription)]

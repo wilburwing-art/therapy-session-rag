@@ -85,8 +85,17 @@ class SummarizationService:
             self._claude_client = ClaudeClient(settings=self.settings)
         return self._claude_client
 
-    async def generate_recap(self, session_id: uuid.UUID) -> SessionRecapRead:
+    async def generate_recap(
+        self,
+        session_id: uuid.UUID,
+        intake_context: str | None = None,
+    ) -> SessionRecapRead:
         """Generate a recap for a session and persist it.
+
+        If ``intake_context`` is provided, it is prepended to the LLM
+        prompt as the patient's self-reported background so the recap
+        can reference it (e.g. "patient's intake flagged sleep issues").
+        The parameter is optional to preserve existing call sites.
 
         Raises:
             NotFoundError: if the session or its transcript is missing.
@@ -108,9 +117,15 @@ class SummarizationService:
             segments=transcript.segments,
         )
 
+        intake_block = (
+            f"PATIENT INTAKE (self-reported, pre-session):\n{intake_context.strip()}\n\n"
+            if intake_context and intake_context.strip()
+            else ""
+        )
         user_message = (
             "Here is the full transcript of a therapy session. "
             "Produce the JSON recap per the system instructions.\n\n"
+            f"{intake_block}"
             "TRANSCRIPT:\n"
             f"{transcript_body}"
         )

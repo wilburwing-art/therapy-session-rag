@@ -77,7 +77,7 @@ export function ChatSurface({ patient }: { patient: CurrentPatient }) {
         </p>
       </header>
 
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 space-y-4 pb-40">
         {messages.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
             Try: <em>&ldquo;What did we discuss about sleep last time?&rdquo;</em>
@@ -85,11 +85,17 @@ export function ChatSurface({ patient }: { patient: CurrentPatient }) {
         )}
         {messages.map((m) =>
           m.role === "user" ? (
-            <div key={m.id} className="ml-auto max-w-[80%] rounded-2xl bg-brand-600 px-4 py-2 text-white shadow">
+            <div
+              key={m.id}
+              className="ml-auto max-w-[85%] rounded-2xl bg-brand-600 px-4 py-2 text-white shadow sm:max-w-[80%]"
+            >
               {m.content}
             </div>
           ) : (
-            <div key={m.id} className="max-w-[85%] rounded-2xl bg-white px-4 py-3 shadow">
+            <div
+              key={m.id}
+              className="max-w-[90%] rounded-2xl bg-white px-4 py-3 shadow sm:max-w-[85%]"
+            >
               <p className="whitespace-pre-wrap text-slate-800">{m.content}</p>
               {m.sources.length > 0 && (
                 <details className="mt-3 text-xs text-slate-500">
@@ -129,28 +135,36 @@ export function ChatSurface({ patient }: { patient: CurrentPatient }) {
         </p>
       )}
 
-      <form onSubmit={send} className="mt-4 flex gap-2">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send(e as unknown as React.FormEvent);
-            }
-          }}
-          rows={2}
-          placeholder="Ask your session history…"
-          disabled={sending}
-          className="flex-1 resize-none rounded-xl border border-slate-300 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500"
-        />
-        <button
-          type="submit"
-          disabled={sending || input.trim().length === 0}
-          className="self-end rounded-xl bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
-        >
-          Send
-        </button>
+      <form
+        onSubmit={send}
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-4 pt-3 sm:px-6"
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)",
+        }}
+      >
+        <div className="mx-auto flex max-w-2xl gap-2">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send(e as unknown as React.FormEvent);
+              }
+            }}
+            rows={2}
+            placeholder="Ask your session history…"
+            disabled={sending}
+            className="w-full flex-1 resize-none rounded-xl border border-slate-300 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+          />
+          <button
+            type="submit"
+            disabled={sending || input.trim().length === 0}
+            className="self-end rounded-xl bg-brand-600 px-4 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            Send
+          </button>
+        </div>
       </form>
     </div>
   );

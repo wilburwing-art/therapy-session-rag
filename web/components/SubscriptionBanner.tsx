@@ -22,7 +22,7 @@ export function SubscriptionBanner({
       ),
     );
     return (
-      <div className="border-b border-brand-100 bg-brand-50 px-6 py-3 text-sm text-brand-900">
+      <div className="border-b border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900 sm:px-6">
         You&apos;re on a free trial — {daysLeft} day{daysLeft === 1 ? "" : "s"} left.{" "}
         <Link href="/billing" className="font-medium underline">
           Add a payment method
@@ -41,7 +41,7 @@ export function SubscriptionBanner({
   };
 
   return (
-    <div className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900">
+    <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6">
       {copy[status] ?? "Your subscription needs attention."}{" "}
       <Link href="/billing" className="font-medium underline">
         Open billing

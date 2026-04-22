@@ -17,17 +17,17 @@ export default function LandingPage() {
 function MarketingNav() {
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-4 sm:px-6">
         <Link href="/" className="text-lg font-semibold text-slate-900">
           TherapyRAG
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-2 text-sm sm:gap-4">
           <Link href="/login" className="text-slate-600 hover:text-slate-900">
             Sign in
           </Link>
           <Link
             href="/signup"
-            className="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700"
+            className="rounded-md bg-brand-600 px-3 py-2 text-white hover:bg-brand-700 sm:px-4"
           >
             Start trial
           </Link>
@@ -39,29 +39,29 @@ function MarketingNav() {
 
 function Hero() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+    <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 md:py-28">
       <p className="text-sm font-medium uppercase tracking-wider text-brand-700">
         For private-practice therapists
       </p>
-      <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-tight text-slate-900 md:text-6xl">
+      <h1 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
         Your session notes, homework tracking, and between-session chatbot —
         all from the recording.
       </h1>
-      <p className="mt-6 max-w-2xl text-lg text-slate-600">
+      <p className="mt-6 max-w-2xl text-base text-slate-600 sm:text-lg">
         TherapyRAG turns every session recording into a cited summary, a
         running theme map, and a patient-facing chatbot that answers
         questions from your own sessions. No chart-wars, no empty fields.
       </p>
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link
           href="/signup"
-          className="rounded-lg bg-brand-600 px-6 py-3 text-white hover:bg-brand-700"
+          className="rounded-lg bg-brand-600 px-6 py-3 text-center text-white hover:bg-brand-700"
         >
           Start 14-day trial
         </Link>
         <a
           href="#features"
-          className="rounded-lg border border-slate-300 px-6 py-3 text-slate-700 hover:bg-white"
+          className="rounded-lg border border-slate-300 px-6 py-3 text-center text-slate-700 hover:bg-white"
         >
           See how it works
         </a>
@@ -92,12 +92,12 @@ function FeatureGrid() {
     },
   ];
   return (
-    <section id="features" className="bg-white py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <h2 className="text-3xl font-semibold tracking-tight">
+    <section id="features" className="bg-white py-14 sm:py-20">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           What you get, every session
         </h2>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-10 grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}
@@ -117,13 +117,13 @@ function FeatureGrid() {
 
 function PrivacySection() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-20">
-      <div className="grid gap-10 md:grid-cols-2">
+    <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+      <div className="grid gap-10 grid-cols-1 md:grid-cols-2">
         <div>
           <p className="text-sm font-medium uppercase tracking-wider text-brand-700">
             HIPAA-aware by default
           </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             Your patients&apos; data doesn&apos;t leak between practices.
           </h2>
           <p className="mt-4 text-slate-600">
@@ -167,14 +167,14 @@ function Check() {
 
 function Pricing() {
   return (
-    <section className="bg-white py-20">
-      <div className="mx-auto max-w-4xl px-6">
-        <h2 className="text-center text-3xl font-semibold tracking-tight">
+    <section className="bg-white py-14 sm:py-20">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6">
+        <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
           One plan, everything included.
         </h2>
         <div className="mt-10 overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-          <div className="grid gap-0 md:grid-cols-3">
-            <div className="bg-brand-600 p-8 text-white md:col-span-1">
+          <div className="grid gap-0 grid-cols-1 md:grid-cols-3">
+            <div className="bg-brand-600 p-6 text-white sm:p-8 md:col-span-1">
               <p className="text-sm uppercase tracking-wider opacity-80">
                 Practice plan
               </p>
@@ -182,12 +182,12 @@ function Pricing() {
               <p className="mt-1 opacity-80">/ month, per therapist</p>
               <Link
                 href="/signup"
-                className="mt-6 inline-block rounded-md bg-white px-4 py-2 font-semibold text-brand-700 hover:bg-slate-100"
+                className="mt-6 inline-block rounded-md bg-white px-4 py-3 font-semibold text-brand-700 hover:bg-slate-100"
               >
                 Start 14-day trial
               </Link>
             </div>
-            <ul className="space-y-3 bg-white p-8 text-slate-700 md:col-span-2">
+            <ul className="space-y-3 bg-white p-6 text-slate-700 sm:p-8 md:col-span-2">
               <li className="flex gap-2">
                 <Check /> Unlimited session uploads and transcription
               </li>
@@ -231,8 +231,8 @@ function FAQ() {
     },
   ];
   return (
-    <section className="mx-auto max-w-4xl px-6 py-20">
-      <h2 className="text-3xl font-semibold tracking-tight">
+    <section className="mx-auto max-w-4xl px-4 py-14 sm:px-6 sm:py-20">
+      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
         Common questions
       </h2>
       <dl className="mt-8 space-y-6">
@@ -253,7 +253,7 @@ function FAQ() {
 function Footer() {
   return (
     <footer className="border-t border-slate-200 bg-white py-10 text-sm text-slate-500">
-      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-6 md:flex-row md:items-center">
+      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 sm:px-6 md:flex-row md:items-center">
         <p>© {new Date().getFullYear()} TherapyRAG</p>
         <nav className="flex gap-5">
           <Link href="/login">Sign in</Link>

@@ -40,7 +40,7 @@ export default async function SessionDetailPage({
         >
           ← Back to patient
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold">
+        <h1 className="mt-2 text-xl font-semibold sm:text-2xl">
           Session on {new Date(session.session_date).toLocaleString()}
         </h1>
         <p className="mt-1 text-slate-600">
@@ -51,9 +51,9 @@ export default async function SessionDetailPage({
       <NotesEditor sessionId={id} initialNotes={session.therapist_notes ?? ""} />
 
       <section className="prose-surface">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="text-lg font-semibold">Recap</h2>
-          <div className="flex items-start gap-3">
+          <div className="flex w-full flex-wrap items-start gap-3 sm:w-auto">
             <DownloadRecapButton sessionId={id} />
             <RecapActions sessionId={id} hasExisting={!!recap} />
           </div>

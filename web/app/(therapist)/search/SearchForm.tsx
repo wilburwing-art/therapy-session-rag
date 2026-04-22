@@ -121,7 +121,7 @@ export function SearchForm() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search transcripts, recaps, and notes…"
-          className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:text-sm"
           aria-label="Search query"
         />
       </label>

@@ -336,6 +336,7 @@ class TestDeletePatient:
             _scalars_all(session_ids),         # session ids
             _scalars_all(transcript_ids),      # transcript ids
             _scalars_all(conv_ids),            # conversation ids
+            _scalars_all([]),                  # webhook subscribers for patient.deleted
         ]
         mock_session.delete = AsyncMock()
         # add() is a synchronous attribute on AsyncMock; we inspect .call_args

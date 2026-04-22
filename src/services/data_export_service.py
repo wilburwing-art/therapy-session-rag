@@ -29,6 +29,7 @@ from src.models.db.session import Session as SessionRecording
 from src.models.db.session_recap import SessionRecap
 from src.models.db.transcript import Transcript
 from src.models.db.user import User, UserRole
+from src.services.webhook_dispatcher import WebhookDispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +314,23 @@ class DataExportService:
 
         await self.db_session.delete(patient)
         await self.db_session.flush()
+
+        # Notify subscribed customer endpoints. Dispatch piggybacks on
+        # the same session so cascade + tombstone + webhook rows either
+        # all commit or all roll back together. If no endpoints are
+        # subscribed this is a no-op.
+        dispatcher = WebhookDispatcher(self.db_session)
+        await dispatcher.dispatch(
+            organization_id=org_id,
+            event_type="patient.deleted",
+            data={
+                "patient_id": str(patient_id),
+                "triggered_by": str(therapist_id),
+                "session_count_deleted": session_count,
+                "transcript_count_deleted": transcript_count,
+                "conversation_count_deleted": conversation_count,
+            },
+        )
 
         logger.info(
             "Patient %s deleted by therapist %s (org=%s, sessions=%d)",

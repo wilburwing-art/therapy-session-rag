@@ -21,3 +21,26 @@ class SubscriptionStatusResponse(BaseModel):
     current_period_end: datetime | None = None
     has_stripe_customer: bool
     is_entitled: bool
+
+
+class BillingUsageResponse(BaseModel):
+    """Current-period usage counters plus seat utilisation."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    period_start: datetime
+    period_end: datetime
+    sessions_transcribed: int
+    recaps_generated: int
+    chat_messages: int
+    seats_used: int
+    seats_included: int
+
+
+class UpcomingInvoiceResponse(BaseModel):
+    """Preview of the next Stripe invoice."""
+
+    amount_due: int
+    amount_total: int
+    currency: str
+    period_end: datetime | None = None

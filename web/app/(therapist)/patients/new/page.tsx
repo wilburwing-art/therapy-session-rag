@@ -84,7 +84,7 @@ export default function NewPatientPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+          className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
         >
           {submitting ? "Adding…" : "Add patient"}
         </button>

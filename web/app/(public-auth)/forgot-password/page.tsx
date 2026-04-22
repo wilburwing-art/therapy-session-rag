@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-20">
+    <main className="mx-auto max-w-md px-4 py-12 sm:px-6 sm:py-20">
       <h1 className="text-2xl font-semibold">Reset your password</h1>
       {done ? (
         <div className="mt-4 rounded-md bg-slate-100 p-4 text-slate-700">
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-md bg-brand-600 py-2 text-white hover:bg-brand-700 disabled:opacity-50"
+            className="w-full rounded-md bg-brand-600 py-3 text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {submitting ? "Sending…" : "Send reset link"}
           </button>

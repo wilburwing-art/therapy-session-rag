@@ -1,7 +1,7 @@
 """Tests for BillingService Stripe integration."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,8 +9,13 @@ import pytest
 import stripe
 
 from src.core.exceptions import NotFoundError
+from src.models.db.billing_usage import BillingUsage
 from src.models.db.organization import Organization, SubscriptionStatus
-from src.services.billing_service import BillingService, BillingServiceError
+from src.services.billing_service import (
+    BillingService,
+    BillingServiceError,
+    _period_bounds_for,
+)
 
 
 def _mock_settings() -> MagicMock:
@@ -201,3 +206,257 @@ async def test_webhook_ignores_unknown_event(service: BillingService) -> None:
     }
     result = await service.handle_webhook(payload=b"{}", signature="sig")
     assert result == {"received": True, "type": "invoice.paid"}
+
+
+# ----------------------------------------------------------------------
+# Metered billing
+# ----------------------------------------------------------------------
+
+
+def _stub_usage_row_fetch(
+    service: BillingService,
+    org: Organization,
+    existing_row: BillingUsage | None = None,
+) -> None:
+    """Make db.execute() return the org first, then the usage row."""
+    org_result = MagicMock()
+    org_result.scalar_one_or_none.return_value = org
+    org_result.scalar_one.return_value = org
+    row_result = MagicMock()
+    row_result.scalar_one_or_none.return_value = existing_row
+
+    async def execute_side_effect(*_args: object, **_kwargs: object) -> MagicMock:
+        return execute_side_effect.queue.pop(0)  # type: ignore[attr-defined]
+
+    execute_side_effect.queue = [org_result, row_result]  # type: ignore[attr-defined]
+    service.db_session.execute = AsyncMock(side_effect=execute_side_effect)
+
+
+@pytest.mark.asyncio
+async def test_record_sessions_transcribed_creates_row(
+    service: BillingService,
+) -> None:
+    org = _mock_org(stripe_customer_id="cus_meter")
+    org.current_period_end = datetime(2026, 5, 1, tzinfo=UTC)
+    _stub_usage_row_fetch(service, org, existing_row=None)
+
+    captured: dict[str, BillingUsage] = {}
+
+    def _add(obj: BillingUsage) -> None:
+        captured["row"] = obj
+
+    service.db_session.add = MagicMock(side_effect=_add)
+
+    row = await service.record_sessions_transcribed(org.id)
+
+    assert row.sessions_transcribed == 1
+    assert captured["row"] is row
+    service.db_session.flush.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_record_sessions_transcribed_increments_existing(
+    service: BillingService,
+) -> None:
+    org = _mock_org(stripe_customer_id="cus_meter")
+    org.current_period_end = datetime(2026, 5, 1, tzinfo=UTC)
+    existing = BillingUsage(
+        organization_id=org.id,
+        period_start=datetime(2026, 4, 1, tzinfo=UTC),
+        period_end=datetime(2026, 5, 1, tzinfo=UTC),
+        sessions_transcribed=3,
+        recaps_generated=1,
+        chat_messages=7,
+    )
+    _stub_usage_row_fetch(service, org, existing_row=existing)
+
+    row = await service.record_sessions_transcribed(org.id, count=2)
+    assert row is existing
+    assert row.sessions_transcribed == 5
+
+
+@pytest.mark.asyncio
+async def test_record_usage_rejects_zero_count(service: BillingService) -> None:
+    with pytest.raises(ValueError):
+        await service.record_sessions_transcribed(uuid.uuid4(), count=0)
+
+
+@pytest.mark.asyncio
+async def test_report_usage_to_stripe_creates_meter_events(
+    service: BillingService,
+) -> None:
+    org = _mock_org(stripe_customer_id="cus_meter")
+    org.current_period_end = datetime(2026, 5, 1, tzinfo=UTC)
+    existing = BillingUsage(
+        organization_id=org.id,
+        period_start=datetime(2026, 4, 1, tzinfo=UTC),
+        period_end=datetime(2026, 5, 1, tzinfo=UTC),
+        sessions_transcribed=4,
+        recaps_generated=0,
+        chat_messages=2,
+    )
+    existing.id = uuid.uuid4()
+    _stub_usage_row_fetch(service, org, existing_row=existing)
+
+    service.gateway.create_meter_event.return_value = SimpleNamespace(
+        identifier="meter-evt-abc"
+    )
+
+    now = datetime(2026, 5, 1, 12, tzinfo=UTC)
+    row = await service.report_usage_to_stripe(org.id, now=now)
+
+    # Only two meters had positive counters, so two events should fire.
+    assert service.gateway.create_meter_event.call_count == 2
+    event_names = {
+        call.kwargs["event_name"]
+        for call in service.gateway.create_meter_event.call_args_list
+    }
+    assert event_names == {"sessions_transcribed", "chat_messages"}
+    assert row.reported_to_stripe_at == now
+    assert row.stripe_meter_event_id == "meter-evt-abc"
+
+
+@pytest.mark.asyncio
+async def test_report_usage_requires_stripe_customer(
+    service: BillingService,
+) -> None:
+    org = _mock_org()  # No stripe_customer_id
+    _execute_returning(service, org)
+    with pytest.raises(BillingServiceError):
+        await service.report_usage_to_stripe(org.id)
+
+
+@pytest.mark.asyncio
+async def test_report_usage_wraps_stripe_errors(
+    service: BillingService,
+) -> None:
+    org = _mock_org(stripe_customer_id="cus_meter")
+    org.current_period_end = datetime(2026, 5, 1, tzinfo=UTC)
+    existing = BillingUsage(
+        organization_id=org.id,
+        period_start=datetime(2026, 4, 1, tzinfo=UTC),
+        period_end=datetime(2026, 5, 1, tzinfo=UTC),
+        sessions_transcribed=1,
+        recaps_generated=0,
+        chat_messages=0,
+    )
+    existing.id = uuid.uuid4()
+    _stub_usage_row_fetch(service, org, existing_row=existing)
+    service.gateway.create_meter_event.side_effect = stripe.APIError("meters down")
+
+    with pytest.raises(BillingServiceError):
+        await service.report_usage_to_stripe(org.id)
+
+
+# ----------------------------------------------------------------------
+# Seats
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_count_active_seats_uses_query_result(
+    service: BillingService,
+) -> None:
+    seat_result = MagicMock()
+    seat_result.scalar.return_value = 3
+    service.db_session.execute = AsyncMock(return_value=seat_result)
+
+    count = await service.count_active_seats(uuid.uuid4())
+    assert count == 3
+
+
+@pytest.mark.asyncio
+async def test_sync_subscription_seats_updates_stripe(
+    service: BillingService,
+) -> None:
+    seat_result = MagicMock()
+    seat_result.scalar.return_value = 5
+    service.db_session.execute = AsyncMock(return_value=seat_result)
+
+    seats = await service.sync_subscription_seats(
+        uuid.uuid4(), subscription_item_id="si_abc"
+    )
+    assert seats == 5
+    service.gateway.update_subscription_item_quantity.assert_called_once_with(
+        subscription_item_id="si_abc", quantity=5
+    )
+
+
+@pytest.mark.asyncio
+async def test_sync_subscription_seats_wraps_stripe_error(
+    service: BillingService,
+) -> None:
+    seat_result = MagicMock()
+    seat_result.scalar.return_value = 5
+    service.db_session.execute = AsyncMock(return_value=seat_result)
+    service.gateway.update_subscription_item_quantity.side_effect = stripe.APIError(
+        "quantity update failed"
+    )
+    with pytest.raises(BillingServiceError):
+        await service.sync_subscription_seats(uuid.uuid4(), subscription_item_id="si_a")
+
+
+# ----------------------------------------------------------------------
+# Upcoming invoice
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_preview_upcoming_invoice_returns_summary(
+    service: BillingService,
+) -> None:
+    org = _mock_org(stripe_customer_id="cus_preview")
+    _execute_returning(service, org)
+    period_end = int(datetime(2026, 5, 15, tzinfo=UTC).timestamp())
+    service.gateway.preview_upcoming_invoice.return_value = SimpleNamespace(
+        amount_due=14900,
+        total=14900,
+        currency="usd",
+        period_end=period_end,
+    )
+    summary = await service.preview_upcoming_invoice(org.id)
+    assert summary["amount_due"] == 14900
+    assert summary["currency"] == "usd"
+    assert summary["period_end"] is not None
+
+
+@pytest.mark.asyncio
+async def test_preview_upcoming_invoice_requires_customer(
+    service: BillingService,
+) -> None:
+    org = _mock_org()
+    _execute_returning(service, org)
+    with pytest.raises(BillingServiceError):
+        await service.preview_upcoming_invoice(org.id)
+
+
+# ----------------------------------------------------------------------
+# Period bounds
+# ----------------------------------------------------------------------
+
+
+def test_period_bounds_prefers_current_period_end() -> None:
+    org = _mock_org()
+    org.current_period_end = datetime(2026, 5, 1, tzinfo=UTC)
+    start, end = _period_bounds_for(org, datetime(2026, 4, 14, tzinfo=UTC))
+    # period_start is 30 days before the period_end when now is before it.
+    assert end == datetime(2026, 5, 1, tzinfo=UTC)
+    assert start <= datetime(2026, 4, 14, tzinfo=UTC)
+    assert end - start <= timedelta(days=31)
+
+
+def test_period_bounds_falls_back_to_calendar_month() -> None:
+    org = _mock_org()
+    org.current_period_end = None
+    now = datetime(2026, 4, 14, tzinfo=UTC)
+    start, end = _period_bounds_for(org, now)
+    assert start == datetime(2026, 4, 1, tzinfo=UTC)
+    assert end == datetime(2026, 5, 1, tzinfo=UTC)
+
+
+def test_period_bounds_falls_back_handles_december() -> None:
+    org = _mock_org()
+    org.current_period_end = None
+    now = datetime(2026, 12, 14, tzinfo=UTC)
+    _, end = _period_bounds_for(org, now)
+    assert end == datetime(2027, 1, 1, tzinfo=UTC)

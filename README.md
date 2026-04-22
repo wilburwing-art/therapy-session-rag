@@ -72,6 +72,8 @@ npm install
 npm run dev  # http://localhost:3000
 ```
 
+The Expo client under `/mobile/` is the patient-facing app that pairs with the web therapist dashboard. See `mobile/README.md` for setup.
+
 ## Environment variables
 
 | Group | Keys |

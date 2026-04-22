@@ -55,7 +55,7 @@ export function AssessmentPanel({
 
   return (
     <div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
         <Card
           title="PHQ-9"
           latest={phq}
@@ -200,8 +200,8 @@ function AssessmentForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-2 sm:p-4">
+      <div className="max-h-[90vh] w-full max-w-full overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:max-w-xl sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
             {instrument.toUpperCase()} — over the past 2 weeks
@@ -219,11 +219,11 @@ function AssessmentForm({
               <p className="text-sm">
                 <span className="text-slate-500">{i + 1}.</span> {q}
               </p>
-              <div className="flex gap-3 text-xs">
+              <div className="flex gap-1.5 text-xs sm:gap-3">
                 {LIKERT_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
-                    className={`flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-md border px-2 py-1.5 ${responses[i] === opt.value ? "border-brand-600 bg-brand-50" : "border-slate-200"}`}
+                    className={`flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-md border px-1.5 py-2 sm:px-2 sm:py-1.5 ${responses[i] === opt.value ? "border-brand-600 bg-brand-50" : "border-slate-200"}`}
                   >
                     <input
                       type="radio"
@@ -260,17 +260,17 @@ function AssessmentForm({
             {error}
           </p>
         )}
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex flex-col justify-end gap-2 sm:flex-row">
           <button
             onClick={onClose}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+            className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm hover:bg-slate-50 sm:w-auto sm:py-2"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={submitting || !complete}
-            className="rounded-md bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-700 disabled:opacity-50"
+            className="w-full rounded-md bg-brand-600 px-4 py-3 text-sm text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:py-2"
           >
             {submitting ? "Saving…" : "Save"}
           </button>

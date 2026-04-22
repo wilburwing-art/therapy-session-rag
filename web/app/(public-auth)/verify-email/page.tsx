@@ -35,7 +35,7 @@ function VerifyEmailInner() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-md px-6 py-20">
+    <main className="mx-auto max-w-md px-4 py-12 sm:px-6 sm:py-20">
       <h1 className="text-2xl font-semibold">Email verification</h1>
       <div className="mt-6 rounded-md bg-white p-5 shadow-sm">
         {state.kind === "loading" && (

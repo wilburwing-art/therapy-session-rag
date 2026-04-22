@@ -546,7 +546,7 @@ export function Charts({
 
       {/* Assessment trend */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <header className="mb-4 flex items-center justify-between">
+        <header className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
               Assessment score trend
