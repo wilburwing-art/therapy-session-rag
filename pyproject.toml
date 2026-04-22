@@ -51,6 +51,7 @@ dependencies = [
     "stripe>=15.0.1",
     "resend>=2.29.0",
     "sentry-sdk[fastapi]>=2.58.0",
+    "pyotp>=2.9.0",
 ]
 
 [project.optional-dependencies]
@@ -89,12 +90,13 @@ include = ["src*"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -m 'not evaluation'"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 markers = [
     "integration: marks tests as integration tests (require running services)",
+    "evaluation: marks tests as RAG evaluation-harness tests (opt-in, hermetic)",
 ]
 
 [tool.ruff]

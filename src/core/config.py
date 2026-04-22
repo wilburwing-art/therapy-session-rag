@@ -150,6 +150,34 @@ class Settings(BaseSettings):
         description="Lifetime of patient magic-link tokens in seconds",
     )
 
+    # Account lockout
+    lockout_threshold: int = Field(
+        default=5,
+        description="Failed login attempts before temporary lockout",
+    )
+    lockout_duration_minutes: int = Field(
+        default=15,
+        description="How long an account stays locked after hitting the threshold",
+    )
+
+    # TOTP 2FA
+    totp_encryption_key: str = Field(
+        default="placeholder-32-byte-key-for-dev-only-change-me",
+        description=(
+            "Fernet encryption key (32-byte urlsafe-base64) for TOTP secrets. "
+            "Must be stable across deploys — rotating this value invalidates "
+            "all existing 2FA secrets. In non-dev envs set via env var."
+        ),
+    )
+    totp_challenge_ttl_seconds: int = Field(
+        default=300,  # 5 minutes
+        description="Lifetime of short-lived TOTP challenge tokens",
+    )
+    totp_issuer: str = Field(
+        default="TherapyRAG",
+        description="Issuer label shown in authenticator apps",
+    )
+
     # Stripe billing
     stripe_secret_key: str = Field(
         default="placeholder",

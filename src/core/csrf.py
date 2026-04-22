@@ -40,6 +40,9 @@ _EXEMPT_PREFIXES = (
     "/api/v1/auth/password-reset-request",
     "/api/v1/auth/password-reset-confirm",
     "/api/v1/auth/verify-email-confirm",
+    # 2FA challenge runs between login (password verified) and session
+    # cookie issuance — the user has no session yet, so CSRF can't apply.
+    "/api/v1/auth/2fa/challenge",
     "/api/v1/auth/patient/session",
     "/api/v1/auth/patient/logout",
     "/api/v1/billing/webhook",

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.services.rate_limiter import (
+    AuthRateLimiter,
     ChatRateLimiter,
     RateLimiter,
     RateLimitExceeded,
@@ -361,3 +362,164 @@ class TestRateLimitExceeded:
 
         assert exc.remaining == 0
         assert exc.reset_time == 0
+
+
+class TestAuthRateLimiter:
+    """Tests for AuthRateLimiter class."""
+
+    @pytest.fixture
+    def auth_limiter(
+        self,
+        mock_redis: MagicMock,
+        mock_settings: MagicMock,
+    ) -> AuthRateLimiter:
+        """Create an auth rate limiter sharing a single mock Redis pipeline.
+
+        Every action category gets its own RateLimiter under the hood;
+        they all share the mocked client passed here, so individual tests
+        can configure pipeline return values once and reuse them across
+        all three categories.
+        """
+        return AuthRateLimiter(
+            settings=mock_settings,
+            redis_client=mock_redis,
+        )
+
+    @pytest.mark.asyncio
+    async def test_check_login_allows_under_ip_and_email_limits(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        """Under both limits — no exception raised."""
+        mock_pipe = MagicMock()
+        # First call (IP bucket): count=1, ttl=60; second (email bucket):
+        # count=1, ttl=60. Since AuthRateLimiter reuses one RateLimiter,
+        # execute() is called twice.
+        mock_pipe.execute.side_effect = [
+            [1, True, 60],
+            [1, True, 60],
+        ]
+        mock_redis.pipeline.return_value = mock_pipe
+
+        await auth_limiter.check_login("1.2.3.4", "doc@example.com")
+
+        assert mock_pipe.execute.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_check_login_trips_ip_limit(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        """IP exceeded → RateLimitExceeded before email is touched."""
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [11, True, 45]  # 11 > IP_MAX of 10
+        mock_redis.pipeline.return_value = mock_pipe
+
+        with pytest.raises(RateLimitExceeded) as exc:
+            await auth_limiter.check_login("1.2.3.4", "doc@example.com")
+
+        assert exc.value.reset_time == 45
+
+    @pytest.mark.asyncio
+    async def test_check_login_trips_email_limit(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        """IP under, email over → still raises (on the email step)."""
+        mock_pipe = MagicMock()
+        mock_pipe.execute.side_effect = [
+            [1, True, 60],  # IP under
+            [6, True, 30],  # email 6 > EMAIL_MAX of 5
+        ]
+        mock_redis.pipeline.return_value = mock_pipe
+
+        with pytest.raises(RateLimitExceeded) as exc:
+            await auth_limiter.check_login("1.2.3.4", "doc@example.com")
+
+        assert exc.value.reset_time == 30
+
+    @pytest.mark.asyncio
+    async def test_check_login_normalizes_email_for_key(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        """Email casing/whitespace must not bypass the email limit."""
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [1, True, 60]
+        mock_redis.pipeline.return_value = mock_pipe
+
+        await auth_limiter.check_login("1.2.3.4", "  DOC@Example.com  ")
+        # Inspect the keys that were passed to incr — lowercased+stripped.
+        call_args = [c.args for c in mock_pipe.incr.call_args_list]
+        keys = [a[0] for a in call_args]
+        assert any("doc@example.com" in k for k in keys)
+        assert not any("DOC@Example.com" in k for k in keys)
+
+    @pytest.mark.asyncio
+    async def test_check_registration_under_limit(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [3, True, 2400]  # under 5/hour
+        mock_redis.pipeline.return_value = mock_pipe
+
+        await auth_limiter.check_registration("1.2.3.4")
+
+    @pytest.mark.asyncio
+    async def test_check_registration_over_limit(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [6, True, 1200]  # over 5/hour
+        mock_redis.pipeline.return_value = mock_pipe
+
+        with pytest.raises(RateLimitExceeded):
+            await auth_limiter.check_registration("1.2.3.4")
+
+    @pytest.mark.asyncio
+    async def test_check_password_reset_under_limit(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [2, True, 1800]
+        mock_redis.pipeline.return_value = mock_pipe
+
+        await auth_limiter.check_password_reset("doc@example.com")
+
+    @pytest.mark.asyncio
+    async def test_check_password_reset_over_limit(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [4, True, 1200]  # over 3/hour
+        mock_redis.pipeline.return_value = mock_pipe
+
+        with pytest.raises(RateLimitExceeded):
+            await auth_limiter.check_password_reset("doc@example.com")
+
+    @pytest.mark.asyncio
+    async def test_check_password_reset_uses_normalized_email(
+        self,
+        auth_limiter: AuthRateLimiter,
+        mock_redis: MagicMock,
+    ) -> None:
+        mock_pipe = MagicMock()
+        mock_pipe.execute.return_value = [1, True, 3600]
+        mock_redis.pipeline.return_value = mock_pipe
+
+        await auth_limiter.check_password_reset("  DOC@Example.com  ")
+        call_args = [c.args for c in mock_pipe.incr.call_args_list]
+        keys = [a[0] for a in call_args]
+        assert any("doc@example.com" in k for k in keys)

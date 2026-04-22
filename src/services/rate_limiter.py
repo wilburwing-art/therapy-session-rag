@@ -304,3 +304,108 @@ class ChatRateLimiter:
             identifier=patient_id,
         )
         return max(0, self.max_requests - usage["current_count"])
+
+
+class AuthRateLimiter:
+    """Rate limiter for auth endpoints.
+
+    Protects login, registration, and password-reset flows from
+    brute-force and abuse. Uses per-minute windows for login (tight, to
+    catch credential stuffing) and per-hour windows for registration and
+    password-reset (broader, because those are higher-cost and less
+    time-sensitive).
+
+    Key design:
+      - Login: rate-limit by BOTH source IP (10/min) and target email
+        (5/min). Either limit trips a 429; both are checked before the
+        password is even verified.
+      - Registration: per-IP only (5/hour). We don't know the email yet
+        (the caller picks it), and email-based limiting would let a
+        determined attacker poison a target's signup.
+      - Password reset: per-email only (3/hour). The endpoint already
+        returns a uniform 202 to avoid enumeration; an IP limit here
+        would let an attacker abuse a single email by cycling IPs.
+    """
+
+    LOGIN_IP_TYPE = "auth_login_ip"
+    LOGIN_EMAIL_TYPE = "auth_login_email"
+    REGISTRATION_IP_TYPE = "auth_register_ip"
+    PASSWORD_RESET_EMAIL_TYPE = "auth_pw_reset_email"
+
+    LOGIN_IP_MAX = 10
+    LOGIN_EMAIL_MAX = 5
+    LOGIN_WINDOW_SECONDS = 60
+
+    REGISTRATION_IP_MAX = 5
+    REGISTRATION_WINDOW_SECONDS = 3600
+
+    PASSWORD_RESET_EMAIL_MAX = 3
+    PASSWORD_RESET_WINDOW_SECONDS = 3600
+
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        redis_client: Redis | None = None,  # type: ignore[type-arg]
+    ) -> None:
+        """Initialize auth rate limiter.
+
+        Each action category uses its own RateLimiter instance because
+        windows differ (login is per-minute, others per-hour) and the
+        window is carried on the limiter itself.
+        """
+        self.settings = settings or get_settings()
+        self._login_limiter = RateLimiter(
+            redis_client=redis_client,
+            settings=self.settings,
+            window_seconds=self.LOGIN_WINDOW_SECONDS,
+        )
+        self._registration_limiter = RateLimiter(
+            redis_client=redis_client,
+            settings=self.settings,
+            window_seconds=self.REGISTRATION_WINDOW_SECONDS,
+        )
+        self._password_reset_limiter = RateLimiter(
+            redis_client=redis_client,
+            settings=self.settings,
+            window_seconds=self.PASSWORD_RESET_WINDOW_SECONDS,
+        )
+
+    @staticmethod
+    def _normalize_email(email: str) -> str:
+        return email.strip().lower()
+
+    async def check_login(self, ip: str, email: str) -> None:
+        """Check and consume one login attempt for (ip, email).
+
+        Increments both counters; raises RateLimitExceeded if either
+        exceeds its cap. The exception's `reset_time` reflects the
+        offending bucket (whichever we tripped).
+        """
+        email_key = self._normalize_email(email)
+        await self._login_limiter.check_and_increment(
+            key_type=self.LOGIN_IP_TYPE,
+            identifier=ip,
+            max_requests=self.LOGIN_IP_MAX,
+        )
+        await self._login_limiter.check_and_increment(
+            key_type=self.LOGIN_EMAIL_TYPE,
+            identifier=email_key,
+            max_requests=self.LOGIN_EMAIL_MAX,
+        )
+
+    async def check_registration(self, ip: str) -> None:
+        """Check and consume one registration attempt for an IP."""
+        await self._registration_limiter.check_and_increment(
+            key_type=self.REGISTRATION_IP_TYPE,
+            identifier=ip,
+            max_requests=self.REGISTRATION_IP_MAX,
+        )
+
+    async def check_password_reset(self, email: str) -> None:
+        """Check and consume one password-reset attempt for an email."""
+        email_key = self._normalize_email(email)
+        await self._password_reset_limiter.check_and_increment(
+            key_type=self.PASSWORD_RESET_EMAIL_TYPE,
+            identifier=email_key,
+            max_requests=self.PASSWORD_RESET_EMAIL_MAX,
+        )

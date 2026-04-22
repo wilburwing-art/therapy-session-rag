@@ -3,7 +3,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 
 from src.api.v1.dependencies import CurrentPatient, CurrentTherapist
 from src.core.config import Settings, get_settings
@@ -13,12 +13,14 @@ from src.core.csrf import (
     set_csrf_cookie,
 )
 from src.core.database import DbSession
+from src.core.exceptions import RateLimitError
 from src.models.domain.auth import (
-    CurrentPatient as CurrentPatientSchema,
-)
-from src.models.domain.auth import (
+    Challenge2FARequest,
     CurrentUser,
+    Disable2FARequest,
     EmailVerificationConfirm,
+    Enroll2FAResponse,
+    LoginChallengeResponse,
     LoginRequest,
     LoginResponse,
     MagicLinkCreateRequest,
@@ -29,10 +31,16 @@ from src.models.domain.auth import (
     PasswordResetRequest,
     RegisterRequest,
     RegisterResponse,
+    Verify2FARequest,
+)
+from src.models.domain.auth import (
+    CurrentPatient as CurrentPatientSchema,
 )
 from src.services.auth_service import AuthService
 from src.services.email_service import EmailService, EmailServiceError
 from src.services.magic_link_service import MagicLinkService
+from src.services.rate_limiter import AuthRateLimiter, RateLimitExceeded
+from src.services.totp_service import TotpService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -50,11 +58,29 @@ def get_email_service() -> EmailService:
     return EmailService()
 
 
+def get_totp_service(session: DbSession) -> TotpService:
+    return TotpService(session)
+
+
+def get_auth_rate_limiter() -> AuthRateLimiter:
+    """Redis-backed per-IP/email rate limits for auth endpoints."""
+    return AuthRateLimiter()
+
+
 AuthSvc = Annotated[AuthService, Depends(get_auth_service)]
 MagicLinkSvc = Annotated[MagicLinkService, Depends(get_magic_link_service)]
 EmailSvc = Annotated[EmailService, Depends(get_email_service)]
+TotpSvc = Annotated[TotpService, Depends(get_totp_service)]
+AuthLimiter = Annotated[AuthRateLimiter, Depends(get_auth_rate_limiter)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 PATIENT_COOKIE_NAME = "therapyrag_patient"
+
+
+def _client_ip(request: Request) -> str:
+    """Extract the client IP, tolerating missing/proxied cases."""
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
 
 
 def _set_session_cookie(
@@ -87,20 +113,63 @@ def _clear_session_cookie(response: Response, settings: Settings) -> None:
     clear_csrf_cookie(response, settings)
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=None)
 async def login(
     payload: LoginRequest,
+    request: Request,
+    response: Response,
+    auth_service: AuthSvc,
+    rate_limiter: AuthLimiter,
+    settings: SettingsDep,
+) -> LoginResponse | LoginChallengeResponse:
+    """Authenticate a therapist and either set a JWT session cookie or
+    start a 2FA challenge.
+
+    The return body is either `LoginResponse` (no 2FA, session cookie
+    set) or `LoginChallengeResponse` (2FA required, no cookie set yet
+    — client must POST /auth/2fa/challenge next). Both are HTTP 200 so
+    the fetch layer doesn't need an error branch; the client inspects
+    `requires_2fa` to decide what to do.
+    """
+    try:
+        await rate_limiter.check_login(_client_ip(request), payload.email)
+    except RateLimitExceeded as exc:
+        raise RateLimitError(detail=str(exc), retry_after=exc.reset_time) from exc
+
+    user, token, expires_at, requires_2fa = await auth_service.authenticate_therapist(
+        email=payload.email,
+        password=payload.password,
+    )
+    if requires_2fa:
+        return LoginChallengeResponse(
+            challenge_token=token,
+            expires_at=expires_at,
+        )
+
+    _set_session_cookie(response, token, settings)
+    return LoginResponse(
+        user_id=user.id,
+        organization_id=user.organization_id,
+        email=user.email,
+        full_name=user.full_name,
+        expires_at=expires_at,
+    )
+
+
+@router.post("/2fa/challenge", response_model=LoginResponse)
+async def complete_2fa_challenge(
+    payload: Challenge2FARequest,
     response: Response,
     auth_service: AuthSvc,
     settings: SettingsDep,
 ) -> LoginResponse:
-    """Authenticate a therapist and set a JWT session cookie."""
-    user, token, expires_at = await auth_service.authenticate_therapist(
-        email=payload.email,
-        password=payload.password,
+    """Complete a 2FA login by verifying a TOTP code against the
+    challenge token issued during /auth/login."""
+    user, token, expires_at = await auth_service.complete_totp_challenge(
+        challenge_token=payload.challenge_token,
+        code=payload.code,
     )
     _set_session_cookie(response, token, settings)
-
     return LoginResponse(
         user_id=user.id,
         organization_id=user.organization_id,
@@ -113,9 +182,11 @@ async def login(
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 async def register(
     payload: RegisterRequest,
+    request: Request,
     response: Response,
     auth_service: AuthSvc,
     email_service: EmailSvc,
+    rate_limiter: AuthLimiter,
     settings: SettingsDep,
 ) -> RegisterResponse:
     """Create a new practice (org) plus its founding therapist account.
@@ -126,6 +197,11 @@ async def register(
     account creation (best-effort — a send failure does not fail the
     signup).
     """
+    try:
+        await rate_limiter.check_registration(_client_ip(request))
+    except RateLimitExceeded as exc:
+        raise RateLimitError(detail=str(exc), retry_after=exc.reset_time) from exc
+
     user, token, expires_at = await auth_service.register_practice(
         email=payload.email,
         password=payload.password,
@@ -284,6 +360,7 @@ async def password_reset_request(
     payload: PasswordResetRequest,
     auth_service: AuthSvc,
     email_service: EmailSvc,
+    rate_limiter: AuthLimiter,
     settings: SettingsDep,
 ) -> dict[str, bool]:
     """Send a password-reset email if the address matches an account.
@@ -291,6 +368,11 @@ async def password_reset_request(
     Always returns 202 with `sent: true` regardless of whether the
     user exists, to avoid leaking which emails are registered.
     """
+    try:
+        await rate_limiter.check_password_reset(payload.email)
+    except RateLimitExceeded as exc:
+        raise RateLimitError(detail=str(exc), retry_after=exc.reset_time) from exc
+
     raw_token = await auth_service.request_password_reset(payload.email)
     if raw_token:
         reset_url = f"{settings.web_app_url}/reset-password?t={raw_token}"
@@ -316,7 +398,7 @@ async def password_reset_confirm(
         raw_token=payload.token,
         new_password=payload.new_password,
     )
-    _, token, expires_at = await auth_service.authenticate_therapist(
+    _, token, expires_at, _ = await auth_service.authenticate_therapist(
         email=user.email,
         password=payload.new_password,
     )
@@ -358,3 +440,56 @@ async def verify_email_confirm(
 ) -> CurrentUser:
     user = await auth_service.confirm_email_verification(payload.token)
     return CurrentUser.model_validate(user)
+
+
+@router.post("/2fa/enroll", response_model=Enroll2FAResponse)
+async def enroll_2fa(
+    totp_service: TotpSvc,
+    current_user: CurrentTherapist,
+) -> Enroll2FAResponse:
+    """Start enrollment — return provisioning URI + raw secret.
+
+    Idempotent against abandoned enrollments: calling twice before
+    activation replaces the pending secret. Returns 409 if 2FA is
+    already active (must disable first).
+    """
+    provisioning_uri, raw_secret = await totp_service.enroll(current_user.id)
+    return Enroll2FAResponse(
+        provisioning_uri=provisioning_uri,
+        secret=raw_secret,
+    )
+
+
+@router.post("/2fa/activate", status_code=200)
+async def activate_2fa(
+    payload: Verify2FARequest,
+    totp_service: TotpSvc,
+    current_user: CurrentTherapist,
+) -> dict[str, bool]:
+    """Verify the enrollment code and activate 2FA on the account."""
+    await totp_service.activate(current_user.id, payload.code)
+    return {"enabled": True}
+
+
+@router.post("/2fa/disable", status_code=200)
+async def disable_2fa(
+    payload: Disable2FARequest,
+    totp_service: TotpSvc,
+    current_user: CurrentTherapist,
+) -> dict[str, bool]:
+    """Disable 2FA after verifying the current password AND a TOTP code.
+
+    Requires both factors so a stolen session cookie alone can't
+    remove 2FA — the attacker would also need the authenticator.
+    """
+    # Local imports to keep the auth core surface small.
+    from src.core.auth import verify_password
+    from src.core.exceptions import UnauthorizedError
+
+    if current_user.password_hash is None or not verify_password(
+        payload.password, current_user.password_hash
+    ):
+        raise UnauthorizedError("Invalid password")
+
+    await totp_service.disable(current_user.id, payload.code)
+    return {"enabled": False}
