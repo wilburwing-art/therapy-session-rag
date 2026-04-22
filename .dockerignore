@@ -1,8 +1,9 @@
-# Git
+# VCS
 .git
 .gitignore
+.gitattributes
 
-# Python
+# Python build artefacts
 __pycache__
 *.py[cod]
 *$py.class
@@ -24,57 +25,80 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# Virtualenvs / caches
 .venv
 venv/
 ENV/
 env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
 
-# IDE
+# Editors
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-
-# Documentation
-docs/_build/
-
 # Local environment
 .env
-.env.local
-.env.*.local
+.env.*
 *.local
 
-# Docker
-Dockerfile*
+# Host compose + Railway legacy
 docker-compose*.yml
-.docker/
+railway.toml
+fly.toml
 
-# Misc
-*.log
-*.tmp
+# OS noise
 .DS_Store
 Thumbs.db
+*.log
+*.tmp
 
-# Tests (not needed in production image)
-tests/
-conftest.py
-
-# CI/CD
+# CI
 .github/
 .gitlab-ci.yml
 .travis.yml
 
-# Scripts (development only)
+# Dev-only trees
 scripts/
+dev/
+specs/
+internal/
+infra/
+dbt_project/
 
-# Alembic migrations (can be included if needed)
-# alembic/
+# Tests are not shipped in the production image
+tests/
+conftest.py
+
+# Web app has its own build context
+web/node_modules
+web/.next
+web/out
+web/.turbo
+web/dist
+
+# Docs: keep README.md (copied for uv build metadata), drop everything else
+*.md
+!README.md
+blog-draft.md
+
+# Claude / agent scratch
+.claude/
+.ralph/
+.aiignore
+AGENTS.md
+CLAUDE.md
+CONVENTIONS.md
+ARCHITECTURE.md
+DEPLOY.md
+LAUNCH_READINESS.md
+error-documentation.md
+lessons-learned.md

@@ -1,0 +1,90 @@
+# Fly.io app manifest for the TherapyRAG backend.
+#
+# Two process groups run off the same image:
+#   - app:    uvicorn, public HTTP on port 8000
+#   - worker: RQ processor for transcription + embedding + summarization queues
+#
+# On first deploy, rename `app` below with `fly apps create <unique-name>`
+# or edit this file. The web frontend (web/) ships as its own app
+# (`fly launch` from ./web) and is not managed by this manifest.
+
+app = "therapyrag-api"
+primary_region = "iad"
+kill_signal = "SIGINT"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Runs once per release on a temporary machine before the new version
+  # takes traffic. If this exits non-zero, the release is aborted.
+  # The production image does not ship `uv`; alembic is already on PATH
+  # via /app/.venv/bin.
+  release_command = "alembic upgrade head"
+  strategy = "rolling"
+
+[env]
+  APP_ENV = "production"
+  APP_LOG_LEVEL = "INFO"
+  PORT = "8000"
+  PYTHONUNBUFFERED = "1"
+  SENTRY_ENVIRONMENT = "production"
+
+# ---------- processes ----------
+# `app` gets the HTTP service + auto-stop; `worker` runs continuously with no
+# inbound sockets. Secrets (DATABASE_URL, REDIS_URL, etc.) are shared.
+[processes]
+  app = "uvicorn src.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"
+  worker = "python -m rq.cli worker transcription embedding summarization --url $REDIS_URL"
+
+# ---------- HTTP service (app only) ----------
+[[services]]
+  processes = ["app"]
+  internal_port = 8000
+  protocol = "tcp"
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+  # TCP-layer liveness. Fast failure for crashed processes.
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
+
+  # Application readiness. `/health/ready` hits Postgres; failing means
+  # don't route traffic even if the socket is open.
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health/ready"
+    protocol = "http"
+    tls_skip_verify = false
+
+# ---------- VM sizing ----------
+[[vm]]
+  processes = ["app"]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+[[vm]]
+  processes = ["worker"]
+  size = "shared-cpu-1x"
+  memory = "1gb"

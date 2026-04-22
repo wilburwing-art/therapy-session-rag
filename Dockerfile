@@ -1,55 +1,77 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 
-# Build stage
-FROM python:3.12-slim AS builder
+# ---------- builder ----------
+# Installs uv, compiles/sync'd deps into /app/.venv.
+FROM python:3.12-slim-bookworm AS builder
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Pin uv. Bump deliberately; do not float to `latest` in production.
+COPY --from=ghcr.io/astral-sh/uv:0.9.24 /uv /usr/local/bin/uv
 
-# Set up working directory
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
+# Build deps for any packages that need to compile (argon2, cryptography, psycopg bits).
+# Kept minimal; removed from the final image.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential \
+      libffi-dev \
+ && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Install dependencies first (cache layer independent of source).
+COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 
-# Production stage
-FROM python:3.12-slim AS production
-
-# Create non-root user
-RUN groupadd --gid 1000 appgroup && \
-    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
-
-WORKDIR /app
-
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
-
-# Copy application code and migration files
+# Install the project itself (src/) without dev extras.
 COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini ./
+COPY README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
-# Set environment variables
+# ---------- runtime ----------
+FROM python:3.12-slim-bookworm AS runtime
+
+# Minimal runtime libs: libpq for asyncpg fallbacks, curl for health probes,
+# ca-certificates for outbound TLS (Deepgram, Anthropic, OpenAI, Stripe, Resend).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      libpq5 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Non-root user.
+RUN groupadd --system --gid 1000 app \
+ && useradd --system --uid 1000 --gid app --home /app --shell /usr/sbin/nologin app
+
+WORKDIR /app
+
+# Copy the pre-built venv and project source from the builder stage.
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+COPY --chown=app:app src ./src
+COPY --chown=app:app alembic ./alembic
+COPY --chown=app:app alembic.ini ./
+
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000
 
-# Change ownership to non-root user
-RUN chown -R appuser:appgroup /app
+USER app
 
-# Switch to non-root user
-USER appuser
-
-# Expose port
 EXPOSE 8000
 
-# Health check (uses $PORT if set, falls back to 8000)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import os,urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\",\"8000\")}/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent --show-error "http://127.0.0.1:${PORT:-8000}/health/live" || exit 1
 
-# Run migrations then start the API server (Railway sets $PORT dynamically)
-CMD alembic upgrade head && python -m uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Default to the API server. Worker and release process groups override CMD.
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
