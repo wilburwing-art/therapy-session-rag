@@ -100,6 +100,14 @@ npm run typecheck
 npm run build
 ```
 
+### Running E2E tests
+
+The web app ships a Playwright suite under `web/e2e/`. It drives the real backend + Next.js but mocks every external AI / billing / email vendor via placeholder API keys (the codebase already returns canned responses when keys equal `"placeholder"`).
+
+- Start the local stack: `docker compose up -d postgres redis minio minio-setup && uv run alembic upgrade head && uv run uvicorn src.main:app --reload`. Launch the API with `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, and the `STRIPE_*` vars all set to `placeholder` so the tests hit mock paths instead of real vendors.
+- Install browsers once: `cd web && npm install && npx playwright install chromium`.
+- Run the suite: `npm run e2e` (or `npm run e2e:ui` for the Playwright UI). Set `PLAYWRIGHT_PROJECTS=chromium,firefox,webkit` to run the full browser matrix.
+
 ### Project layout
 
 ```

@@ -132,6 +132,118 @@ jobs:
       - name: Build
         run: npm run build
 
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [lint, test-unit, web]
+    continue-on-error: true
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: therapy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      minio:
+        image: bitnami/minio:latest
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          MINIO_DEFAULT_BUCKETS: therapy-recordings
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/therapy_test
+      REDIS_URL: redis://localhost:6379/1
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: therapy-recordings
+      MINIO_SECURE: "false"
+      JWT_SECRET: test-secret-32-bytes-random-value-ok
+      DEEPGRAM_API_KEY: placeholder
+      OPENAI_API_KEY: placeholder
+      ANTHROPIC_API_KEY: placeholder
+      RESEND_API_KEY: placeholder
+      STRIPE_SECRET_KEY: placeholder
+      STRIPE_WEBHOOK_SECRET: placeholder
+      STRIPE_PRICE_ID: placeholder
+      APP_ENV: test
+      BILLING_ENFORCED: "false"
+      THERAPYRAG_API_URL: http://localhost:8000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install backend deps
+        run: uv sync --frozen --dev
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      - name: Start backend
+        run: uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+
+      - name: Install web deps
+        run: npm ci
+        working-directory: ./web
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: ./web
+
+      - name: Build web
+        run: npm run build
+        working-directory: ./web
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/health/live && break || sleep 1
+          done
+
+      - name: Run E2E
+        run: npm run e2e -- --project=chromium
+        working-directory: ./web
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 7
+
   build:
     name: Docker Build
     runs-on: ubuntu-latest
