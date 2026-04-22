@@ -174,6 +174,19 @@ class EmbeddingService:
                 status=SessionStatus.READY,
             )
 
+            # Queue summary generation; import locally to avoid circular imports
+            try:
+                from src.workers.summarization_worker import queue_summarization
+
+                queue_summarization(session_id, settings=self.settings)
+                logger.info(f"Queued summarization for session {session_id}")
+            except Exception as exc:  # pragma: no cover - redis outage is non-fatal
+                logger.warning(
+                    "Failed to queue summarization for session %s: %s",
+                    session_id,
+                    exc,
+                )
+
             return [self._to_chunk_read(chunk) for chunk in created_chunks]
 
         except EmbeddingError as e:

@@ -3,22 +3,22 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1 import router as v1_router
 from src.core.config import get_settings
+from src.core.csrf import CsrfMiddleware
 from src.core.database import close_database, get_db_session, init_database
 from src.core.event_middleware import EventTrackingMiddleware
 from src.core.exceptions import setup_exception_handlers
 from src.core.health import HealthCheckService, HealthStatus
 from src.core.logging import setup_logging, setup_request_logging
+from src.core.observability import init_sentry
 from src.models import db as _models  # noqa: F401  # Import to register models
 
 logger = logging.getLogger("therapy_rag")
@@ -44,6 +44,9 @@ def create_app() -> FastAPI:
     # Setup structured logging first
     setup_logging(settings)
 
+    # Initialize Sentry before the app is created so startup errors get reported.
+    init_sentry(settings)
+
     app = FastAPI(
         title="TherapyRAG API",
         description="Therapy session recording, transcription, and RAG chatbot platform",
@@ -59,6 +62,9 @@ def create_app() -> FastAPI:
 
     # Event tracking middleware (request timing and context)
     app.add_middleware(EventTrackingMiddleware)
+
+    # CSRF protection — enforced on cookie-authenticated state-changing routes
+    app.add_middleware(CsrfMiddleware, settings=settings)
 
     # Configure CORS
     app.add_middleware(
@@ -115,11 +121,6 @@ def create_app() -> FastAPI:
 
     # Include API routers
     app.include_router(v1_router)
-
-    # Serve frontend static files
-    frontend_path = Path(__file__).parent.parent / "frontend"
-    if frontend_path.exists():
-        app.mount("/app", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
 
     return app
 

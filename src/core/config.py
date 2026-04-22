@@ -124,6 +124,103 @@ class Settings(BaseSettings):
         description="Enable clinical AI safety guardrails",
     )
 
+    # Auth
+    jwt_secret: str = Field(
+        default="insecure-dev-secret-change-me",
+        description="Secret used to sign JWT session tokens",
+    )
+    jwt_algorithm: Literal["HS256", "HS384", "HS512"] = Field(
+        default="HS256",
+        description="JWT signing algorithm",
+    )
+    jwt_access_token_ttl_seconds: int = Field(
+        default=43200,  # 12 hours
+        description="Lifetime of therapist JWT session tokens in seconds",
+    )
+    jwt_cookie_name: str = Field(
+        default="therapyrag_session",
+        description="Name of the cookie storing the therapist JWT",
+    )
+    jwt_cookie_secure: bool = Field(
+        default=True,
+        description="Require HTTPS on JWT cookies (set to false for local dev)",
+    )
+    magic_link_ttl_seconds: int = Field(
+        default=900,  # 15 minutes
+        description="Lifetime of patient magic-link tokens in seconds",
+    )
+
+    # Stripe billing
+    stripe_secret_key: str = Field(
+        default="placeholder",
+        description="Stripe secret API key",
+    )
+    stripe_webhook_secret: str = Field(
+        default="placeholder",
+        description="Stripe webhook signing secret for verifying events",
+    )
+    stripe_price_id: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the $149/mo therapist plan",
+    )
+    stripe_trial_days: int = Field(
+        default=14,
+        description="Free trial length in days on new subscriptions",
+    )
+    stripe_success_url: str = Field(
+        default="http://localhost:3000/dashboard?checkout=success",
+        description="Stripe redirect URL after successful checkout",
+    )
+    stripe_cancel_url: str = Field(
+        default="http://localhost:3000/billing?checkout=canceled",
+        description="Stripe redirect URL after canceled checkout",
+    )
+    stripe_portal_return_url: str = Field(
+        default="http://localhost:3000/billing",
+        description="Stripe customer portal return URL",
+    )
+    billing_enforced: bool = Field(
+        default=False,
+        description=(
+            "When true, subscription-gating middleware blocks API access "
+            "for orgs without an active/trialing subscription"
+        ),
+    )
+
+    # Transactional email (Resend)
+    resend_api_key: str = Field(
+        default="placeholder",
+        description="Resend API key for transactional email",
+    )
+    email_from_address: str = Field(
+        default="noreply@therapyrag.local",
+        description="From address for transactional email",
+    )
+    email_from_name: str = Field(
+        default="TherapyRAG",
+        description="From name for transactional email",
+    )
+    web_app_url: str = Field(
+        default="http://localhost:3000",
+        description="Public base URL of the web app (used in email links)",
+    )
+
+    # Error tracking
+    sentry_dsn: str = Field(
+        default="",
+        description="Sentry DSN. Empty disables Sentry.",
+    )
+    sentry_environment: str = Field(
+        default="development",
+        description="Sentry environment tag",
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of transactions to record for performance monitoring",
+    )
+
     # File upload
     max_upload_size: int = Field(
         default=524288000,  # 500MB

@@ -35,5 +35,16 @@ class UserRead(UserBase):
 
     id: UUID = Field(..., description="User unique identifier")
     organization_id: UUID = Field(..., description="Organization the user belongs to")
+    full_name: str | None = Field(None, description="User's full name")
+    email_verified_at: datetime | None = Field(
+        None, description="When the user's email was verified"
+    )
     created_at: datetime = Field(..., description="When the user was created")
     updated_at: datetime = Field(..., description="When the user was last updated")
+
+
+class PatientCreate(BaseModel):
+    """Schema a therapist uses to onboard a new patient."""
+
+    email: EmailStr = Field(..., description="Patient's email address")
+    full_name: str = Field(..., min_length=1, max_length=255)

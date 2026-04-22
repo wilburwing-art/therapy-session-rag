@@ -191,6 +191,36 @@ class ConversationService:
         )
         return [self._to_conversation_summary(c) for c in conversations]
 
+    async def list_for_therapist(
+        self,
+        patient_id: uuid.UUID,
+        organization_id: uuid.UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[ConversationSummary]:
+        """List a patient's conversations, tenant-scoped to the therapist's org."""
+        conversations = await self.repo.list_for_patient_in_org(
+            patient_id=patient_id,
+            organization_id=organization_id,
+            limit=limit,
+            offset=offset,
+        )
+        return [self._to_conversation_summary(c) for c in conversations]
+
+    async def get_for_therapist(
+        self,
+        conversation_id: uuid.UUID,
+        organization_id: uuid.UUID,
+    ) -> ConversationRead:
+        """Fetch a full conversation (with messages), tenant-scoped to an org."""
+        conversation = await self.repo.get_for_org(
+            conversation_id=conversation_id,
+            organization_id=organization_id,
+        )
+        if not conversation:
+            raise NotFoundError(resource="Conversation")
+        return self._to_conversation_read(conversation)
+
     def get_history_for_claude(
         self,
         conversation: Conversation,

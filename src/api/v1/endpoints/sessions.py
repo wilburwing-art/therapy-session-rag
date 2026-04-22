@@ -22,6 +22,7 @@ from src.models.domain.session import (
     SessionUploadResponse,
 )
 from src.models.domain.session import SessionStatus as DomainSessionStatus
+from src.models.domain.session_recap import SessionRecapRead
 from src.models.domain.transcript import (
     TranscriptionJobRead,
     TranscriptionStatusResponse,
@@ -29,6 +30,7 @@ from src.models.domain.transcript import (
 )
 from src.services.session_service import SessionService
 from src.services.storage_service import StorageService
+from src.services.summarization_service import SummarizationService
 from src.services.transcription_service import TranscriptionService
 from src.workers.transcription_worker import queue_transcription
 
@@ -72,9 +74,15 @@ def get_transcription_service(session: DbSession) -> TranscriptionService:
     return TranscriptionService(session)
 
 
+def get_summarization_service(session: DbSession) -> SummarizationService:
+    """Get summarization service instance."""
+    return SummarizationService(session)
+
+
 SessionSvc = Annotated[SessionService, Depends(get_session_service)]
 StorageSvc = Annotated[StorageService, Depends(get_storage_service)]
 TranscriptSvc = Annotated[TranscriptionService, Depends(get_transcription_service)]
+SummarySvc = Annotated[SummarizationService, Depends(get_summarization_service)]
 
 
 @router.post("", response_model=SessionRead, status_code=201)
@@ -321,6 +329,57 @@ async def get_transcript(
     # Validate session access via tenant context
     await session_service.get_session(session_id)
     return await transcription_service.get_transcript(session_id)
+
+
+@router.get("/{session_id}/recap", response_model=SessionRecapRead)
+async def get_session_recap(
+    session_id: uuid.UUID,
+    session_service: SessionSvc,
+    summarization_service: SummarySvc,
+) -> SessionRecapRead:
+    """Get the LLM-generated recap for a session.
+
+    Returns 404 if the recap hasn't been generated yet. Recaps are
+    automatically created after embedding completes, but may take a
+    few seconds to appear. Use POST to regenerate.
+    """
+    await session_service.get_session(session_id)
+    return await summarization_service.get_recap(session_id)
+
+
+@router.post(
+    "/{session_id}/recap",
+    response_model=SessionRecapRead,
+    status_code=201,
+)
+async def generate_session_recap(
+    session_id: uuid.UUID,
+    session_service: SessionSvc,
+    summarization_service: SummarySvc,
+    auth: Auth,
+    events: Events,
+) -> SessionRecapRead:
+    """Generate or regenerate the recap for a session.
+
+    Runs synchronously and returns the new recap. Use this to refresh
+    after a re-transcription or when the auto-generated recap failed.
+    Requires the session to have a transcript.
+    """
+    await session_service.get_session(session_id)
+    recap = await summarization_service.generate_recap(session_id)
+
+    await events.publish(
+        event_name="session.recap_generated",
+        category=EventCategory.SYSTEM,
+        organization_id=auth.organization_id,
+        session_id=session_id,
+        properties={
+            "model": recap.model_name,
+            "risk_flag_count": len(recap.risk_flags),
+        },
+    )
+
+    return recap
 
 
 @router.get(
