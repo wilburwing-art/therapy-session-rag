@@ -1,6 +1,12 @@
 import Link from "next/link";
+import { SessionPlayer } from "@/components/SessionPlayer";
 import { serverFetch, serverFetchOrNull } from "@/lib/serverApi";
-import type { SessionRecap, SessionSummary } from "@/lib/types";
+import type {
+  SessionRead,
+  SessionRecap,
+  TranscriptSegment,
+} from "@/lib/types";
+import { NotesEditor } from "./NotesEditor";
 import { RecapActions } from "./RecapActions";
 
 type Transcript = {
@@ -9,6 +15,7 @@ type Transcript = {
   word_count: number | null;
   duration_seconds: number | null;
   language: string | null;
+  segments: TranscriptSegment[];
 };
 
 export default async function SessionDetailPage({
@@ -18,7 +25,7 @@ export default async function SessionDetailPage({
 }) {
   const { id } = await params;
   const [session, transcript, recap] = await Promise.all([
-    serverFetch<SessionSummary>(`/api/v1/sessions/${id}`),
+    serverFetch<SessionRead>(`/api/v1/sessions/${id}`),
     serverFetchOrNull<Transcript>(`/api/v1/sessions/${id}/transcript`),
     serverFetchOrNull<SessionRecap>(`/api/v1/sessions/${id}/recap`),
   ]);
@@ -39,6 +46,8 @@ export default async function SessionDetailPage({
           Status: <span className="font-medium">{session.status}</span>
         </p>
       </header>
+
+      <NotesEditor sessionId={id} initialNotes={session.therapist_notes ?? ""} />
 
       <section className="prose-surface">
         <div className="flex items-center justify-between">
@@ -130,9 +139,13 @@ export default async function SessionDetailPage({
                 ? ` · ${Math.round(transcript.duration_seconds / 60)} min`
                 : ""}
             </p>
-            <pre className="mt-4 max-h-[480px] overflow-auto whitespace-pre-wrap rounded-md bg-slate-50 p-4 font-mono text-sm text-slate-800">
-              {transcript.full_text}
-            </pre>
+            <div className="mt-4">
+              <SessionPlayer
+                sessionId={id}
+                segments={transcript.segments ?? []}
+                fallbackText={transcript.full_text ?? ""}
+              />
+            </div>
           </>
         ) : (
           <p className="mt-2 text-slate-600">

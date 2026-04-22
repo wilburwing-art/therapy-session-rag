@@ -50,7 +50,16 @@ class SessionUpdate(BaseModel):
         None, description="Duration in seconds"
     )
     error_message: str | None = Field(None, description="Error message if failed")
+    therapist_notes: str | None = Field(None, description="Private therapist notes")
     session_metadata: dict[str, Any] | None = Field(None, description="Updated metadata")
+
+
+class SessionNotesUpdate(BaseModel):
+    """Schema for updating only the therapist notes on a session."""
+
+    notes: str | None = Field(
+        None, max_length=20000, description="Private therapist notes"
+    )
 
 
 class SessionRead(BaseModel):
@@ -68,6 +77,7 @@ class SessionRead(BaseModel):
     status: SessionStatus = Field(..., description="Current processing status")
     session_type: SessionType = Field(..., description="Type of session recording")
     error_message: str | None = Field(None, description="Error message if failed")
+    therapist_notes: str | None = Field(None, description="Private therapist notes")
     session_metadata: dict[str, Any] | None = Field(None, description="Session metadata")
     created_at: datetime = Field(..., description="When the session was created")
     updated_at: datetime = Field(..., description="When the session was last updated")

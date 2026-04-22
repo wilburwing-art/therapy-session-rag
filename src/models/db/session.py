@@ -87,6 +87,10 @@ class Session(Base, TimestampMixin):
         Text,
         nullable=True,
     )
+    therapist_notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
     session_metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,

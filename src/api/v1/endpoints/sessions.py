@@ -1,21 +1,24 @@
 """Session API endpoints."""
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import Auth, Events
 from src.core.config import get_settings
 from src.core.database import DbSession
-from src.core.exceptions import ValidationError
+from src.core.exceptions import NotFoundError, ValidationError
 from src.core.pagination import CursorPage
 from src.core.tenant import TenantContext
 from src.models.db.event import EventCategory
 from src.models.domain.session import (
     SessionCreate,
     SessionFilter,
+    SessionNotesUpdate,
     SessionRead,
     SessionSummary,
     SessionUpdate,
@@ -33,6 +36,17 @@ from src.services.storage_service import StorageService
 from src.services.summarization_service import SummarizationService
 from src.services.transcription_service import TranscriptionService
 from src.workers.transcription_worker import queue_transcription
+
+
+class RecordingUrlResponse(BaseModel):
+    """Response for a presigned recording URL."""
+
+    url: str = Field(..., description="Presigned URL for the recording")
+    expires_at: datetime = Field(..., description="When the URL expires")
+
+
+# Presigned URL expiry: 15 minutes
+RECORDING_URL_EXPIRY_SECONDS = 900
 
 router = APIRouter()
 
@@ -135,6 +149,46 @@ async def update_session(
     Returns 404 if session not found.
     """
     return await service.update_session(session_id, update)
+
+
+@router.patch("/{session_id}/notes", response_model=SessionRead)
+async def update_session_notes(
+    session_id: uuid.UUID,
+    payload: SessionNotesUpdate,
+    service: SessionSvc,
+) -> SessionRead:
+    """Update the therapist notes for a session.
+
+    Notes are private to the therapist and not exposed to patients.
+    Returns 404 if session not found.
+    """
+    return await service.update_notes(session_id, payload.notes)
+
+
+@router.get("/{session_id}/recording/url", response_model=RecordingUrlResponse)
+async def get_recording_url(
+    session_id: uuid.UUID,
+    service: SessionSvc,
+    storage_service: StorageSvc,
+) -> RecordingUrlResponse:
+    """Get a short-lived presigned URL for the session recording.
+
+    Returns 404 if the session has no recording uploaded.
+    The URL expires in 15 minutes.
+    """
+    session = await service.get_session(session_id)
+    if not session.recording_path:
+        raise NotFoundError(
+            resource="Recording",
+            detail=f"Session {session_id} has no recording uploaded",
+        )
+
+    url = await storage_service.get_presigned_url(
+        session.recording_path,
+        expires=timedelta(seconds=RECORDING_URL_EXPIRY_SECONDS),
+    )
+    expires_at = datetime.now(UTC) + timedelta(seconds=RECORDING_URL_EXPIRY_SECONDS)
+    return RecordingUrlResponse(url=url, expires_at=expires_at)
 
 
 @router.get("", response_model=CursorPage[SessionSummary])

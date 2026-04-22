@@ -24,6 +24,7 @@ def mock_db_session() -> MagicMock:
     """Create mock database session."""
     session = MagicMock()
     session.refresh = AsyncMock()
+    session.flush = AsyncMock()
     return session
 
 
@@ -61,6 +62,7 @@ def create_mock_session(
     recording_path: str | None = None,
     recording_duration_seconds: int | None = None,
     error_message: str | None = None,
+    therapist_notes: str | None = None,
 ) -> MagicMock:
     """Create a mock Session object."""
     session = MagicMock(spec=Session)
@@ -74,6 +76,7 @@ def create_mock_session(
     session.status = status
     session.session_type = session_type
     session.error_message = error_message
+    session.therapist_notes = therapist_notes
     session.session_metadata = {}
     session.created_at = datetime.utcnow()
     session.updated_at = datetime.utcnow()
@@ -588,3 +591,98 @@ class TestGetSessionsForPatient:
                 therapist_id=therapist_id,
                 status=SessionStatus.READY,
             )
+
+
+class TestUpdateNotes:
+    """Tests for update_notes method."""
+
+    async def test_updates_notes(
+        self,
+        mock_db_session: MagicMock,
+        patient_id: uuid.UUID,
+        therapist_id: uuid.UUID,
+        consent_id: uuid.UUID,
+        session_id: uuid.UUID,
+    ) -> None:
+        """Updating notes persists the new value and returns the session."""
+        mock_session = create_mock_session(
+            session_id=session_id,
+            patient_id=patient_id,
+            therapist_id=therapist_id,
+            consent_id=consent_id,
+        )
+
+        with (
+            patch("src.services.session_service.ConsentRepository"),
+            patch(
+                "src.services.session_service.SessionRepository"
+            ) as mock_session_repo_class,
+        ):
+            mock_session_repo = MagicMock()
+            mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
+            mock_session_repo_class.return_value = mock_session_repo
+
+            service = SessionService(mock_db_session)
+            result = await service.update_notes(
+                session_id, "Follow up on sleep issues"
+            )
+
+            assert result.id == session_id
+            assert result.therapist_notes == "Follow up on sleep issues"
+            assert mock_session.therapist_notes == "Follow up on sleep issues"
+            mock_db_session.flush.assert_awaited_once()
+            mock_db_session.refresh.assert_awaited_once_with(mock_session)
+
+    async def test_clears_notes_with_none(
+        self,
+        mock_db_session: MagicMock,
+        patient_id: uuid.UUID,
+        therapist_id: uuid.UUID,
+        consent_id: uuid.UUID,
+        session_id: uuid.UUID,
+    ) -> None:
+        """Passing None clears the existing notes."""
+        mock_session = create_mock_session(
+            session_id=session_id,
+            patient_id=patient_id,
+            therapist_id=therapist_id,
+            consent_id=consent_id,
+            therapist_notes="previous value",
+        )
+
+        with (
+            patch("src.services.session_service.ConsentRepository"),
+            patch(
+                "src.services.session_service.SessionRepository"
+            ) as mock_session_repo_class,
+        ):
+            mock_session_repo = MagicMock()
+            mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
+            mock_session_repo_class.return_value = mock_session_repo
+
+            service = SessionService(mock_db_session)
+            result = await service.update_notes(session_id, None)
+
+            assert result.therapist_notes is None
+            assert mock_session.therapist_notes is None
+
+    async def test_raises_not_found_when_missing(
+        self,
+        mock_db_session: MagicMock,
+        session_id: uuid.UUID,
+    ) -> None:
+        """update_notes raises NotFoundError when session does not exist."""
+        with (
+            patch("src.services.session_service.ConsentRepository"),
+            patch(
+                "src.services.session_service.SessionRepository"
+            ) as mock_session_repo_class,
+        ):
+            mock_session_repo = MagicMock()
+            mock_session_repo.get_by_id = AsyncMock(return_value=None)
+            mock_session_repo_class.return_value = mock_session_repo
+
+            service = SessionService(mock_db_session)
+
+            with pytest.raises(NotFoundError):
+                await service.update_notes(session_id, "new notes")
