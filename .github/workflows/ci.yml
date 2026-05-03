@@ -105,6 +105,14 @@ jobs:
             pg_isready -h localhost -p 5432 -U postgres && break || sleep 1
           done
 
+      - name: Create pgvector extension
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d therapy_test \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
       - name: Run integration tests
         run: uv run pytest tests/integration -v --tb=short -m "not skip"
 
