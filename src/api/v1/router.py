@@ -14,6 +14,7 @@ from src.api.v1.endpoints import (
     intake,
     invites,
     organizations,
+    patient_portal,
     patients,
     search,
     sessions,
@@ -68,6 +69,12 @@ router.include_router(
     homework.router,
     prefix="/homework",
     tags=["homework"],
+    dependencies=_gated_dependency,
+)
+router.include_router(
+    patient_portal.router,
+    prefix="/patient",
+    tags=["patient-portal"],
     dependencies=_gated_dependency,
 )
 router.include_router(

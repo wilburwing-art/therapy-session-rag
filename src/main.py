@@ -21,6 +21,10 @@ from src.core.logging import setup_logging, setup_request_logging
 from src.core.observability import init_sentry
 from src.core.telemetry import init_telemetry, instrument_fastapi
 from src.models import db as _models  # noqa: F401  # Import to register models
+from src.workers.reminder_scheduler import (  # reminders-engineer:scheduler-hook
+    start_scheduler,
+    stop_scheduler,
+)
 
 logger = logging.getLogger("therapy_rag")
 
@@ -31,10 +35,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     # Startup
     settings = get_settings()
     init_database(settings)
+    # --- reminders-engineer: scheduler startup (unique anchor) ---
+    try:
+        start_scheduler(settings)
+    except Exception as exc:  # noqa: BLE001 - scheduler is non-critical at boot
+        logger.warning("reminder_scheduler.start_failed", extra={"error": str(exc)})
+    # --- end reminders-engineer startup anchor ---
     logger.info("Application started", extra={"env": settings.app_env})
     yield
     # Shutdown
     logger.info("Application shutting down")
+    # --- reminders-engineer: scheduler shutdown (unique anchor) ---
+    try:
+        stop_scheduler(settings)
+    except Exception as exc:  # noqa: BLE001 - best-effort teardown
+        logger.warning("reminder_scheduler.stop_failed", extra={"error": str(exc)})
+    # --- end reminders-engineer shutdown anchor ---
     await close_database()
 
 

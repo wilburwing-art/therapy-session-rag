@@ -290,6 +290,46 @@ class Settings(BaseSettings):
         description="Metered.ca TURN credential",
     )
 
+    # --- reminders-engineer: twilio notifications settings (append-only anchor) ---
+    reminders_enabled: bool = Field(
+        default=False,
+        description="Enable scheduled reminder notifications (SMS/email).",
+    )
+    reminders_scheduler_interval_seconds: int = Field(
+        default=60,
+        description="How often the rq-scheduler wakes to enqueue due reminders.",
+    )
+    twilio_account_sid: str = Field(
+        default="",
+        description="Twilio Account SID. Empty disables SMS sending (sender becomes a no-op stub).",
+    )
+    twilio_auth_token: str = Field(
+        default="",
+        description="Twilio auth token. Empty disables SMS sending.",
+    )
+    twilio_from_number: str = Field(
+        default="",
+        description="E.164-formatted Twilio phone number used as the SMS sender.",
+    )
+    twilio_messaging_service_sid: str = Field(
+        default="",
+        description=(
+            "Optional Twilio Messaging Service SID. When set, takes precedence "
+            "over twilio_from_number for delivery."
+        ),
+    )
+
+    @property
+    def twilio_configured(self) -> bool:
+        """True when Twilio credentials are present and SMS can be sent."""
+        return bool(
+            self.twilio_account_sid
+            and self.twilio_auth_token
+            and (self.twilio_from_number or self.twilio_messaging_service_sid)
+        )
+
+    # --- end reminders-engineer anchor ---
+
     # --- observability-engineer: OpenTelemetry settings (append-only anchor) ---
     otel_enabled: bool = Field(
         default=False,

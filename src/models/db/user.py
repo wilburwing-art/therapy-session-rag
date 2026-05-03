@@ -3,10 +3,10 @@
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.db.base import Base, TimestampMixin
@@ -81,6 +81,15 @@ class User(Base, TimestampMixin):
     totp_pending_secret: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
+    )
+
+    # Per-user notification preferences (channels, quiet hours, opt-outs).
+    # Free-form JSONB so new channels can land without a migration.
+    notification_preferences: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="{}",
+        default=dict,
     )
 
     # Relationships

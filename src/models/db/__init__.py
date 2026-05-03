@@ -16,6 +16,12 @@ from src.models.db.intake_response import IntakeResponse
 from src.models.db.magic_link import MagicLink
 from src.models.db.organization import Organization
 from src.models.db.patient_themes import PatientThemes
+from src.models.db.reminder_sent import (
+    ReminderChannel,
+    ReminderKind,
+    ReminderSent,
+    ReminderStatus,
+)
 from src.models.db.session import Session
 from src.models.db.session_chunk import SessionChunk
 from src.models.db.session_recap import SessionRecap
@@ -45,6 +51,10 @@ __all__ = [
     "MagicLink",
     "Organization",
     "PatientThemes",
+    "ReminderChannel",
+    "ReminderKind",
+    "ReminderSent",
+    "ReminderStatus",
     "Session",
     "SessionChunk",
     "SessionRecap",
