@@ -56,19 +56,16 @@ export default function PatientChatPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <CrisisBanner />
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        {state.kind === "loading" || state.kind === "redeeming" ? (
-          <p className="text-slate-600">Getting your chat ready…</p>
-        ) : state.kind === "needs_link" ? (
-          <NeedsLinkMessage />
-        ) : state.kind === "error" ? (
-          <p className="text-red-600">{state.message}</p>
-        ) : (
-          <ChatSurface patient={state.patient} />
-        )}
-      </div>
+    <main className="mx-auto max-w-2xl px-4 py-8">
+      {state.kind === "loading" || state.kind === "redeeming" ? (
+        <p className="text-slate-600">Getting your chat ready…</p>
+      ) : state.kind === "needs_link" ? (
+        <NeedsLinkMessage />
+      ) : state.kind === "error" ? (
+        <p className="text-red-600">{state.message}</p>
+      ) : (
+        <ChatSurface patient={state.patient} />
+      )}
     </main>
   );
 }
@@ -82,15 +79,6 @@ function NeedsLinkMessage() {
         after 15 minutes and can only be used once. Contact your therapist to
         request a fresh one.
       </p>
-    </div>
-  );
-}
-
-function CrisisBanner() {
-  return (
-    <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900">
-      This chat is not a crisis service. If you&apos;re in danger, call or text{" "}
-      <strong>988</strong> (US) or your local emergency number.
     </div>
   );
 }

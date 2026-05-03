@@ -13,6 +13,7 @@ import { DataRights } from "./DataRights";
 import { DownloadRecordButton } from "./DownloadRecordButton";
 import { DownloadThemesButton } from "./DownloadThemesButton";
 import { GenerateThemesButton } from "./GenerateThemesButton";
+import { HomeworkSection } from "./HomeworkSection";
 import { MagicLinkButton } from "./MagicLinkButton";
 import { NewSessionButton } from "./NewSessionButton";
 
@@ -81,6 +82,8 @@ export default async function PatientDetailPage({
           <AssessmentPanel patientId={id} assessments={assessments} />
         </div>
       </section>
+
+      <HomeworkSection patientId={id} />
 
       <section>
         <div className="flex items-center justify-between">

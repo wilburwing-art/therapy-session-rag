@@ -63,6 +63,21 @@ export type HomeworkItem = {
   notes: string | null;
 };
 
+// Full tracked homework row from /api/v1/homework/* and
+// /api/v1/patients/{id}/homework. Distinct from the recap sub-item
+// above (which is JSON inside the recap payload).
+export type HomeworkItemRecord = {
+  id: UUID;
+  session_id: UUID;
+  patient_id: UUID;
+  task: string;
+  notes: string | null;
+  completed: boolean;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type SessionRecap = {
   id: UUID;
   session_id: UUID;

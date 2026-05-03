@@ -26,11 +26,13 @@ from src.models.domain.assessment import (
     AssessmentRead,
 )
 from src.models.domain.chat import ConversationRead, ConversationSummary
+from src.models.domain.homework import HomeworkItemRead
 from src.models.domain.patient_themes import PatientThemesRead
 from src.services.assessment_service import AssessmentService
 from src.services.auth_service import AuthService
 from src.services.conversation_service import ConversationService
 from src.services.data_export_service import DataExportService
+from src.services.homework_service import HomeworkService
 from src.services.pdf_service import PdfService
 from src.services.themes_service import ThemesService
 
@@ -61,12 +63,17 @@ def get_pdf_service(session: DbSession) -> PdfService:
     return PdfService(session)
 
 
+def get_homework_service(session: DbSession) -> HomeworkService:
+    return HomeworkService(session)
+
+
 ThemesSvc = Annotated[ThemesService, Depends(get_themes_service)]
 ConversationSvc = Annotated[ConversationService, Depends(get_conversation_service)]
 AssessmentSvc = Annotated[AssessmentService, Depends(get_assessment_service)]
 DataExportSvc = Annotated[DataExportService, Depends(get_data_export_service)]
 AuthSvc = Annotated[AuthService, Depends(get_auth_service)]
 PdfSvc = Annotated[PdfService, Depends(get_pdf_service)]
+HomeworkSvc = Annotated[HomeworkService, Depends(get_homework_service)]
 
 
 class PatientDeleteConfirm(BaseModel):
@@ -411,3 +418,47 @@ async def download_patient_themes_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get(
+    "/{patient_id}/homework",
+    response_model=list[HomeworkItemRead],
+)
+async def list_patient_homework(
+    patient_id: uuid.UUID,
+    service: HomeworkSvc,
+    auth: Auth,
+    events: Events,
+    completed: Annotated[
+        bool | None,
+        Query(description="Filter by completion state. Omit for all."),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> list[HomeworkItemRead]:
+    """Therapist view of a patient's between-session homework items.
+
+    Scoped to the authenticated therapist's org so a therapist cannot
+    read another org's patient data. Audited via the standard
+    DATA_ACCESS event stream.
+    """
+    items = await service.list_for_patient(
+        patient_id=patient_id,
+        organization_id=auth.organization_id,
+        completed=completed,
+        limit=limit,
+    )
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="patient",
+        event_name="patient.homework_viewed",
+        properties={
+            "patient_id": str(patient_id),
+            "result_count": len(items),
+            "completed_filter": completed,
+        },
+    )
+
+    return items

@@ -10,6 +10,7 @@ from src.api.v1.endpoints import (
     chat,
     consent,
     experiments,
+    homework,
     intake,
     invites,
     organizations,
@@ -61,6 +62,12 @@ router.include_router(
     experiments.router,
     prefix="/experiments",
     tags=["experiments"],
+    dependencies=_gated_dependency,
+)
+router.include_router(
+    homework.router,
+    prefix="/homework",
+    tags=["homework"],
     dependencies=_gated_dependency,
 )
 router.include_router(

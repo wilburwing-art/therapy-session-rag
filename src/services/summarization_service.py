@@ -27,6 +27,7 @@ from src.models.domain.session_recap import (
     SessionRecapPayload,
     SessionRecapRead,
 )
+from src.repositories.homework_repo import HomeworkRepository
 from src.repositories.session_recap_repo import SessionRecapRepository
 from src.repositories.session_repo import SessionRepository
 from src.repositories.transcript_repo import TranscriptRepository
@@ -91,6 +92,7 @@ class SummarizationService:
         self.session_repo = SessionRepository(db_session)
         self.transcript_repo = TranscriptRepository(db_session)
         self.recap_repo = SessionRecapRepository(db_session)
+        self.homework_repo = HomeworkRepository(db_session)
         self._claude_client: ClaudeClient | None = claude_client
 
     @property
@@ -177,6 +179,32 @@ class SummarizationService:
             response.model,
             len(payload.risk_flags),
         )
+
+        # Materialize homework rows so patients can track them in the
+        # web app. Idempotent on (session_id, task_hash): re-running
+        # recap generation will not duplicate or reset rows patients
+        # may have already ticked off.
+        if payload.homework_assigned:
+            try:
+                created = await self.homework_repo.upsert_many_for_session(
+                    session_id=session_id,
+                    patient_id=session.patient_id,
+                    organization_id=session.patient.organization_id,
+                    items=[item.model_dump() for item in payload.homework_assigned],
+                )
+                logger.info(
+                    "Materialized %d homework row(s) for session %s",
+                    created,
+                    session_id,
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                # Homework materialization must not fail recap generation;
+                # recap is the source of truth and can be re-run later.
+                logger.warning(
+                    "Failed to materialize homework for session %s: %s",
+                    session_id,
+                    exc,
+                )
 
         return self._to_read(recap)
 

@@ -9,6 +9,7 @@ from src.models.db.consent import Consent
 from src.models.db.conversation import Conversation, ConversationMessage
 from src.models.db.event import AnalyticsEvent
 from src.models.db.experiment import Experiment, ExperimentAssignment, ExperimentMetric
+from src.models.db.homework_item import HomeworkItem
 from src.models.db.intake_form import IntakeForm
 from src.models.db.intake_invitation import IntakeInvitation
 from src.models.db.intake_response import IntakeResponse
@@ -37,6 +38,7 @@ __all__ = [
     "Experiment",
     "ExperimentAssignment",
     "ExperimentMetric",
+    "HomeworkItem",
     "IntakeForm",
     "IntakeInvitation",
     "IntakeResponse",

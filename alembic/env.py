@@ -24,6 +24,7 @@ from src.models.db.experiment import (  # noqa: F401
 from src.models.db.assessment import Assessment  # noqa: F401
 from src.models.db.auth_token import AuthToken  # noqa: F401
 from src.models.db.billing_usage import BillingUsage  # noqa: F401
+from src.models.db.homework_item import HomeworkItem  # noqa: F401
 from src.models.db.intake_form import IntakeForm  # noqa: F401
 from src.models.db.intake_invitation import IntakeInvitation  # noqa: F401
 from src.models.db.intake_response import IntakeResponse  # noqa: F401

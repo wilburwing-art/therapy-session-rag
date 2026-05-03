@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
-import type { ChatResponse, ChatSource, CurrentPatient } from "@/lib/types";
+import type {
+  ChatResponse,
+  ChatSource,
+  CurrentPatient,
+  HomeworkItemRecord,
+} from "@/lib/types";
 
 type UIMessage =
   | { role: "user"; content: string; id: string }
@@ -19,7 +24,50 @@ export function ChatSurface({ patient }: { patient: CurrentPatient }) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [homework, setHomework] = useState<HomeworkItemRecord[] | null>(null);
+  const [homeworkBusy, setHomeworkBusy] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const loadHomework = useCallback(async () => {
+    try {
+      const items = await apiFetch<HomeworkItemRecord[]>(
+        "/v1/homework/me?completed=false&limit=5",
+      );
+      setHomework(items);
+    } catch {
+      // Homework panel is a soft feature — silently hide it on error
+      // rather than blocking the chat surface.
+      setHomework([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadHomework();
+  }, [loadHomework]);
+
+  async function toggleHomework(item: HomeworkItemRecord) {
+    if (homeworkBusy) return;
+    setHomeworkBusy(item.id);
+    try {
+      const updated = await apiFetch<HomeworkItemRecord>(
+        `/v1/homework/${item.id}`,
+        {
+          method: "PATCH",
+          json: { completed: !item.completed },
+        },
+      );
+      // Drop completed items from the "pending" panel immediately.
+      setHomework((prev) =>
+        prev ? prev.filter((h) => h.id !== updated.id) : prev,
+      );
+    } catch {
+      // Surface the failure in the existing error channel so the user
+      // notices but the chat still works.
+      setError("Could not update homework. Try again.");
+    } finally {
+      setHomeworkBusy(null);
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -76,6 +124,45 @@ export function ChatSurface({ patient }: { patient: CurrentPatient }) {
           back to the session and timestamp.
         </p>
       </header>
+
+      {homework && homework.length > 0 && (
+        <section
+          aria-label="Open homework"
+          className="mb-6 rounded-xl border border-brand-200 bg-brand-50/60 p-4"
+        >
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-brand-800">
+              From your last session
+            </h2>
+            <span className="text-xs text-brand-700">
+              {homework.length} open
+            </span>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {homework.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-start gap-3 rounded-lg bg-white px-3 py-2 shadow-sm"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  checked={item.completed}
+                  disabled={homeworkBusy === item.id}
+                  onChange={() => void toggleHomework(item)}
+                  aria-label={`Mark "${item.task}" complete`}
+                />
+                <div className="flex-1">
+                  <p className="text-sm text-slate-800">{item.task}</p>
+                  {item.notes && (
+                    <p className="mt-0.5 text-xs text-slate-500">{item.notes}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="flex-1 space-y-4 pb-40">
         {messages.length === 0 && (
