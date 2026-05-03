@@ -110,9 +110,7 @@ class TestGetTherapistUtilization:
         assert result[0].sessions_in_period == 8
         assert result[0].total_hours == 6.5
 
-    async def test_returns_empty_list(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_empty_list(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         with patch.object(
             service._analytics_repo,
             "therapist_utilization",
@@ -127,9 +125,7 @@ class TestGetTherapistUtilization:
 class TestGetSessionOutcomes:
     """Tests for AnalyticsService.get_session_outcomes()."""
 
-    async def test_returns_outcomes(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_outcomes(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         mock_row = _make_outcome_row()
 
         with patch.object(
@@ -168,9 +164,7 @@ class TestGetSessionOutcomes:
 class TestGetPatientEngagement:
     """Tests for AnalyticsService.get_patient_engagement()."""
 
-    async def test_returns_engagement(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_engagement(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         mock_row = _make_engagement_row()
 
         with patch.object(
@@ -186,9 +180,7 @@ class TestGetPatientEngagement:
         assert result[0].total_patients == 50
         assert result[0].patient_activation_rate_pct == 30.0
 
-    async def test_zero_patients(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_zero_patients(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         mock_row = _make_engagement_row()
         mock_row.total_patients = 0
         mock_row.active_patients = 0
@@ -230,9 +222,7 @@ class TestGetAISafetyMetrics:
 class TestGetEventTimeline:
     """Tests for AnalyticsService.get_event_timeline()."""
 
-    async def test_returns_timeline(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_timeline(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         now = datetime.now(UTC)
         mock_event = MagicMock(spec=AnalyticsEvent)
         mock_event.id = uuid.uuid4()
@@ -254,9 +244,7 @@ class TestGetEventTimeline:
         assert result.has_more is False
         assert result.next_cursor is None
 
-    async def test_timeline_pagination(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_timeline_pagination(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         now = datetime.now(UTC)
         events = []
         for _ in range(3):
@@ -285,9 +273,7 @@ class TestGetEventTimeline:
 class TestGetEventAggregates:
     """Tests for AnalyticsService.get_event_aggregates()."""
 
-    async def test_returns_aggregates(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_aggregates(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         with patch.object(
             service._event_repo,
             "aggregate_by_period",
@@ -353,9 +339,7 @@ class TestSessionsByWeek:
         # Last bucket is the current Monday.
         assert points[-1].week_start == _current_monday()
 
-    async def test_maps_rows_to_buckets(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_maps_rows_to_buckets(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         monday = _current_monday()
         prev = monday - timedelta(weeks=1)
         row_now = MagicMock()
@@ -365,9 +349,7 @@ class TestSessionsByWeek:
         row_prev.week_start = prev
         row_prev.session_count = 3
 
-        service._db.execute = AsyncMock(
-            return_value=_execute_result([row_now, row_prev])
-        )
+        service._db.execute = AsyncMock(return_value=_execute_result([row_now, row_prev]))
 
         points = await service.sessions_by_week(org_id, weeks_back=4)
 
@@ -401,9 +383,7 @@ class TestSessionsByStatus:
         failed_row.status = SessionStatus.FAILED
         failed_row.session_count = 2
 
-        service._db.execute = AsyncMock(
-            return_value=_execute_result([ready_row, failed_row])
-        )
+        service._db.execute = AsyncMock(return_value=_execute_result([ready_row, failed_row]))
 
         counts = await service.sessions_by_status(org_id)
 
@@ -422,9 +402,7 @@ class TestSessionsByStatus:
 class TestActivePatients:
     """Tests for AnalyticsService.active_patients()."""
 
-    async def test_returns_count(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_count(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         row = MagicMock()
         row.active_patients = 7
         service._db.execute = AsyncMock(return_value=_execute_result([row]))
@@ -448,9 +426,7 @@ class TestActivePatients:
 class TestChatActivityByDay:
     """Tests for AnalyticsService.chat_activity_by_day()."""
 
-    async def test_zero_fills_window(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_zero_fills_window(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         service._db.execute = AsyncMock(return_value=_execute_result([]))
 
         points = await service.chat_activity_by_day(org_id, days=30)
@@ -483,21 +459,15 @@ class TestChatActivityByDay:
 class TestAssessmentScoreTrend:
     """Tests for AnalyticsService.assessment_score_trend()."""
 
-    async def test_zero_fills_empty(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_zero_fills_empty(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         service._db.execute = AsyncMock(return_value=_execute_result([]))
 
-        points = await service.assessment_score_trend(
-            org_id, AssessmentInstrument.PHQ9, weeks=12
-        )
+        points = await service.assessment_score_trend(org_id, AssessmentInstrument.PHQ9, weeks=12)
 
         assert len(points) == 12
         assert all(p.avg_score is None and p.count == 0 for p in points)
 
-    async def test_maps_avg_score(
-        self, service: AnalyticsService, org_id: uuid.UUID
-    ) -> None:
+    async def test_maps_avg_score(self, service: AnalyticsService, org_id: uuid.UUID) -> None:
         monday = _current_monday()
         row = MagicMock()
         row.week_start = monday
@@ -506,9 +476,7 @@ class TestAssessmentScoreTrend:
 
         service._db.execute = AsyncMock(return_value=_execute_result([row]))
 
-        points = await service.assessment_score_trend(
-            org_id, AssessmentInstrument.GAD7, weeks=4
-        )
+        points = await service.assessment_score_trend(org_id, AssessmentInstrument.GAD7, weeks=4)
 
         assert len(points) == 4
         current = [p for p in points if p.week_start == monday][0]

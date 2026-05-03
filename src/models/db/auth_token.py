@@ -57,6 +57,4 @@ class AuthToken(Base, TimestampMixin):
 
     user: Mapped["User"] = relationship(foreign_keys=[user_id], lazy="selectin")
 
-    __table_args__ = (
-        Index("ix_auth_tokens_user_purpose", "user_id", "purpose", "expires_at"),
-    )
+    __table_args__ = (Index("ix_auth_tokens_user_purpose", "user_id", "purpose", "expires_at"),)

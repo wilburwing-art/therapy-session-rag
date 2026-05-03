@@ -50,9 +50,7 @@ _RESPONSE_SNIPPET_BYTES = 1024
 def _signature_header(secret: str, body: bytes, now: int) -> str:
     """Compute the Webhook-Signature header value."""
     signed_payload = f"{now}.{body.decode('utf-8')}".encode()
-    mac = hmac.new(
-        secret.encode("utf-8"), signed_payload, hashlib.sha256
-    ).hexdigest()
+    mac = hmac.new(secret.encode("utf-8"), signed_payload, hashlib.sha256).hexdigest()
     return f"t={now},v1={mac}"
 
 
@@ -121,9 +119,7 @@ async def process_webhook_delivery_job(delivery_id: str) -> dict[str, Any]:
         response_snippet: str | None = None
         error_message: str | None = None
         try:
-            async with httpx.AsyncClient(
-                timeout=_HTTP_TIMEOUT_SECONDS
-            ) as client:
+            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT_SECONDS) as client:
                 response = await client.post(
                     endpoint.url,
                     content=body,
@@ -151,9 +147,7 @@ async def process_webhook_delivery_job(delivery_id: str) -> dict[str, Any]:
             error_message = f"Unexpected delivery error: {exc}"
 
         backoff = _backoff_for_attempt(delivery.attempt_count)
-        next_attempt_at = (
-            datetime.now(UTC) + backoff if backoff is not None else None
-        )
+        next_attempt_at = datetime.now(UTC) + backoff if backoff is not None else None
         await deliveries.mark_failed(
             delivery,
             response_status_code=response_status,
@@ -199,9 +193,7 @@ def queue_webhook_delivery(
             result_ttl=86400,
             failure_ttl=86400,
         )
-    logger.info(
-        "Queued webhook delivery %s as RQ job %s", delivery_id, rq_job.id
-    )
+    logger.info("Queued webhook delivery %s as RQ job %s", delivery_id, rq_job.id)
     return str(rq_job.id)
 
 

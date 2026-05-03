@@ -95,9 +95,7 @@ async def create_invite(
 
     invite_url = f"{settings.web_app_url}/accept-invite?t={raw_token}"
     practice_name = (
-        therapist.organization.name
-        if therapist.organization is not None
-        else "your practice"
+        therapist.organization.name if therapist.organization is not None else "your practice"
     )
     inviter_name = therapist.full_name or therapist.email
     try:
@@ -109,9 +107,7 @@ async def create_invite(
             role=invite.role.value,
         )
     except EmailServiceError as exc:
-        logger.warning(
-            "Failed to email invite to %s: %s", invite.email, exc
-        )
+        logger.warning("Failed to email invite to %s: %s", invite.email, exc)
 
     await events.publish(
         event_name="invite.sent",

@@ -63,9 +63,7 @@ async def _index_fixture(
     # If chunking yields nothing (shouldn't for our fixtures), fall back to
     # one chunk per segment so retrieval still has content to search.
     if not chunks_data:
-        raise AssertionError(
-            f"chunk_transcript returned no chunks for {fixture.name}"
-        )
+        raise AssertionError(f"chunk_transcript returned no chunks for {fixture.name}")
 
     stored: list[StoredChunk] = []
     patient_id = _patient_id_for(fixture.name)
@@ -134,20 +132,15 @@ async def test_retrieval_hit_at_3(
                 hits += 1
             else:
                 top_contents = [
-                    (r.chunk.content[:80].replace("\n", " "), round(r.score, 3))
-                    for r in results
+                    (r.chunk.content[:80].replace("\n", " "), round(r.score, 3)) for r in results
                 ]
                 miss_report.append(
-                    f"[{fixture.name}] {query!r} expected-any={expected!r} "
-                    f"top3={top_contents!r}"
+                    f"[{fixture.name}] {query!r} expected-any={expected!r} top3={top_contents!r}"
                 )
 
     assert total_queries > 0, "no queries were evaluated"
     rate = hits / total_queries
-    print(
-        f"\n[retrieval-eval] hit@{_TOP_K} = {hits}/{total_queries} "
-        f"({rate:.0%})"
-    )
+    print(f"\n[retrieval-eval] hit@{_TOP_K} = {hits}/{total_queries} ({rate:.0%})")
 
     if rate < _HIT_AT_3_THRESHOLD:
         detail = "\n  - ".join(miss_report)
@@ -189,12 +182,12 @@ async def test_retrieval_isolates_by_patient(
         top_k=5,
     )
 
-    assert all(
-        r.chunk.session_id == _session_id_for(fx_a.name) for r in a_results
-    ), f"patient A search returned non-A chunks: {[r.chunk.session_id for r in a_results]}"
-    assert all(
-        r.chunk.session_id == _session_id_for(fx_b.name) for r in b_results
-    ), f"patient B search returned non-B chunks: {[r.chunk.session_id for r in b_results]}"
+    assert all(r.chunk.session_id == _session_id_for(fx_a.name) for r in a_results), (
+        f"patient A search returned non-A chunks: {[r.chunk.session_id for r in a_results]}"
+    )
+    assert all(r.chunk.session_id == _session_id_for(fx_b.name) for r in b_results), (
+        f"patient B search returned non-B chunks: {[r.chunk.session_id for r in b_results]}"
+    )
 
 
 async def test_retrieval_deterministic(

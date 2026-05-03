@@ -72,9 +72,7 @@ class TestEncryptDecryptRoundtrip:
         assert cipher != plain
         assert decrypt_secret(cipher, settings=test_settings) == plain
 
-    def test_roundtrip_with_real_fernet_key(
-        self, fernet_key_settings: MagicMock
-    ) -> None:
+    def test_roundtrip_with_real_fernet_key(self, fernet_key_settings: MagicMock) -> None:
         plain = "secret-value-abcdef"
         cipher = encrypt_secret(plain, settings=fernet_key_settings)
         assert decrypt_secret(cipher, settings=fernet_key_settings) == plain
@@ -96,9 +94,7 @@ class TestEncryptDecryptRoundtrip:
         with pytest.raises(InvalidToken):
             decrypt_secret(cipher, settings=s2)
 
-    def test_decrypt_rejects_tampered_ciphertext(
-        self, test_settings: MagicMock
-    ) -> None:
+    def test_decrypt_rejects_tampered_ciphertext(self, test_settings: MagicMock) -> None:
         cipher = encrypt_secret("data", settings=test_settings)
         # Flip a middle character. Fernet's HMAC should catch it.
         tampered = cipher[:10] + ("A" if cipher[10] != "A" else "B") + cipher[11:]

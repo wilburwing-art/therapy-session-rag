@@ -22,6 +22,7 @@ def service() -> AssessmentService:
     db = MagicMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
+
     # Simulate the DB assigning defaults on insert so Pydantic can
     # validate the ORM object.
     async def _refresh(obj: object) -> None:
@@ -30,6 +31,7 @@ def service() -> AssessmentService:
         now = datetime.now(UTC)
         obj.created_at = now  # type: ignore[attr-defined]
         obj.updated_at = now  # type: ignore[attr-defined]
+
     db.refresh = AsyncMock(side_effect=_refresh)
     db.execute = AsyncMock()
     return AssessmentService(db)

@@ -24,9 +24,7 @@ class WebhookEndpointRepository:
         await self.session.refresh(endpoint)
         return endpoint
 
-    async def get_by_id(
-        self, endpoint_id: uuid.UUID
-    ) -> WebhookEndpoint | None:
+    async def get_by_id(self, endpoint_id: uuid.UUID) -> WebhookEndpoint | None:
         result = await self.session.execute(
             select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id)
         )
@@ -45,9 +43,7 @@ class WebhookEndpointRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_for_org(
-        self, organization_id: uuid.UUID
-    ) -> list[WebhookEndpoint]:
+    async def list_for_org(self, organization_id: uuid.UUID) -> list[WebhookEndpoint]:
         result = await self.session.execute(
             select(WebhookEndpoint)
             .where(WebhookEndpoint.organization_id == organization_id)
@@ -77,9 +73,7 @@ class WebhookEndpointRepository:
         all_active = list(result.scalars().all())
         return [e for e in all_active if event_type in e.event_types]
 
-    async def delete(
-        self, endpoint_id: uuid.UUID, organization_id: uuid.UUID
-    ) -> bool:
+    async def delete(self, endpoint_id: uuid.UUID, organization_id: uuid.UUID) -> bool:
         endpoint = await self.get_for_org(endpoint_id, organization_id)
         if endpoint is None:
             return False
@@ -100,17 +94,13 @@ class WebhookDeliveryRepository:
         await self.session.refresh(delivery)
         return delivery
 
-    async def get_by_id(
-        self, delivery_id: uuid.UUID
-    ) -> WebhookDelivery | None:
+    async def get_by_id(self, delivery_id: uuid.UUID) -> WebhookDelivery | None:
         result = await self.session.execute(
             select(WebhookDelivery).where(WebhookDelivery.id == delivery_id)
         )
         return result.scalar_one_or_none()
 
-    async def claim_for_delivery(
-        self, delivery_id: uuid.UUID
-    ) -> WebhookDelivery | None:
+    async def claim_for_delivery(self, delivery_id: uuid.UUID) -> WebhookDelivery | None:
         """Atomically flip a pending row to in_flight.
 
         Uses ``FOR UPDATE SKIP LOCKED`` semantics via a row-level lock so
@@ -172,13 +162,9 @@ class WebhookDeliveryRepository:
         status: WebhookDeliveryStatus | None = None,
     ) -> list[WebhookDelivery]:
         """Operator view: the most recent deliveries, optionally filtered."""
-        query = select(WebhookDelivery).order_by(
-            WebhookDelivery.created_at.desc()
-        )
+        query = select(WebhookDelivery).order_by(WebhookDelivery.created_at.desc())
         if organization_id is not None:
-            query = query.where(
-                WebhookDelivery.organization_id == organization_id
-            )
+            query = query.where(WebhookDelivery.organization_id == organization_id)
         if endpoint_id is not None:
             query = query.where(WebhookDelivery.endpoint_id == endpoint_id)
         if status is not None:

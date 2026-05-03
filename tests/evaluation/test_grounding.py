@@ -30,7 +30,11 @@ def test_perfectly_grounded_answer_scores_1() -> None:
 
 
 def test_random_unrelated_text_scores_low() -> None:
-    sources = [_source("Session covered grief, loss, and continuing bonds with a mother who recently died.")]
+    sources = [
+        _source(
+            "Session covered grief, loss, and continuing bonds with a mother who recently died."
+        )
+    ]
     answer = (
         "Quantum chromodynamics predicts asymptotic freedom. "
         "Kubernetes scheduling relies on taints and tolerations. "

@@ -104,9 +104,7 @@ class EmailService:
             raise EmailServiceError(f"Failed to send email: {exc}") from exc
 
         provider_id = response.get("id") if isinstance(response, dict) else None
-        logger.info(
-            "[email:sent] to=%s subject=%r provider_id=%s", to, subject, provider_id
-        )
+        logger.info("[email:sent] to=%s subject=%r provider_id=%s", to, subject, provider_id)
         return EmailResult(delivered=True, provider_id=provider_id)
 
     def send_magic_link(

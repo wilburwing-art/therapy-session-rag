@@ -172,8 +172,9 @@ class ConversationRepository:
             The next sequence number (1-indexed)
         """
         result = await self.session.execute(
-            select(func.coalesce(func.max(ConversationMessage.sequence_number), 0))
-            .where(ConversationMessage.conversation_id == conversation_id)
+            select(func.coalesce(func.max(ConversationMessage.sequence_number), 0)).where(
+                ConversationMessage.conversation_id == conversation_id
+            )
         )
         current_max = result.scalar_one()
         return current_max + 1
@@ -190,7 +191,5 @@ class ConversationRepository:
             title: The new title
         """
         await self.session.execute(
-            update(Conversation)
-            .where(Conversation.id == conversation_id)
-            .values(title=title)
+            update(Conversation).where(Conversation.id == conversation_id).values(title=title)
         )

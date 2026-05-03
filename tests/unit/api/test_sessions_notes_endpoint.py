@@ -69,9 +69,7 @@ def app(
     test_app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     test_app.dependency_overrides[get_session_service] = lambda: mock_session_service
     test_app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
-    test_app.dependency_overrides[get_transcription_service] = (
-        lambda: mock_transcription_service
-    )
+    test_app.dependency_overrides[get_transcription_service] = lambda: mock_transcription_service
 
     mock_events = MagicMock()
     mock_events.publish = AsyncMock(return_value=None)
@@ -215,9 +213,7 @@ class TestUpdateNotes:
         mock_session_service: MagicMock,
         session_id: uuid.UUID,
     ) -> None:
-        mock_session_service.update_notes = AsyncMock(
-            side_effect=NotFoundError(resource="Session")
-        )
+        mock_session_service.update_notes = AsyncMock(side_effect=NotFoundError(resource="Session"))
 
         response = client.patch(
             f"/sessions/{session_id}/notes",
@@ -291,9 +287,7 @@ class TestGetRecordingUrl:
         mock_session_service: MagicMock,
         session_id: uuid.UUID,
     ) -> None:
-        mock_session_service.get_session = AsyncMock(
-            side_effect=NotFoundError(resource="Session")
-        )
+        mock_session_service.get_session = AsyncMock(side_effect=NotFoundError(resource="Session"))
 
         response = client.get(f"/sessions/{session_id}/recording/url")
 

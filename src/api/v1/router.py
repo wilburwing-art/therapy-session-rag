@@ -53,9 +53,7 @@ router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 
 # Product endpoints require an entitled subscription when billing_enforced=true.
 _gated_dependency = [Depends(require_entitled_subscription)]
-router.include_router(
-    chat.router, prefix="/chat", tags=["chat"], dependencies=_gated_dependency
-)
+router.include_router(chat.router, prefix="/chat", tags=["chat"], dependencies=_gated_dependency)
 router.include_router(
     consent.router, prefix="/consent", tags=["consent"], dependencies=_gated_dependency
 )
@@ -92,6 +90,4 @@ router.include_router(
     tags=["sessions"],
     dependencies=_gated_dependency,
 )
-router.include_router(
-    video.router, prefix="/video", tags=["video"], dependencies=_gated_dependency
-)
+router.include_router(video.router, prefix="/video", tags=["video"], dependencies=_gated_dependency)

@@ -292,9 +292,7 @@ class TestTranscribeFile:
         success_response.status_code = 200
         success_response.json.return_value = sample_response
 
-        mock_http_client.post = AsyncMock(
-            side_effect=[rate_limit_response, success_response]
-        )
+        mock_http_client.post = AsyncMock(side_effect=[rate_limit_response, success_response])
         client._client = mock_http_client
 
         result = await client.transcribe_file(audio_data=b"fake audio data")
@@ -320,9 +318,7 @@ class TestTranscribeFile:
         success_response.status_code = 200
         success_response.json.return_value = sample_response
 
-        mock_http_client.post = AsyncMock(
-            side_effect=[server_error_response, success_response]
-        )
+        mock_http_client.post = AsyncMock(side_effect=[server_error_response, success_response])
         client._client = mock_http_client
 
         result = await client.transcribe_file(audio_data=b"fake audio data")
@@ -356,9 +352,7 @@ class TestTranscribeFile:
         # Reduce retry delay for testing
         client.RETRY_DELAY = 0.01
 
-        mock_http_client.post = AsyncMock(
-            side_effect=httpx.TimeoutException("Timeout")
-        )
+        mock_http_client.post = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
         client._client = mock_http_client
 
         with pytest.raises(DeepgramError) as exc_info:
@@ -378,9 +372,7 @@ class TestParseResponse:
         assert result.segments == []
         assert result.duration_seconds == 0.0
 
-    def test_parse_response_without_utterances(
-        self, client: DeepgramClient
-    ) -> None:
+    def test_parse_response_without_utterances(self, client: DeepgramClient) -> None:
         """Test parsing response without utterances (uses words)."""
         data = {
             "metadata": {"duration": 2.0},

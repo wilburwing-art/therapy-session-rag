@@ -69,14 +69,10 @@ class AdminService:
             select(
                 Organization,
                 func.coalesce(user_count_subq.c.user_count, 0).label("user_count"),
-                func.coalesce(org_session_totals.c.session_count, 0).label(
-                    "session_count"
-                ),
+                func.coalesce(org_session_totals.c.session_count, 0).label("session_count"),
             )
             .select_from(Organization)
-            .outerjoin(
-                user_count_subq, user_count_subq.c.org_id == Organization.id
-            )
+            .outerjoin(user_count_subq, user_count_subq.c.org_id == Organization.id)
             .outerjoin(
                 org_session_totals,
                 org_session_totals.c.org_id == Organization.id,
@@ -99,9 +95,7 @@ class AdminService:
             for org, user_count, session_count in rows
         ]
 
-    async def get_organization_detail(
-        self, org_id: uuid.UUID
-    ) -> OrganizationAdminDetail:
+    async def get_organization_detail(self, org_id: uuid.UUID) -> OrganizationAdminDetail:
         """Return the full admin detail view for one organization."""
         org_result = await self.db_session.execute(
             select(Organization).where(Organization.id == org_id)
@@ -111,9 +105,7 @@ class AdminService:
             raise NotFoundError(resource="Organization", resource_id=str(org_id))
 
         users_result = await self.db_session.execute(
-            select(User)
-            .where(User.organization_id == org_id)
-            .order_by(User.created_at.asc())
+            select(User).where(User.organization_id == org_id).order_by(User.created_at.asc())
         )
         users = list(users_result.scalars().all())
 
@@ -220,9 +212,7 @@ class AdminService:
             )
             for e in page_rows
         ]
-        next_cursor = (
-            page_rows[-1].event_timestamp.isoformat() if has_more and page_rows else None
-        )
+        next_cursor = page_rows[-1].event_timestamp.isoformat() if has_more and page_rows else None
         return AdminAuditEventPage(
             events=items,
             next_cursor=next_cursor,

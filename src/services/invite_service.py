@@ -60,18 +60,14 @@ class InviteService:
         normalized_email = email.lower().strip()
         existing_user = await self.auth_service.get_user_by_email(normalized_email)
         if existing_user is not None:
-            raise ConflictError(
-                detail="A user with this email already exists"
-            )
+            raise ConflictError(detail="A user with this email already exists")
 
         pending = await self.repo.get_pending_for_org_and_email(
             organization_id=organization_id,
             email=normalized_email,
         )
         if pending is not None:
-            raise ConflictError(
-                detail="A pending invite already exists for this email"
-            )
+            raise ConflictError(detail="A pending invite already exists for this email")
 
         raw_token = secrets.token_urlsafe(_TOKEN_BYTES)
         token_hash = self._hash_token(raw_token)
@@ -94,9 +90,7 @@ class InviteService:
         )
         return invite, raw_token, expires_at
 
-    async def list_invites(
-        self, organization_id: uuid.UUID
-    ) -> list[TherapistInvite]:
+    async def list_invites(self, organization_id: uuid.UUID) -> list[TherapistInvite]:
         """List every invite (pending and accepted) for an organization."""
         return await self.repo.list_for_org(organization_id)
 
@@ -113,9 +107,7 @@ class InviteService:
         if invite is None:
             raise NotFoundError(resource="Invite", resource_id=str(invite_id))
         if invite.accepted_at is not None:
-            raise ConflictError(
-                detail="Cannot revoke an invite that has already been accepted"
-            )
+            raise ConflictError(detail="Cannot revoke an invite that has already been accepted")
         await self.repo.revoke(invite_id)
         logger.info("Therapist invite %s revoked by org %s", invite_id, organization_id)
 
@@ -151,9 +143,7 @@ class InviteService:
         # was issued.
         existing_user = await self.auth_service.get_user_by_email(invite.email)
         if existing_user is not None:
-            raise ConflictError(
-                detail="A user with this email already exists"
-            )
+            raise ConflictError(detail="A user with this email already exists")
 
         user = User(
             organization_id=invite.organization_id,

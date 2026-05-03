@@ -124,16 +124,12 @@ class TestExperimentLifecycle:
         self, async_client: AsyncClient, experiment: Experiment
     ) -> None:
         # Start
-        response = await async_client.post(
-            f"/api/v1/experiments/{experiment.id}/start"
-        )
+        response = await async_client.post(f"/api/v1/experiments/{experiment.id}/start")
         assert response.status_code == 200
         assert response.json()["status"] == "running"
 
         # Stop
-        response = await async_client.post(
-            f"/api/v1/experiments/{experiment.id}/stop"
-        )
+        response = await async_client.post(f"/api/v1/experiments/{experiment.id}/stop")
         assert response.status_code == 200
         assert response.json()["status"] == "completed"
 
@@ -142,9 +138,7 @@ class TestExperimentLifecycle:
         self, async_client: AsyncClient, experiment: Experiment
     ) -> None:
         await async_client.post(f"/api/v1/experiments/{experiment.id}/start")
-        response = await async_client.post(
-            f"/api/v1/experiments/{experiment.id}/start"
-        )
+        response = await async_client.post(f"/api/v1/experiments/{experiment.id}/start")
 
         assert response.status_code == 400
 
@@ -176,25 +170,17 @@ class TestExperimentAssignment:
         await async_client.post(f"/api/v1/experiments/{experiment.id}/start")
 
         subject_id = uuid.uuid4()
-        r1 = await async_client.post(
-            f"/api/v1/experiments/{experiment.id}/assign/{subject_id}"
-        )
-        r2 = await async_client.post(
-            f"/api/v1/experiments/{experiment.id}/assign/{subject_id}"
-        )
+        r1 = await async_client.post(f"/api/v1/experiments/{experiment.id}/assign/{subject_id}")
+        r2 = await async_client.post(f"/api/v1/experiments/{experiment.id}/assign/{subject_id}")
 
         assert r1.json()["variant"] == r2.json()["variant"]
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_record_metric(
-        self, async_client: AsyncClient, experiment: Experiment
-    ) -> None:
+    async def test_record_metric(self, async_client: AsyncClient, experiment: Experiment) -> None:
         await async_client.post(f"/api/v1/experiments/{experiment.id}/start")
 
         subject_id = uuid.uuid4()
-        await async_client.post(
-            f"/api/v1/experiments/{experiment.id}/assign/{subject_id}"
-        )
+        await async_client.post(f"/api/v1/experiments/{experiment.id}/assign/{subject_id}")
 
         response = await async_client.post(
             f"/api/v1/experiments/{experiment.id}/metrics",
@@ -209,17 +195,13 @@ class TestExperimentAssignment:
         assert response.json()["status"] == "recorded"
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_results(
-        self, async_client: AsyncClient, experiment: Experiment
-    ) -> None:
+    async def test_get_results(self, async_client: AsyncClient, experiment: Experiment) -> None:
         await async_client.post(f"/api/v1/experiments/{experiment.id}/start")
 
         # Assign and record metrics for several subjects
         for i in range(10):
             subject_id = uuid.UUID(int=i)
-            await async_client.post(
-                f"/api/v1/experiments/{experiment.id}/assign/{subject_id}"
-            )
+            await async_client.post(f"/api/v1/experiments/{experiment.id}/assign/{subject_id}")
             await async_client.post(
                 f"/api/v1/experiments/{experiment.id}/metrics",
                 json={

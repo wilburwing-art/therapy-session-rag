@@ -215,8 +215,12 @@ class ExperimentService:
             a, b = variant_list[0], variant_list[1]
             if a.subject_count >= 2 and b.subject_count >= 2:
                 p_value = self._welch_t_test(
-                    a.metric_mean, a.metric_std, a.subject_count,
-                    b.metric_mean, b.metric_std, b.subject_count,
+                    a.metric_mean,
+                    a.metric_std,
+                    a.subject_count,
+                    b.metric_mean,
+                    b.metric_std,
+                    b.subject_count,
                 )
                 is_significant = p_value < (1 - confidence_level)
 
@@ -258,8 +262,12 @@ class ExperimentService:
 
     @staticmethod
     def _welch_t_test(
-        mean_a: float, std_a: float, n_a: int,
-        mean_b: float, std_b: float, n_b: int,
+        mean_a: float,
+        std_a: float,
+        n_a: int,
+        mean_b: float,
+        std_b: float,
+        n_b: int,
     ) -> float:
         """Welch's t-test for unequal variances.
 
@@ -269,7 +277,7 @@ class ExperimentService:
         if std_a == 0 and std_b == 0:
             return 1.0 if mean_a == mean_b else 0.0
 
-        se = math.sqrt((std_a ** 2 / n_a) + (std_b ** 2 / n_b))
+        se = math.sqrt((std_a**2 / n_a) + (std_b**2 / n_b))
         if se == 0:
             return 1.0
 

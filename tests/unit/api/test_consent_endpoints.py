@@ -169,9 +169,7 @@ class TestRevokeConsentEndpoint:
         therapist_id: uuid.UUID,
     ) -> None:
         """Test successful consent revocation."""
-        mock_result = make_consent_read(
-            patient_id, therapist_id, status=ConsentStatus.REVOKED
-        )
+        mock_result = make_consent_read(patient_id, therapist_id, status=ConsentStatus.REVOKED)
         mock_consent_service.revoke_consent = AsyncMock(return_value=mock_result)
 
         response = client.request(

@@ -104,9 +104,7 @@ class TestSafetyAuditIntegration:
 
         # Query it back
         result = await db_session.execute(
-            select(AnalyticsEvent).where(
-                AnalyticsEvent.event_name == "safety.risk_detected"
-            )
+            select(AnalyticsEvent).where(AnalyticsEvent.event_name == "safety.risk_detected")
         )
         found = result.scalar_one_or_none()
         assert found is not None
@@ -131,9 +129,7 @@ class TestSafetyAuditIntegration:
         await db_session.flush()
 
         result = await db_session.execute(
-            select(AnalyticsEvent).where(
-                AnalyticsEvent.event_name == "safety.guardrail_triggered"
-            )
+            select(AnalyticsEvent).where(AnalyticsEvent.event_name == "safety.guardrail_triggered")
         )
         found = result.scalar_one_or_none()
         assert found is not None
@@ -156,9 +152,7 @@ class TestChatSafetyIntegration:
     def test_safe_input_passes_guardrails(self) -> None:
         """Safe chat input should be allowed by guardrails."""
         guardrails = Guardrails()
-        result = guardrails.check_input(
-            "What coping strategies did my therapist suggest?"
-        )
+        result = guardrails.check_input("What coping strategies did my therapist suggest?")
 
         assert result.action == GuardrailAction.ALLOW
         assert result.assessment.level == RiskLevel.NONE

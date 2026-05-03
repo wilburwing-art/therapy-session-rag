@@ -31,9 +31,7 @@ class AuthTokenRepository:
         await self.session.refresh(token)
         return token
 
-    async def get_by_hash(
-        self, token_hash: str, purpose: AuthTokenPurpose
-    ) -> AuthToken | None:
+    async def get_by_hash(self, token_hash: str, purpose: AuthTokenPurpose) -> AuthToken | None:
         result = await self.session.execute(
             select(AuthToken).where(
                 AuthToken.token_hash == token_hash,
@@ -44,7 +42,5 @@ class AuthTokenRepository:
 
     async def mark_used(self, token_id: uuid.UUID) -> None:
         await self.session.execute(
-            update(AuthToken)
-            .where(AuthToken.id == token_id)
-            .values(used_at=datetime.now(UTC))
+            update(AuthToken).where(AuthToken.id == token_id).values(used_at=datetime.now(UTC))
         )

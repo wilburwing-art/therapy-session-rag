@@ -92,9 +92,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         super().__init__(app)  # type: ignore[arg-type]
         self.settings = settings
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.method in _EXEMPT_METHODS:
             return await call_next(request)
 
@@ -106,9 +104,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # API-key and unauthenticated traffic (login attempt, etc.) pass
         # through — those paths either aren't CSRF-exploitable or are
         # exempted above.
-        has_session_cookie = any(
-            request.cookies.get(name) for name in _SESSION_COOKIES
-        )
+        has_session_cookie = any(request.cookies.get(name) for name in _SESSION_COOKIES)
         if not has_session_cookie:
             return await call_next(request)
 

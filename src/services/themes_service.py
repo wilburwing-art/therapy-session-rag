@@ -158,7 +158,8 @@ class ThemesService:
                 lines.append(f"Tone: {recap.emotional_tone}")
             if recap.homework_assigned:
                 homework_strs = [
-                    item.get("task", "") for item in recap.homework_assigned
+                    item.get("task", "")
+                    for item in recap.homework_assigned
                     if isinstance(item, dict) and item.get("task")
                 ]
                 if homework_strs:
@@ -192,24 +193,16 @@ class ThemesService:
             return PatientThemesPayload.model_validate(data)
         except PydanticValidationError as exc:
             logger.error("Themes payload failed validation: %s", exc)
-            raise ThemesServiceError(
-                f"LLM output did not match expected schema: {exc}"
-            ) from exc
+            raise ThemesServiceError(f"LLM output did not match expected schema: {exc}") from exc
 
     @staticmethod
     def _to_read(themes: Any) -> PatientThemesRead:
         return PatientThemesRead(
             id=themes.id,
             patient_id=themes.patient_id,
-            recurring_topics=[
-                RecurringTopic(**t) for t in (themes.recurring_topics or [])
-            ],
-            emotional_patterns=[
-                EmotionalPattern(**p) for p in (themes.emotional_patterns or [])
-            ],
-            coping_strategies=[
-                CopingStrategy(**s) for s in (themes.coping_strategies or [])
-            ],
+            recurring_topics=[RecurringTopic(**t) for t in (themes.recurring_topics or [])],
+            emotional_patterns=[EmotionalPattern(**p) for p in (themes.emotional_patterns or [])],
+            coping_strategies=[CopingStrategy(**s) for s in (themes.coping_strategies or [])],
             progress_indicators=list(themes.progress_indicators or []),
             ongoing_concerns=list(themes.ongoing_concerns or []),
             source_session_count=themes.source_session_count,

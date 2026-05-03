@@ -99,9 +99,7 @@ async def test_generate_themes_requires_minimum_recaps(
 
 
 @pytest.mark.asyncio
-async def test_generate_themes_happy_path(
-    service: ThemesService, patient_id: uuid.UUID
-) -> None:
+async def test_generate_themes_happy_path(service: ThemesService, patient_id: uuid.UUID) -> None:
     service.repo.list_recaps_for_patient = AsyncMock(
         return_value=[
             _mock_recap("Session 1", ["anxiety"]),
@@ -140,21 +138,15 @@ async def test_generate_themes_wraps_claude_errors(
 
 
 @pytest.mark.asyncio
-async def test_get_themes_missing_raises(
-    service: ThemesService, patient_id: uuid.UUID
-) -> None:
+async def test_get_themes_missing_raises(service: ThemesService, patient_id: uuid.UUID) -> None:
     service.repo.get_by_patient_id = AsyncMock(return_value=None)
     with pytest.raises(NotFoundError):
         await service.get_themes(patient_id)
 
 
 @pytest.mark.asyncio
-async def test_get_themes_returns_existing(
-    service: ThemesService, patient_id: uuid.UUID
-) -> None:
-    service.repo.get_by_patient_id = AsyncMock(
-        return_value=_mock_themes_row(patient_id)
-    )
+async def test_get_themes_returns_existing(service: ThemesService, patient_id: uuid.UUID) -> None:
+    service.repo.get_by_patient_id = AsyncMock(return_value=_mock_themes_row(patient_id))
     result = await service.get_themes(patient_id)
     assert result.patient_id == patient_id
     assert result.source_session_count == 3

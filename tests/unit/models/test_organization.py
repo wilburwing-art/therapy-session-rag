@@ -75,6 +75,7 @@ class TestOrganizationRead:
 
     def test_read_from_orm(self) -> None:
         """Test OrganizationRead can be created from ORM object."""
+
         # Simulate ORM object with attributes
         class FakeORM:
             id = uuid.uuid4()

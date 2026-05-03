@@ -49,9 +49,7 @@ class AnalyticsService:
         to_date: datetime | None = None,
     ) -> list[TherapistUtilization]:
         """Get weekly therapist utilization metrics."""
-        rows = await self._analytics_repo.therapist_utilization(
-            organization_id, from_date, to_date
-        )
+        rows = await self._analytics_repo.therapist_utilization(organization_id, from_date, to_date)
         return [
             TherapistUtilization(
                 therapist_id=row.therapist_id,
@@ -77,9 +75,7 @@ class AnalyticsService:
         to_date: datetime | None = None,
     ) -> list[SessionOutcomeSummary]:
         """Get weekly session processing outcomes."""
-        rows = await self._analytics_repo.session_outcomes(
-            organization_id, from_date, to_date
-        )
+        rows = await self._analytics_repo.session_outcomes(organization_id, from_date, to_date)
         results: list[SessionOutcomeSummary] = []
         for row in rows:
             total = row.total_sessions
@@ -100,9 +96,7 @@ class AnalyticsService:
                         if row.avg_recording_duration_seconds
                         else None
                     ),
-                    avg_word_count=(
-                        float(row.avg_word_count) if row.avg_word_count else None
-                    ),
+                    avg_word_count=(float(row.avg_word_count) if row.avg_word_count else None),
                     avg_seconds_to_ready=(
                         float(row.avg_seconds_to_ready) if row.avg_seconds_to_ready else None
                     ),
@@ -118,9 +112,7 @@ class AnalyticsService:
         to_date: datetime | None = None,
     ) -> list[PatientEngagementTrend]:
         """Get weekly patient engagement trends."""
-        rows = await self._analytics_repo.patient_engagement(
-            organization_id, from_date, to_date
-        )
+        rows = await self._analytics_repo.patient_engagement(organization_id, from_date, to_date)
         results: list[PatientEngagementTrend] = []
         for row in rows:
             active = row.active_patients
@@ -139,9 +131,7 @@ class AnalyticsService:
                     total_sessions=0,  # Session count from separate query
                     total_messages=messages,
                     avg_sessions_per_patient=0,
-                    avg_messages_per_patient=(
-                        round(messages / active, 2) if active > 0 else 0
-                    ),
+                    avg_messages_per_patient=(round(messages / active, 2) if active > 0 else 0),
                     net_consent_change=0,
                 )
             )
@@ -154,9 +144,7 @@ class AnalyticsService:
         to_date: datetime | None = None,
     ) -> list[AISafetyMetrics]:
         """Get weekly AI safety and RAG quality metrics."""
-        rows = await self._analytics_repo.ai_safety_metrics(
-            organization_id, from_date, to_date
-        )
+        rows = await self._analytics_repo.ai_safety_metrics(organization_id, from_date, to_date)
         results: list[AISafetyMetrics] = []
         for row in rows:
             total = row.total_messages
@@ -174,9 +162,7 @@ class AnalyticsService:
                     ),
                     grounded_responses=grounded,
                     zero_source_responses=row.zero_source_responses,
-                    grounding_rate_pct=(
-                        round(grounded / total * 100, 2) if total > 0 else 0
-                    ),
+                    grounding_rate_pct=(round(grounded / total * 100, 2) if total > 0 else 0),
                     risk_detections=row.risk_detections,
                     guardrail_triggers=row.guardrail_triggers,
                     escalations=row.escalations,
@@ -301,9 +287,7 @@ class AnalyticsService:
 
         result = await self._db.execute(stmt)
         rows = result.all()
-        by_week: dict[date, int] = {
-            row.week_start: int(row.session_count) for row in rows
-        }
+        by_week: dict[date, int] = {row.week_start: int(row.session_count) for row in rows}
 
         points: list[SessionsByWeekPoint] = []
         for offset in range(weeks_back):
@@ -412,9 +396,7 @@ class AnalyticsService:
         points: list[ChatActivityPoint] = []
         for offset in range(days):
             day = earliest_day + timedelta(days=offset)
-            points.append(
-                ChatActivityPoint(day=day, message_count=by_day.get(day, 0))
-            )
+            points.append(ChatActivityPoint(day=day, message_count=by_day.get(day, 0)))
         return points
 
     async def assessment_score_trend(
@@ -498,7 +480,5 @@ class AnalyticsService:
         instrument: AssessmentInstrument,
         weeks: int = 12,
     ) -> AssessmentTrendResponse:
-        points = await self.assessment_score_trend(
-            organization_id, instrument, weeks=weeks
-        )
+        points = await self.assessment_score_trend(organization_id, instrument, weeks=weeks)
         return AssessmentTrendResponse(instrument=instrument, points=points)

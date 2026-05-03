@@ -53,9 +53,7 @@ class WebhookService:
         )
         return await self.repo.create(endpoint)
 
-    async def list_endpoints(
-        self, organization_id: uuid.UUID
-    ) -> list[WebhookEndpoint]:
+    async def list_endpoints(self, organization_id: uuid.UUID) -> list[WebhookEndpoint]:
         return await self.repo.list_for_org(organization_id)
 
     async def get_endpoint(
@@ -65,9 +63,7 @@ class WebhookService:
     ) -> WebhookEndpoint:
         endpoint = await self.repo.get_for_org(endpoint_id, organization_id)
         if endpoint is None:
-            raise NotFoundError(
-                resource="Webhook endpoint", resource_id=str(endpoint_id)
-            )
+            raise NotFoundError(resource="Webhook endpoint", resource_id=str(endpoint_id))
         return endpoint
 
     async def update_endpoint(
@@ -85,9 +81,7 @@ class WebhookService:
             endpoint.description = payload.description
         if payload.is_active is not None:
             endpoint.is_active = payload.is_active
-            endpoint.disabled_at = (
-                None if payload.is_active else datetime.now(UTC)
-            )
+            endpoint.disabled_at = None if payload.is_active else datetime.now(UTC)
         await self.session.flush()
         return endpoint
 
@@ -109,9 +103,7 @@ class WebhookService:
     ) -> None:
         ok = await self.repo.delete(endpoint_id, organization_id)
         if not ok:
-            raise NotFoundError(
-                resource="Webhook endpoint", resource_id=str(endpoint_id)
-            )
+            raise NotFoundError(resource="Webhook endpoint", resource_id=str(endpoint_id))
 
 
 def supported_event_types() -> list[str]:

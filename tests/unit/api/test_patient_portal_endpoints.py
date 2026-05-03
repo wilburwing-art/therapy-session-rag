@@ -141,9 +141,7 @@ def app(
     test_app.dependency_overrides[get_current_patient] = lambda: patient_user
     test_app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     test_app.dependency_overrides[get_session_service] = lambda: mock_session_service
-    test_app.dependency_overrides[get_summarization_service] = (
-        lambda: mock_summarization_service
-    )
+    test_app.dependency_overrides[get_summarization_service] = lambda: mock_summarization_service
     test_app.dependency_overrides[get_event_publisher] = lambda: mock_events
 
     return test_app
@@ -214,9 +212,7 @@ class TestGetOwnSessionRecap:
         mock_summarization_service: MagicMock,
     ) -> None:
         session_id = mock_session_service._summary.id
-        mock_summarization_service.get_recap.return_value = _make_recap_read(
-            session_id=session_id
-        )
+        mock_summarization_service.get_recap.return_value = _make_recap_read(session_id=session_id)
 
         response = client.get(f"/patient/sessions/{session_id}/recap")
         assert response.status_code == 200
@@ -253,9 +249,7 @@ class TestGetOwnSessionRecap:
         foreign_session.id = session_id
         foreign_session.patient_id = uuid.uuid4()  # different patient
         foreign_session.session_date = datetime(2026, 4, 1, tzinfo=UTC)
-        mock_session_service.session_repo.get_by_id = AsyncMock(
-            return_value=foreign_session
-        )
+        mock_session_service.session_repo.get_by_id = AsyncMock(return_value=foreign_session)
 
         response = client.get(f"/patient/sessions/{session_id}/recap")
         assert response.status_code == 403

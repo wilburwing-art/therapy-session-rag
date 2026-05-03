@@ -39,9 +39,7 @@ class SessionRepository:
         Returns:
             The session if found, None otherwise
         """
-        result = await self.session.execute(
-            select(Session).where(Session.id == session_id)
-        )
+        result = await self.session.execute(select(Session).where(Session.id == session_id))
         return result.scalar_one_or_none()
 
     async def update_status(
@@ -65,9 +63,7 @@ class SessionRepository:
             values["error_message"] = error_message
 
         cursor_result = await self.session.execute(
-            update(Session)
-            .where(Session.id == session_id)
-            .values(**values)
+            update(Session).where(Session.id == session_id).values(**values)
         )
         rowcount = getattr(cursor_result, "rowcount", 0)
         return bool(rowcount and rowcount > 0)
@@ -93,9 +89,7 @@ class SessionRepository:
             values["recording_duration_seconds"] = recording_duration_seconds
 
         cursor_result = await self.session.execute(
-            update(Session)
-            .where(Session.id == session_id)
-            .values(**values)
+            update(Session).where(Session.id == session_id).values(**values)
         )
         rowcount = getattr(cursor_result, "rowcount", 0)
         return bool(rowcount and rowcount > 0)
@@ -235,8 +229,9 @@ class SessionRepository:
 
         # Order by session_date desc, then id desc for consistency
         query = (
-            query.order_by(Session.session_date.desc(), Session.id.desc())
-            .limit(limit + 1)  # Fetch one extra to detect has_more
+            query.order_by(Session.session_date.desc(), Session.id.desc()).limit(
+                limit + 1
+            )  # Fetch one extra to detect has_more
         )
 
         result = await self.session.execute(query)

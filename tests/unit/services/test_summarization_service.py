@@ -148,9 +148,7 @@ async def test_generate_recap_happy_path(
     transcript = MagicMock()
     transcript.full_text = "Patient discussed anxiety about work."
     transcript.segments = []
-    service.transcript_repo.get_transcript_by_session_id = AsyncMock(
-        return_value=transcript
-    )
+    service.transcript_repo.get_transcript_by_session_id = AsyncMock(return_value=transcript)
     service.recap_repo.upsert = AsyncMock(return_value=_mock_recap_row(session_id))
 
     json_content = (
@@ -197,9 +195,7 @@ async def test_generate_recap_wraps_claude_errors(
     transcript = MagicMock()
     transcript.full_text = "text"
     transcript.segments = []
-    service.transcript_repo.get_transcript_by_session_id = AsyncMock(
-        return_value=transcript
-    )
+    service.transcript_repo.get_transcript_by_session_id = AsyncMock(return_value=transcript)
     service.claude_client.chat = AsyncMock(  # type: ignore[method-assign]
         side_effect=ClaudeError("boom")
     )
@@ -212,9 +208,7 @@ async def test_generate_recap_wraps_claude_errors(
 async def test_get_recap_returns_existing(
     service: SummarizationService, session_id: uuid.UUID
 ) -> None:
-    service.recap_repo.get_by_session_id = AsyncMock(
-        return_value=_mock_recap_row(session_id)
-    )
+    service.recap_repo.get_by_session_id = AsyncMock(return_value=_mock_recap_row(session_id))
     result = await service.get_recap(session_id)
     assert result.session_id == session_id
 

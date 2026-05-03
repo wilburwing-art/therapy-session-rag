@@ -75,8 +75,7 @@ async def process_embedding_job(session_id: str) -> dict[str, Any]:
             await db_session.commit()
 
             logger.info(
-                f"Embedding job completed for session {session_id}: "
-                f"{len(chunks)} chunks created"
+                f"Embedding job completed for session {session_id}: {len(chunks)} chunks created"
             )
 
             # Return result for downstream processing

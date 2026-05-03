@@ -30,9 +30,7 @@ class SearchHit(BaseModel):
 
     session_id: UUID = Field(..., description="ID of the session the hit belongs to")
     patient_id: UUID = Field(..., description="ID of the patient on that session")
-    patient_name: str | None = Field(
-        None, description="Display name of the patient, if set"
-    )
+    patient_name: str | None = Field(None, description="Display name of the patient, if set")
     session_date: datetime = Field(..., description="Date and time of the session")
     source: SearchSource = Field(
         ...,

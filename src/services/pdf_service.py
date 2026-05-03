@@ -124,9 +124,7 @@ class PdfService:
                 styles["PdfHeading"],
             )
         )
-        flowables.append(
-            Paragraph(_escape(patient.email), styles["PdfBody"])
-        )
+        flowables.append(Paragraph(_escape(patient.email), styles["PdfBody"]))
         flowables.append(Spacer(1, 0.15 * inch))
         flowables.append(
             Paragraph(
@@ -227,9 +225,7 @@ class PdfService:
             patient.organization_id != organization_id
             or therapist.organization_id != organization_id
         ):
-            raise ForbiddenError(
-                detail="Session does not belong to your organization"
-            )
+            raise ForbiddenError(detail="Session does not belong to your organization")
         return session
 
     async def _load_patient_in_org(
@@ -237,22 +233,16 @@ class PdfService:
         patient_id: uuid.UUID,
         organization_id: uuid.UUID,
     ) -> User:
-        result = await self.db_session.execute(
-            select(User).where(User.id == patient_id)
-        )
+        result = await self.db_session.execute(select(User).where(User.id == patient_id))
         patient = result.scalar_one_or_none()
         if patient is None or patient.role != UserRole.PATIENT:
             raise NotFoundError(resource="Patient", resource_id=str(patient_id))
         if patient.organization_id != organization_id:
-            raise ForbiddenError(
-                detail="Patient does not belong to your organization"
-            )
+            raise ForbiddenError(detail="Patient does not belong to your organization")
         return patient
 
     async def _get_user(self, user_id: uuid.UUID) -> User:
-        result = await self.db_session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db_session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user is None:
             raise NotFoundError(resource="User", resource_id=str(user_id))
@@ -374,15 +364,13 @@ class PdfService:
         )
         items.append(
             Paragraph(
-                "Therapist: "
-                + _escape(therapist.full_name or therapist.email),
+                "Therapist: " + _escape(therapist.full_name or therapist.email),
                 styles["PdfBrief"],
             )
         )
         items.append(
             Paragraph(
-                "Session date: "
-                + session.session_date.strftime("%Y-%m-%d %H:%M"),
+                "Session date: " + session.session_date.strftime("%Y-%m-%d %H:%M"),
                 styles["PdfBrief"],
             )
         )
@@ -400,8 +388,7 @@ class PdfService:
         items: list[Any] = []
         items.append(
             Paragraph(
-                "Session on "
-                + session.session_date.strftime("%Y-%m-%d %H:%M"),
+                "Session on " + session.session_date.strftime("%Y-%m-%d %H:%M"),
                 styles["PdfTitle"],
             )
         )
@@ -466,16 +453,12 @@ class PdfService:
         if recap.follow_ups:
             items.append(Paragraph("Follow-ups", styles["PdfSubheading"]))
             for f in recap.follow_ups:
-                items.append(
-                    Paragraph("&bull; " + _escape(str(f)), styles["PdfBody"])
-                )
+                items.append(Paragraph("&bull; " + _escape(str(f)), styles["PdfBody"]))
 
         if recap.risk_flags:
             items.append(Paragraph("Risk flags for review", styles["PdfSubheading"]))
             for r in recap.risk_flags:
-                items.append(
-                    Paragraph("&bull; " + _escape(str(r)), styles["PdfRisk"])
-                )
+                items.append(Paragraph("&bull; " + _escape(str(r)), styles["PdfRisk"]))
 
         return items
 
@@ -534,18 +517,14 @@ class PdfService:
         items.append(Paragraph("Progress indicators", styles["PdfSubheading"]))
         if themes.progress_indicators:
             for p in themes.progress_indicators:
-                items.append(
-                    Paragraph("&bull; " + _escape(str(p)), styles["PdfBody"])
-                )
+                items.append(Paragraph("&bull; " + _escape(str(p)), styles["PdfBody"]))
         else:
             items.append(Paragraph("None noted.", styles["PdfBody"]))
 
         items.append(Paragraph("Ongoing concerns", styles["PdfSubheading"]))
         if themes.ongoing_concerns:
             for c in themes.ongoing_concerns:
-                items.append(
-                    Paragraph("&bull; " + _escape(str(c)), styles["PdfBody"])
-                )
+                items.append(Paragraph("&bull; " + _escape(str(c)), styles["PdfBody"]))
         else:
             items.append(Paragraph("None.", styles["PdfBody"]))
 
@@ -665,11 +644,7 @@ def _draw_header_footer(canvas: Any, practice_name: str) -> None:
 
 def _escape(text: str) -> str:
     """HTML-escape for Paragraph markup. Paragraph uses a mini HTML parser."""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _status_value(status: Any) -> str:

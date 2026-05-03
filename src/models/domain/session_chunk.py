@@ -41,9 +41,7 @@ class SessionChunkRead(SessionChunkBase):
 class SessionChunkWithEmbedding(SessionChunkRead):
     """Schema for a session chunk with its embedding vector."""
 
-    embedding: list[float] | None = Field(
-        None, description="Embedding vector (1536 dimensions)"
-    )
+    embedding: list[float] | None = Field(None, description="Embedding vector (1536 dimensions)")
 
 
 class SessionChunkWithScore(SessionChunkRead):

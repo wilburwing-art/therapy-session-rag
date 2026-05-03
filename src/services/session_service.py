@@ -55,9 +55,7 @@ class SessionService:
         """
         # Validate tenant access - ensure patient and therapist belong to org
         if self.tenant:
-            await self.tenant.validate_users_in_org(
-                create.patient_id, create.therapist_id
-            )
+            await self.tenant.validate_users_in_org(create.patient_id, create.therapist_id)
 
         # Check for active recording consent
         consent = await self.consent_repo.get_active_consent(

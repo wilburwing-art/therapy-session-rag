@@ -55,9 +55,7 @@ def _to_created(endpoint: object) -> WebhookEndpointCreated:
     surfaced from the ORM attribute only on create and rotate paths so
     listings and updates never leak it.
     """
-    return WebhookEndpointCreated.model_validate(
-        endpoint, from_attributes=True
-    )
+    return WebhookEndpointCreated.model_validate(endpoint, from_attributes=True)
 
 
 @router.get("/event-types")
@@ -75,10 +73,7 @@ async def list_endpoints(
 ) -> list[WebhookEndpointRead]:
     """List every webhook endpoint configured by the caller's organization."""
     endpoints = await service.list_endpoints(auth.organization_id)
-    return [
-        WebhookEndpointRead.model_validate(e, from_attributes=True)
-        for e in endpoints
-    ]
+    return [WebhookEndpointRead.model_validate(e, from_attributes=True) for e in endpoints]
 
 
 @router.post(
@@ -117,9 +112,7 @@ async def update_endpoint(
     auth: Auth,
     service: WebhookSvc,
 ) -> WebhookEndpointRead:
-    endpoint = await service.update_endpoint(
-        endpoint_id, auth.organization_id, payload
-    )
+    endpoint = await service.update_endpoint(endpoint_id, auth.organization_id, payload)
     return WebhookEndpointRead.model_validate(endpoint, from_attributes=True)
 
 
@@ -137,9 +130,7 @@ async def rotate_secret(
     After rotation the customer MUST update their verifier or all
     subsequent deliveries will fail signature checks on their side.
     """
-    endpoint = await service.rotate_secret(
-        endpoint_id, auth.organization_id
-    )
+    endpoint = await service.rotate_secret(endpoint_id, auth.organization_id)
     return _to_created(endpoint)
 
 

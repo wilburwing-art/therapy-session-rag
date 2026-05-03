@@ -298,9 +298,7 @@ async def test_report_usage_to_stripe_creates_meter_events(
     existing.id = uuid.uuid4()
     _stub_usage_row_fetch(service, org, existing_row=existing)
 
-    service.gateway.create_meter_event.return_value = SimpleNamespace(
-        identifier="meter-evt-abc"
-    )
+    service.gateway.create_meter_event.return_value = SimpleNamespace(identifier="meter-evt-abc")
 
     now = datetime(2026, 5, 1, 12, tzinfo=UTC)
     row = await service.report_usage_to_stripe(org.id, now=now)
@@ -308,8 +306,7 @@ async def test_report_usage_to_stripe_creates_meter_events(
     # Only two meters had positive counters, so two events should fire.
     assert service.gateway.create_meter_event.call_count == 2
     event_names = {
-        call.kwargs["event_name"]
-        for call in service.gateway.create_meter_event.call_args_list
+        call.kwargs["event_name"] for call in service.gateway.create_meter_event.call_args_list
     }
     assert event_names == {"sessions_transcribed", "chat_messages"}
     assert row.reported_to_stripe_at == now
@@ -373,9 +370,7 @@ async def test_sync_subscription_seats_updates_stripe(
     seat_result.scalar.return_value = 5
     service.db_session.execute = AsyncMock(return_value=seat_result)
 
-    seats = await service.sync_subscription_seats(
-        uuid.uuid4(), subscription_item_id="si_abc"
-    )
+    seats = await service.sync_subscription_seats(uuid.uuid4(), subscription_item_id="si_abc")
     assert seats == 5
     service.gateway.update_subscription_item_quantity.assert_called_once_with(
         subscription_item_id="si_abc", quantity=5

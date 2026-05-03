@@ -510,9 +510,7 @@ class TestTherapistSessionsByWeek:
     ) -> None:
         mock_analytics_service.sessions_by_week = AsyncMock(return_value=[])
 
-        response = client.get(
-            "/analytics/therapist/sessions-by-week", params={"weeks_back": 4}
-        )
+        response = client.get("/analytics/therapist/sessions-by-week", params={"weeks_back": 4})
 
         assert response.status_code == 200
         call_kwargs = mock_analytics_service.sessions_by_week.call_args.kwargs
@@ -567,9 +565,7 @@ class TestTherapistActivePatients:
             return_value=ActivePatientsResponse(window_days=7, active_patients=3)
         )
 
-        response = client.get(
-            "/analytics/therapist/active-patients", params={"days": 7}
-        )
+        response = client.get("/analytics/therapist/active-patients", params={"days": 7})
 
         assert response.status_code == 200
         call_kwargs = mock_analytics_service.active_patients_response.call_args.kwargs
@@ -630,9 +626,7 @@ class TestTherapistAssessmentTrend:
             return_value=AssessmentTrendResponse(
                 instrument=AssessmentInstrument.PHQ9,
                 points=[
-                    AssessmentTrendPoint(
-                        week_start=date(2026, 2, 2), avg_score=11.5, count=3
-                    ),
+                    AssessmentTrendPoint(week_start=date(2026, 2, 2), avg_score=11.5, count=3),
                 ],
             )
         )

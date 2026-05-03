@@ -47,9 +47,7 @@ class TranscriptRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_latest_job_for_session(
-        self, session_id: uuid.UUID
-    ) -> TranscriptionJob | None:
+    async def get_latest_job_for_session(self, session_id: uuid.UUID) -> TranscriptionJob | None:
         """Get the most recent transcription job for a session.
 
         Args:
@@ -86,9 +84,7 @@ class TranscriptRepository:
         Returns:
             True if updated, False if not found
         """
-        values: dict[str, TranscriptionJobStatus | str | datetime | None] = {
-            "status": status
-        }
+        values: dict[str, TranscriptionJobStatus | str | datetime | None] = {"status": status}
         if error_message is not None:
             values["error_message"] = error_message
         if started_at is not None:
@@ -97,9 +93,7 @@ class TranscriptRepository:
             values["completed_at"] = completed_at
 
         cursor_result = await self.session.execute(
-            update(TranscriptionJob)
-            .where(TranscriptionJob.id == job_id)
-            .values(**values)
+            update(TranscriptionJob).where(TranscriptionJob.id == job_id).values(**values)
         )
         rowcount = getattr(cursor_result, "rowcount", 0)
         return bool(rowcount and rowcount > 0)
@@ -139,9 +133,7 @@ class TranscriptRepository:
         await self.session.refresh(transcript)
         return transcript
 
-    async def get_transcript_by_id(
-        self, transcript_id: uuid.UUID
-    ) -> Transcript | None:
+    async def get_transcript_by_id(self, transcript_id: uuid.UUID) -> Transcript | None:
         """Get a transcript by ID.
 
         Args:
@@ -155,9 +147,7 @@ class TranscriptRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_transcript_by_session_id(
-        self, session_id: uuid.UUID
-    ) -> Transcript | None:
+    async def get_transcript_by_session_id(self, session_id: uuid.UUID) -> Transcript | None:
         """Get the transcript for a session.
 
         Args:

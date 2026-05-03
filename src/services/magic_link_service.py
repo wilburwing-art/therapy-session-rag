@@ -61,9 +61,7 @@ class MagicLinkService:
 
         raw_token = secrets.token_urlsafe(_TOKEN_BYTES)
         token_hash = self._hash_token(raw_token)
-        expires_at = datetime.now(UTC) + timedelta(
-            seconds=self.settings.magic_link_ttl_seconds
-        )
+        expires_at = datetime.now(UTC) + timedelta(seconds=self.settings.magic_link_ttl_seconds)
 
         await self.repo.create(
             patient_id=patient_id,
@@ -100,9 +98,7 @@ class MagicLinkService:
 
         patient = await self.auth_service.get_user_by_id(link.patient_id)
         if patient.role != UserRole.PATIENT:
-            logger.warning(
-                "Magic link %s pointed at non-patient user %s", link.id, patient.id
-            )
+            logger.warning("Magic link %s pointed at non-patient user %s", link.id, patient.id)
             raise generic
 
         await self.repo.mark_used(link.id)

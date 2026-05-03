@@ -77,17 +77,14 @@ def _check_expected(
         got = " ".join(payload.key_topics).lower()
         if not any(t in got for t in wanted_topics):
             failures.append(
-                f"no expected topic in {payload.key_topics!r} "
-                f"(wanted any of {wanted_topics!r})"
+                f"no expected topic in {payload.key_topics!r} (wanted any of {wanted_topics!r})"
             )
 
     # Emotional tone contains any
     tone_pool = [s.lower() for s in expected.get("emotional_tone_contains_any", [])]
     tone = (payload.emotional_tone or "").lower()
     if tone_pool and tone and not any(p in tone for p in tone_pool):
-        failures.append(
-            f"emotional_tone {tone!r} does not contain any of {tone_pool!r}"
-        )
+        failures.append(f"emotional_tone {tone!r} does not contain any of {tone_pool!r}")
     # If tone is None, skip per spec.
 
     # Risk flags polarity
@@ -104,10 +101,7 @@ def _check_expected(
         subs = expected.get("risk_flag_substring_any") or []
         joined = " ".join(payload.risk_flags).lower()
         if subs and not any(s.lower() in joined for s in subs):
-            failures.append(
-                f"risk_flags {payload.risk_flags!r} "
-                f"missing any of {subs!r}"
-            )
+            failures.append(f"risk_flags {payload.risk_flags!r} missing any of {subs!r}")
 
     return RecapCheckResult(
         name=fixture.name,
@@ -136,13 +130,9 @@ async def test_recap_per_fixture(
             _RECAP_STATS["passed"] += 1
         else:
             _RECAP_STATS["failed"] += 1
-            failures_all.append(
-                f"[{result.name}] " + "; ".join(result.failures)
-            )
+            failures_all.append(f"[{result.name}] " + "; ".join(result.failures))
 
-    assert not failures_all, (
-        "Recap evaluation failures:\n  - " + "\n  - ".join(failures_all)
-    )
+    assert not failures_all, "Recap evaluation failures:\n  - " + "\n  - ".join(failures_all)
 
 
 async def test_recap_brief_length_range(
@@ -152,9 +142,7 @@ async def test_recap_brief_length_range(
     """Every fixture gets a recap with brief length in range."""
     for fixture in all_transcript_fixtures:
         payload = await _run_recap(fixture, mock_claude_client)
-        assert 30 <= len(payload.brief) <= 2000, (
-            f"{fixture.name} brief length {len(payload.brief)}"
-        )
+        assert 30 <= len(payload.brief) <= 2000, f"{fixture.name} brief length {len(payload.brief)}"
 
 
 async def test_recap_risk_fixture_sets_flag(
@@ -183,8 +171,7 @@ async def test_recap_non_risk_fixtures_no_flags(
 ) -> None:
     """Non-risk fixtures must not produce risk flags."""
     non_risk = [
-        fx for fx in all_transcript_fixtures
-        if not fx.expected_recap.get("expected_risk_flags")
+        fx for fx in all_transcript_fixtures if not fx.expected_recap.get("expected_risk_flags")
     ]
     assert non_risk, "at least one non-risk fixture expected"
 
@@ -201,8 +188,5 @@ def test_recap_aggregate_pass_rate() -> None:
     if total == 0:
         pytest.skip("test_recap_per_fixture did not run")
     rate = _RECAP_STATS["passed"] / total
-    print(
-        f"\n[recap-eval] passed {_RECAP_STATS['passed']}/{total} "
-        f"({rate:.0%})"
-    )
+    print(f"\n[recap-eval] passed {_RECAP_STATS['passed']}/{total} ({rate:.0%})")
     assert rate == 1.0, f"recap pass rate {rate:.0%} < 100%"

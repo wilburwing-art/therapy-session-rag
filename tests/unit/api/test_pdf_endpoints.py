@@ -215,9 +215,7 @@ class TestPatientRecordPdf:
         mock_pdf_service: MagicMock,
         patient_id: uuid.UUID,
     ) -> None:
-        mock_pdf_service.render_patient_record_pdf.side_effect = NotFoundError(
-            resource="Patient"
-        )
+        mock_pdf_service.render_patient_record_pdf.side_effect = NotFoundError(resource="Patient")
 
         response = client.get(f"/patients/{patient_id}/record.pdf")
 
@@ -248,9 +246,7 @@ class TestPatientThemesPdf:
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/pdf"
-        assert (
-            f"{patient_id}-themes.pdf" in response.headers["content-disposition"]
-        )
+        assert f"{patient_id}-themes.pdf" in response.headers["content-disposition"]
         assert response.content.startswith(b"%PDF")
 
     def test_returns_404_when_no_themes(
@@ -259,9 +255,7 @@ class TestPatientThemesPdf:
         mock_pdf_service: MagicMock,
         patient_id: uuid.UUID,
     ) -> None:
-        mock_pdf_service.render_themes_pdf.side_effect = NotFoundError(
-            resource="PatientThemes"
-        )
+        mock_pdf_service.render_themes_pdf.side_effect = NotFoundError(resource="PatientThemes")
 
         response = client.get(f"/patients/{patient_id}/themes.pdf")
 

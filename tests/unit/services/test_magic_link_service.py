@@ -62,9 +62,7 @@ async def test_issue_link_success(service: MagicLinkService) -> None:
     service.auth_service.get_user_by_id = AsyncMock(
         return_value=_mock_user(patient_id, UserRole.PATIENT, org_id)
     )
-    service.repo.create = AsyncMock(
-        return_value=_mock_link(patient_id, "hash", datetime.now(UTC))
-    )
+    service.repo.create = AsyncMock(return_value=_mock_link(patient_id, "hash", datetime.now(UTC)))
 
     token, expires = await service.issue_link(
         patient_id=patient_id,

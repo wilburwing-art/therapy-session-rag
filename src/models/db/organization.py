@@ -32,9 +32,7 @@ class Organization(Base, TimestampMixin):
     __tablename__ = "organizations"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    video_chat_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    video_chat_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     stripe_customer_id: Mapped[str | None] = mapped_column(
         String(128),

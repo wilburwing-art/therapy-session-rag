@@ -54,44 +54,32 @@ def _sample_hit() -> SearchHit:
 class TestQueryValidation:
     """Tests for SearchService query-string validation."""
 
-    async def test_rejects_empty_string(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_rejects_empty_string(self, service: SearchService, org_id: uuid.UUID) -> None:
         with pytest.raises(ValidationError):
             await service.search_sessions(org_id, "")
 
-    async def test_rejects_whitespace_only(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_rejects_whitespace_only(self, service: SearchService, org_id: uuid.UUID) -> None:
         with pytest.raises(ValidationError):
             await service.search_sessions(org_id, "   \t  ")
 
-    async def test_rejects_too_short(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_rejects_too_short(self, service: SearchService, org_id: uuid.UUID) -> None:
         # MIN_QUERY_LENGTH is 2 → single-char should fail.
         assert MIN_QUERY_LENGTH == 2
         with pytest.raises(ValidationError):
             await service.search_sessions(org_id, "a")
 
-    async def test_rejects_too_long(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_rejects_too_long(self, service: SearchService, org_id: uuid.UUID) -> None:
         too_long = "x" * (MAX_QUERY_LENGTH + 1)
         with pytest.raises(ValidationError):
             await service.search_sessions(org_id, too_long)
 
-    async def test_accepts_min_length(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_accepts_min_length(self, service: SearchService, org_id: uuid.UUID) -> None:
         await service.search_sessions(org_id, "ab")
         service._repo.search_across.assert_awaited_once()
         kwargs = service._repo.search_across.await_args.kwargs
         assert kwargs["query"] == "ab"
 
-    async def test_accepts_max_length(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_accepts_max_length(self, service: SearchService, org_id: uuid.UUID) -> None:
         at_max = "x" * MAX_QUERY_LENGTH
         await service.search_sessions(org_id, at_max)
         kwargs = service._repo.search_across.await_args.kwargs
@@ -115,16 +103,12 @@ class TestLimitValidation:
         kwargs = service._repo.search_across.await_args.kwargs
         assert kwargs["limit"] == DEFAULT_LIMIT
 
-    async def test_clamps_limit_below_one(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_clamps_limit_below_one(self, service: SearchService, org_id: uuid.UUID) -> None:
         await service.search_sessions(org_id, "hello", limit=0)
         kwargs = service._repo.search_across.await_args.kwargs
         assert kwargs["limit"] == 1
 
-    async def test_clamps_limit_above_max(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_clamps_limit_above_max(self, service: SearchService, org_id: uuid.UUID) -> None:
         await service.search_sessions(org_id, "hello", limit=9999)
         kwargs = service._repo.search_across.await_args.kwargs
         assert kwargs["limit"] == MAX_LIMIT
@@ -140,9 +124,7 @@ class TestLimitValidation:
 class TestForwardsToRepository:
     """Tests that validated args are forwarded correctly to the repo."""
 
-    async def test_forwards_patient_filter(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_forwards_patient_filter(self, service: SearchService, org_id: uuid.UUID) -> None:
         patient_id = uuid.uuid4()
         await service.search_sessions(
             org_id,
@@ -153,9 +135,7 @@ class TestForwardsToRepository:
         assert kwargs["organization_id"] == org_id
         assert kwargs["patient_id"] == patient_id
 
-    async def test_returns_repo_results(
-        self, service: SearchService, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_repo_results(self, service: SearchService, org_id: uuid.UUID) -> None:
         hit = _sample_hit()
         service._repo.search_across = AsyncMock(return_value=[hit])
         result = await service.search_sessions(org_id, "hello")

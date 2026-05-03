@@ -12,9 +12,7 @@ from src.models.db.organization import Organization
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def sample_events(
-    db_session: AsyncSession, test_org: Organization
-) -> list[AnalyticsEvent]:
+async def sample_events(db_session: AsyncSession, test_org: Organization) -> list[AnalyticsEvent]:
     """Seed analytics events for testing."""
     events = []
     event_definitions = [
@@ -131,9 +129,7 @@ class TestAnalyticsEndpoints:
         assert data["period_type"] == "day"
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_event_aggregates_invalid_period(
-        self, async_client: AsyncClient
-    ) -> None:
+    async def test_event_aggregates_invalid_period(self, async_client: AsyncClient) -> None:
         response = await async_client.get(
             "/api/v1/analytics/events/aggregate",
             params={"period": "century"},

@@ -15,9 +15,7 @@ class SessionRecapRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_by_session_id(
-        self, session_id: uuid.UUID
-    ) -> SessionRecap | None:
+    async def get_by_session_id(self, session_id: uuid.UUID) -> SessionRecap | None:
         result = await self.session.execute(
             select(SessionRecap).where(SessionRecap.session_id == session_id)
         )

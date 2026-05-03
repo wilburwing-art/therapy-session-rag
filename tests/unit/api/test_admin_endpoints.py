@@ -149,9 +149,7 @@ class TestGetOrganizationDetail:
         mock_admin_service: MagicMock,
     ) -> None:
         org_id = uuid.uuid4()
-        mock_admin_service.get_organization_detail.return_value = _make_org_detail(
-            org_id
-        )
+        mock_admin_service.get_organization_detail.return_value = _make_org_detail(org_id)
 
         response = client.get(f"/admin/orgs/{org_id}")
 

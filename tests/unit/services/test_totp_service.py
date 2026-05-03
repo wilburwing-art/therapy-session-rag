@@ -84,15 +84,11 @@ class TestEnroll:
         assert len(raw_secret) == 32  # pyotp default
         assert user.totp_pending_secret is not None
         assert user.totp_pending_secret != raw_secret
-        assert decrypt_secret(
-            user.totp_pending_secret, settings=test_settings
-        ) == raw_secret
+        assert decrypt_secret(user.totp_pending_secret, settings=test_settings) == raw_secret
         db_session.flush.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_enroll_conflict_if_already_enabled(
-        self, service: TotpService
-    ) -> None:
+    async def test_enroll_conflict_if_already_enabled(self, service: TotpService) -> None:
         user = _make_user(totp_enabled_at=datetime.now(UTC))
         service._auth_service.get_user_by_id = AsyncMock(return_value=user)
 
@@ -112,9 +108,7 @@ class TestEnroll:
         _, raw_secret = await service.enroll(user.id)
 
         assert user.totp_pending_secret != old
-        assert decrypt_secret(
-            user.totp_pending_secret, settings=test_settings
-        ) == raw_secret
+        assert decrypt_secret(user.totp_pending_secret, settings=test_settings) == raw_secret
 
 
 class TestActivate:
@@ -158,9 +152,7 @@ class TestActivate:
         assert user.totp_enabled_at is None
 
     @pytest.mark.asyncio
-    async def test_activate_conflict_if_no_pending(
-        self, service: TotpService
-    ) -> None:
+    async def test_activate_conflict_if_no_pending(self, service: TotpService) -> None:
         user = _make_user()  # no pending secret
         service._auth_service.get_user_by_id = AsyncMock(return_value=user)
 
@@ -185,18 +177,14 @@ class TestActivate:
 
 
 class TestVerifyCode:
-    def test_verify_valid_code(
-        self, service: TotpService, test_settings: MagicMock
-    ) -> None:
+    def test_verify_valid_code(self, service: TotpService, test_settings: MagicMock) -> None:
         raw = pyotp.random_base32()
         encrypted = encrypt_secret(raw, settings=test_settings)
         current = pyotp.TOTP(raw).now()
 
         assert service.verify_code(encrypted, current) is True
 
-    def test_verify_wrong_code(
-        self, service: TotpService, test_settings: MagicMock
-    ) -> None:
+    def test_verify_wrong_code(self, service: TotpService, test_settings: MagicMock) -> None:
         raw = pyotp.random_base32()
         encrypted = encrypt_secret(raw, settings=test_settings)
 
@@ -208,9 +196,7 @@ class TestVerifyCode:
     def test_verify_empty_secret_returns_false(self, service: TotpService) -> None:
         assert service.verify_code("", "123456") is False
 
-    def test_verify_malformed_cipher_returns_false(
-        self, service: TotpService
-    ) -> None:
+    def test_verify_malformed_cipher_returns_false(self, service: TotpService) -> None:
         """Tampered/wrong-key ciphertext should fail closed, not raise."""
         assert service.verify_code("not-a-valid-cipher-string", "123456") is False
 
@@ -260,9 +246,7 @@ class TestDisable:
         assert user.totp_enabled_at is not None
 
     @pytest.mark.asyncio
-    async def test_disable_conflict_when_not_enabled(
-        self, service: TotpService
-    ) -> None:
+    async def test_disable_conflict_when_not_enabled(self, service: TotpService) -> None:
         user = _make_user()  # no TOTP
         service._auth_service.get_user_by_id = AsyncMock(return_value=user)
 

@@ -59,15 +59,11 @@ class SearchService:
             raise ValidationError(detail="Search query must not be empty.")
         if len(cleaned) < MIN_QUERY_LENGTH:
             raise ValidationError(
-                detail=(
-                    f"Search query must be at least {MIN_QUERY_LENGTH} characters."
-                )
+                detail=(f"Search query must be at least {MIN_QUERY_LENGTH} characters.")
             )
         if len(cleaned) > MAX_QUERY_LENGTH:
             raise ValidationError(
-                detail=(
-                    f"Search query must be at most {MAX_QUERY_LENGTH} characters."
-                )
+                detail=(f"Search query must be at most {MAX_QUERY_LENGTH} characters.")
             )
         return cleaned
 

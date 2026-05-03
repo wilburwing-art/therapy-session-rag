@@ -97,9 +97,7 @@ class IntakeService:
             raise NotFoundError(resource="IntakeForm", resource_id=str(form_id))
         return form
 
-    async def list_forms(
-        self, organization_id: uuid.UUID
-    ) -> list[IntakeForm]:
+    async def list_forms(self, organization_id: uuid.UUID) -> list[IntakeForm]:
         return await self.form_repo.list_for_org(organization_id)
 
     async def issue_invitation(
@@ -125,18 +123,14 @@ class IntakeService:
         if form is None:
             raise NotFoundError(resource="IntakeForm", resource_id=str(form_id))
         if form.status == IntakeFormStatus.ARCHIVED:
-            raise ConflictError(
-                detail="Cannot send invitations for an archived form"
-            )
+            raise ConflictError(detail="Cannot send invitations for an archived form")
 
         pending = await self.invitation_repo.get_pending_for_org_and_email(
             organization_id=organization_id,
             patient_email=normalized_email,
         )
         if pending is not None:
-            raise ConflictError(
-                detail="A pending intake invitation already exists for this email"
-            )
+            raise ConflictError(detail="A pending intake invitation already exists for this email")
 
         raw_token = secrets.token_urlsafe(_TOKEN_BYTES)
         token_hash = self._hash_token(raw_token)
@@ -160,9 +154,7 @@ class IntakeService:
         )
         return invitation, raw_token, expires_at
 
-    async def list_invitations(
-        self, organization_id: uuid.UUID
-    ) -> list[IntakeInvitation]:
+    async def list_invitations(self, organization_id: uuid.UUID) -> list[IntakeInvitation]:
         return await self.invitation_repo.list_for_org(organization_id)
 
     async def list_invitations_for_email(
@@ -181,18 +173,14 @@ class IntakeService:
         invitation_id: uuid.UUID,
     ) -> None:
         """Revoke a pending invitation. Submitted invitations cannot be revoked."""
-        invitation = await self.invitation_repo.get_by_id_for_org(
-            invitation_id, organization_id
-        )
+        invitation = await self.invitation_repo.get_by_id_for_org(invitation_id, organization_id)
         if invitation is None:
             raise NotFoundError(
                 resource="IntakeInvitation",
                 resource_id=str(invitation_id),
             )
         if invitation.status == IntakeInvitationStatus.SUBMITTED:
-            raise ConflictError(
-                detail="Cannot revoke an invitation that has been submitted"
-            )
+            raise ConflictError(detail="Cannot revoke an invitation that has been submitted")
         if invitation.status == IntakeInvitationStatus.REVOKED:
             return
         await self.invitation_repo.mark_revoked(invitation_id)
@@ -202,9 +190,7 @@ class IntakeService:
             organization_id,
         )
 
-    async def load_public_invitation(
-        self, raw_token: str
-    ) -> tuple[IntakeInvitation, IntakeForm]:
+    async def load_public_invitation(self, raw_token: str) -> tuple[IntakeInvitation, IntakeForm]:
         """Resolve a raw token to (invitation, form) for the public redeem page.
 
         Raises UnauthorizedError for any invalid, expired, submitted, or
@@ -329,9 +315,7 @@ class IntakeService:
 
         unknown = set(answers.keys()) - known_ids
         if unknown:
-            raise ConflictError(
-                detail=f"Unknown question id(s): {sorted(unknown)}"
-            )
+            raise ConflictError(detail=f"Unknown question id(s): {sorted(unknown)}")
 
         missing: list[str] = []
         for qid in required_ids:
@@ -345,9 +329,7 @@ class IntakeService:
             if isinstance(value, list) and len(value) == 0:
                 missing.append(qid)
         if missing:
-            raise ConflictError(
-                detail=f"Missing required answers: {sorted(missing)}"
-            )
+            raise ConflictError(detail=f"Missing required answers: {sorted(missing)}")
 
     @staticmethod
     def _format_answer(value: Any) -> str:

@@ -83,9 +83,7 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
 
             await db_session.commit()
         except SummarizationServiceError as exc:
-            logger.error(
-                "Summarization job failed for session %s: %s", session_id, exc
-            )
+            logger.error("Summarization job failed for session %s: %s", session_id, exc)
             await db_session.rollback()
             return {
                 "session_id": session_id,
@@ -109,9 +107,7 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
                 therapist_name,
             )
         except EmailServiceError as exc:
-            logger.warning(
-                "Recap email failed for session %s: %s", session_id, exc
-            )
+            logger.warning("Recap email failed for session %s: %s", session_id, exc)
 
     # Dispatch session.completed + recap.ready webhooks after the recap
     # has been committed and the therapist email has been sent. We open
@@ -126,9 +122,7 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
                     event_type="session.completed",
                     data={
                         "session_id": session_id,
-                        "patient_id": (
-                            str(patient_id) if patient_id is not None else None
-                        ),
+                        "patient_id": (str(patient_id) if patient_id is not None else None),
                     },
                 )
                 await dispatcher.dispatch(
@@ -137,9 +131,7 @@ async def process_summarization_job(session_id: str) -> dict[str, Any]:
                     data={
                         "session_id": session_id,
                         "recap_id": str(recap_id),
-                        "patient_id": (
-                            str(patient_id) if patient_id is not None else None
-                        ),
+                        "patient_id": (str(patient_id) if patient_id is not None else None),
                     },
                 )
                 await webhook_session.commit()

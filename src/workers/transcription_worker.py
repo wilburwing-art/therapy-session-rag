@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 try:
     from src.core.telemetry import record_duration as _record_duration
 except ImportError:  # pragma: no cover - defensive
+
     @contextmanager
     def _record_duration(
         operation: str,  # noqa: ARG001 - signature-compat no-op stub

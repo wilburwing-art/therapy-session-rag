@@ -275,9 +275,7 @@ class TestGetPatientConversation:
         convo = _make_conversation_read(patient_id, mock_auth_context.organization_id)
         mock_conversation_service.get_for_therapist.return_value = convo
 
-        response = client.get(
-            f"/patients/{patient_id}/conversations/{convo.id}"
-        )
+        response = client.get(f"/patients/{patient_id}/conversations/{convo.id}")
 
         assert response.status_code == 200
         body = response.json()
@@ -298,9 +296,7 @@ class TestGetPatientConversation:
         )
 
         bogus_convo_id = uuid.uuid4()
-        response = client.get(
-            f"/patients/{patient_id}/conversations/{bogus_convo_id}"
-        )
+        response = client.get(f"/patients/{patient_id}/conversations/{bogus_convo_id}")
 
         assert response.status_code == 404
 

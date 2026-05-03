@@ -17,9 +17,7 @@ class PatientThemesRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_by_patient_id(
-        self, patient_id: uuid.UUID
-    ) -> PatientThemes | None:
+    async def get_by_patient_id(self, patient_id: uuid.UUID) -> PatientThemes | None:
         result = await self.session.execute(
             select(PatientThemes).where(PatientThemes.patient_id == patient_id)
         )

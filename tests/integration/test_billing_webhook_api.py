@@ -93,9 +93,7 @@ async def test_webhook_subscription_updated_mirrors_state(
             },
         }
         with patch.object(stripe.Webhook, "construct_event", return_value=fake_event):
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.post(
                     "/api/v1/billing/webhook",
                     content=b'{"type":"customer.subscription.updated"}',
@@ -107,9 +105,7 @@ async def test_webhook_subscription_updated_mirrors_state(
                 assert resp.status_code == 200
                 assert resp.json()["type"] == "customer.subscription.updated"
 
-        refreshed = await db_session.execute(
-            select(Organization).where(Organization.id == org.id)
-        )
+        refreshed = await db_session.execute(select(Organization).where(Organization.id == org.id))
         updated = refreshed.scalar_one()
         assert updated.subscription_status == SubscriptionStatus.ACTIVE
         assert updated.stripe_subscription_id == "sub_abc"

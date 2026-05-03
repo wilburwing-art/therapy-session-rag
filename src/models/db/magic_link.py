@@ -64,6 +64,4 @@ class MagicLink(Base, TimestampMixin):
         lazy="selectin",
     )
 
-    __table_args__ = (
-        Index("ix_magic_links_patient_expires", "patient_id", "expires_at"),
-    )
+    __table_args__ = (Index("ix_magic_links_patient_expires", "patient_id", "expires_at"),)

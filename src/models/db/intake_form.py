@@ -77,6 +77,4 @@ class IntakeForm(Base, TimestampMixin):
         lazy="selectin",
     )
 
-    __table_args__ = (
-        Index("ix_intake_forms_org_status", "organization_id", "status"),
-    )
+    __table_args__ = (Index("ix_intake_forms_org_status", "organization_id", "status"),)

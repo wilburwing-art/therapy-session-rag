@@ -145,7 +145,5 @@ def serialize_payload(payload: dict[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def _endpoint_has_subscribed(
-    endpoint: WebhookEndpoint, event_type: str
-) -> bool:
+def _endpoint_has_subscribed(endpoint: WebhookEndpoint, event_type: str) -> bool:
     return event_type in endpoint.event_types

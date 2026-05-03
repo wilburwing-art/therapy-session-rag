@@ -203,15 +203,9 @@ async def get_recording_url(
 @router.get("", response_model=CursorPage[SessionSummary])
 async def list_sessions(
     service: SessionSvc,
-    patient_id: Annotated[
-        uuid.UUID | None, Query(description="Filter by patient ID")
-    ] = None,
-    therapist_id: Annotated[
-        uuid.UUID | None, Query(description="Filter by therapist ID")
-    ] = None,
-    status: Annotated[
-        DomainSessionStatus | None, Query(description="Filter by status")
-    ] = None,
+    patient_id: Annotated[uuid.UUID | None, Query(description="Filter by patient ID")] = None,
+    therapist_id: Annotated[uuid.UUID | None, Query(description="Filter by therapist ID")] = None,
+    status: Annotated[DomainSessionStatus | None, Query(description="Filter by status")] = None,
     cursor: Annotated[
         str | None, Query(description="Pagination cursor from previous response")
     ] = None,
@@ -318,12 +312,8 @@ async def upload_recording(
 async def get_patient_sessions(
     patient_id: uuid.UUID,
     service: SessionSvc,
-    therapist_id: Annotated[
-        uuid.UUID | None, Query(description="Filter by therapist ID")
-    ] = None,
-    status: Annotated[
-        DomainSessionStatus | None, Query(description="Filter by status")
-    ] = None,
+    therapist_id: Annotated[uuid.UUID | None, Query(description="Filter by therapist ID")] = None,
+    status: Annotated[DomainSessionStatus | None, Query(description="Filter by status")] = None,
 ) -> list[SessionSummary]:
     """Get all sessions for a patient.
 
@@ -357,9 +347,7 @@ async def start_transcription(
     # Verify session exists and has a recording
     session = await session_service.get_session(session_id)
     if not session.recording_path:
-        raise ValidationError(
-            detail="Session has no recording. Upload a recording first."
-        )
+        raise ValidationError(detail="Session has no recording. Upload a recording first.")
 
     # Create transcription job
     job = await transcription_service.create_transcription_job(session_id)

@@ -95,9 +95,7 @@ class TwilioSmsSender:
 
     def __init__(self, settings: Settings) -> None:
         if not settings.twilio_configured:
-            raise SmsSenderError(
-                "TwilioSmsSender constructed without complete credentials"
-            )
+            raise SmsSenderError("TwilioSmsSender constructed without complete credentials")
         # Local import: twilio is an optional dependency.
         try:
             from twilio.rest import Client

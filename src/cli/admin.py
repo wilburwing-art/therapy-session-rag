@@ -175,9 +175,7 @@ def _format_iso(dt: datetime | None) -> str:
 
 def _render_csv(rows: list[AdminRow], stream: TextIO) -> None:
     writer = csv.writer(stream)
-    writer.writerow(
-        ["email", "full_name", "organization", "last_login_at", "dormant"]
-    )
+    writer.writerow(["email", "full_name", "organization", "last_login_at", "dormant"])
     for row in rows:
         writer.writerow(
             [
@@ -214,8 +212,7 @@ def _render_table(rows: list[AdminRow], stream: TextIO) -> None:
     stream.write(sep.join("-" * w for w in widths) + "\n")
     for row in data:
         stream.write(
-            sep.join(str(cell).ljust(w) for cell, w in zip(row, widths, strict=True))
-            + "\n"
+            sep.join(str(cell).ljust(w) for cell, w in zip(row, widths, strict=True)) + "\n"
         )
 
 
@@ -229,9 +226,7 @@ async def _run_access_review(
         try:
             org_uuid = uuid.UUID(organization_id)
         except ValueError:
-            sys.stderr.write(
-                f"--organization-id must be a UUID (got {organization_id!r})\n"
-            )
+            sys.stderr.write(f"--organization-id must be a UUID (got {organization_id!r})\n")
             return 2
 
     session_factory = _make_session_factory()

@@ -270,9 +270,7 @@ class DataExportService:
         patient = await self._load_patient_in_org(patient_id, org_id)
 
         session_count_row = await self.db_session.execute(
-            select(SessionRecording.id).where(
-                SessionRecording.patient_id == patient_id
-            )
+            select(SessionRecording.id).where(SessionRecording.patient_id == patient_id)
         )
         session_count = len(list(session_count_row.scalars().all()))
 
@@ -353,9 +351,7 @@ class DataExportService:
         org_id: uuid.UUID,
     ) -> User:
         """Fetch the patient row and verify it belongs to the caller's org."""
-        result = await self.db_session.execute(
-            select(User).where(User.id == patient_id)
-        )
+        result = await self.db_session.execute(select(User).where(User.id == patient_id))
         patient = result.scalar_one_or_none()
         if patient is None:
             raise NotFoundError(resource="Patient", resource_id=str(patient_id))

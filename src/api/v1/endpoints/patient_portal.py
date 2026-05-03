@@ -110,9 +110,7 @@ async def get_own_session_recap(
     if session is None:
         raise NotFoundError(resource="Session", resource_id=str(session_id))
     if session.patient_id != patient.id:
-        raise ForbiddenError(
-            detail="Session does not belong to the authenticated patient."
-        )
+        raise ForbiddenError(detail="Session does not belong to the authenticated patient.")
 
     recap = await summary_service.get_recap(session_id)
 

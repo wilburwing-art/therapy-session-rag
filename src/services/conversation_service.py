@@ -154,9 +154,7 @@ class ConversationService:
             The created message
         """
         seq = await self.repo.get_next_sequence_number(conversation.id)
-        sources_json = (
-            [s.model_dump(mode="json") for s in sources] if sources else None
-        )
+        sources_json = [s.model_dump(mode="json") for s in sources] if sources else None
         message = ConversationMessage(
             conversation_id=conversation.id,
             role=MessageRole.ASSISTANT,
@@ -287,9 +285,7 @@ class ConversationService:
             updated_at=conversation.updated_at,
         )
 
-    def _to_conversation_summary(
-        self, conversation: Conversation
-    ) -> ConversationSummary:
+    def _to_conversation_summary(self, conversation: Conversation) -> ConversationSummary:
         """Convert a Conversation model to ConversationSummary schema."""
         return ConversationSummary(
             id=conversation.id,

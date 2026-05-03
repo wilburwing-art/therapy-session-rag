@@ -160,9 +160,7 @@ class TestRenderSessionRecapPdf:
         service.session_repo.get_by_id = AsyncMock(
             return_value=_mock_session(session_id, patient_id, therapist_id)
         )
-        service.recap_repo.get_by_session_id = AsyncMock(
-            return_value=_mock_recap(session_id)
-        )
+        service.recap_repo.get_by_session_id = AsyncMock(return_value=_mock_recap(session_id))
 
         patient_user = _mock_user(patient_id, organization_id, role=UserRole.PATIENT)
         therapist_user = _mock_user(
@@ -277,9 +275,7 @@ class TestRenderThemesPdf:
         db_results = iter([_scalar_one(patient_user), _scalar_one(org_row)])
         service.db_session.execute = AsyncMock(side_effect=lambda *_a, **_kw: next(db_results))  # type: ignore[attr-defined]
 
-        service.themes_repo.get_by_patient_id = AsyncMock(
-            return_value=_mock_themes(patient_id)
-        )
+        service.themes_repo.get_by_patient_id = AsyncMock(return_value=_mock_themes(patient_id))
 
         pdf_bytes = await service.render_themes_pdf(
             patient_id=patient_id,
@@ -297,9 +293,7 @@ class TestRenderThemesPdf:
     ) -> None:
         other_org = uuid.uuid4()
         patient_user = _mock_user(patient_id, other_org)
-        service.db_session.execute = AsyncMock(
-            return_value=_scalar_one(patient_user)
-        )
+        service.db_session.execute = AsyncMock(return_value=_scalar_one(patient_user))
 
         with pytest.raises(ForbiddenError):
             await service.render_themes_pdf(
@@ -315,9 +309,7 @@ class TestRenderThemesPdf:
         organization_id: uuid.UUID,
     ) -> None:
         patient_user = _mock_user(patient_id, organization_id)
-        service.db_session.execute = AsyncMock(
-            return_value=_scalar_one(patient_user)
-        )
+        service.db_session.execute = AsyncMock(return_value=_scalar_one(patient_user))
         service.themes_repo.get_by_patient_id = AsyncMock(return_value=None)
 
         with pytest.raises(NotFoundError):
@@ -380,9 +372,7 @@ class TestRenderPatientRecordPdf:
         )
         service.db_session.execute = AsyncMock(side_effect=lambda *_a, **_kw: next(db_results))  # type: ignore[attr-defined]
 
-        service.themes_repo.get_by_patient_id = AsyncMock(
-            return_value=_mock_themes(patient_id)
-        )
+        service.themes_repo.get_by_patient_id = AsyncMock(return_value=_mock_themes(patient_id))
 
         pdf_bytes = await service.render_patient_record_pdf(
             patient_id=patient_id,
@@ -430,9 +420,7 @@ class TestRenderPatientRecordPdf:
     ) -> None:
         other_org = uuid.uuid4()
         patient_user = _mock_user(patient_id, other_org)
-        service.db_session.execute = AsyncMock(
-            return_value=_scalar_one(patient_user)
-        )
+        service.db_session.execute = AsyncMock(return_value=_scalar_one(patient_user))
 
         with pytest.raises(ForbiddenError):
             await service.render_patient_record_pdf(

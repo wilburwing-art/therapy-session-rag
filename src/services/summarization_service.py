@@ -40,12 +40,14 @@ logger = logging.getLogger(__name__)
 try:
     from src.core.telemetry import record_duration as _record_duration
 except ImportError:  # pragma: no cover - defensive
+
     @contextmanager
     def _record_duration(
         operation: str,  # noqa: ARG001 - signature-compat no-op stub
         attributes: dict[str, str] | None = None,  # noqa: ARG001
     ) -> Iterator[None]:
         yield
+
 
 _MAX_TRANSCRIPT_CHARS = 120_000
 
@@ -156,9 +158,7 @@ class SummarizationService:
                 )
         except ClaudeError as exc:
             logger.error("Claude error generating recap for %s: %s", session_id, exc)
-            raise SummarizationServiceError(
-                f"LLM call failed: {exc}"
-            ) from exc
+            raise SummarizationServiceError(f"LLM call failed: {exc}") from exc
 
         payload = self._parse_payload(response.content)
 
@@ -282,9 +282,7 @@ class SummarizationService:
             data = json.loads(candidate)
         except json.JSONDecodeError as exc:
             logger.error("Failed to decode recap JSON: %s\nRaw: %s", exc, raw[:500])
-            raise SummarizationServiceError(
-                "LLM returned non-JSON output"
-            ) from exc
+            raise SummarizationServiceError("LLM returned non-JSON output") from exc
 
         SummarizationService._normalize_homework(data)
 
@@ -326,9 +324,7 @@ class SummarizationService:
             brief=recap.brief,
             key_topics=list(recap.key_topics or []),
             emotional_tone=recap.emotional_tone,
-            homework_assigned=[
-                HomeworkItem(**item) for item in (recap.homework_assigned or [])
-            ],
+            homework_assigned=[HomeworkItem(**item) for item in (recap.homework_assigned or [])],
             follow_ups=list(recap.follow_ups or []),
             risk_flags=list(recap.risk_flags or []),
             model_name=recap.model_name,

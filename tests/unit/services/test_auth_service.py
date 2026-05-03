@@ -139,9 +139,7 @@ class TestLockout:
         user = _make_user(locked_until=past, failed_login_count=2)
         auth_service.get_user_by_email = AsyncMock(return_value=user)
 
-        result = await auth_service.authenticate_therapist(
-            user.email, "correct-horse"
-        )
+        result = await auth_service.authenticate_therapist(user.email, "correct-horse")
 
         user_out, token, expires_at, requires_2fa = result
         assert user_out is user
@@ -179,10 +177,8 @@ class TestTotpBranch:
         )
         auth_service.get_user_by_email = AsyncMock(return_value=user)
 
-        user_out, token, expires_at, requires_2fa = (
-            await auth_service.authenticate_therapist(
-                user.email, "correct-horse"
-            )
+        user_out, token, expires_at, requires_2fa = await auth_service.authenticate_therapist(
+            user.email, "correct-horse"
         )
 
         assert requires_2fa is True
@@ -207,9 +203,7 @@ class TestTotpBranch:
         auth_service.get_user_by_email = AsyncMock(return_value=user)
         auth_service.get_user_by_id = AsyncMock(return_value=user)
 
-        _, challenge, _, _ = await auth_service.authenticate_therapist(
-            user.email, "correct-horse"
-        )
+        _, challenge, _, _ = await auth_service.authenticate_therapist(user.email, "correct-horse")
 
         user_out, session_token, _ = await auth_service.complete_totp_challenge(
             challenge_token=challenge,
@@ -232,9 +226,7 @@ class TestTotpBranch:
         auth_service.get_user_by_email = AsyncMock(return_value=user)
         auth_service.get_user_by_id = AsyncMock(return_value=user)
 
-        _, challenge, _, _ = await auth_service.authenticate_therapist(
-            user.email, "correct-horse"
-        )
+        _, challenge, _, _ = await auth_service.authenticate_therapist(user.email, "correct-horse")
 
         with pytest.raises(UnauthorizedError):
             await auth_service.complete_totp_challenge(

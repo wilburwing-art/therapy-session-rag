@@ -212,17 +212,83 @@ def mock_deepgram_response() -> dict[str, Any]:
                             "transcript": "Hello, how are you feeling today? I've been feeling anxious lately.",
                             "confidence": 0.95,
                             "words": [
-                                {"word": "Hello", "start": 0.0, "end": 0.5, "confidence": 0.99, "speaker": 0},
-                                {"word": "how", "start": 0.6, "end": 0.8, "confidence": 0.98, "speaker": 0},
-                                {"word": "are", "start": 0.9, "end": 1.0, "confidence": 0.97, "speaker": 0},
-                                {"word": "you", "start": 1.1, "end": 1.3, "confidence": 0.99, "speaker": 0},
-                                {"word": "feeling", "start": 1.4, "end": 1.8, "confidence": 0.96, "speaker": 0},
-                                {"word": "today", "start": 1.9, "end": 2.3, "confidence": 0.98, "speaker": 0},
-                                {"word": "I've", "start": 3.0, "end": 3.2, "confidence": 0.95, "speaker": 1},
-                                {"word": "been", "start": 3.3, "end": 3.5, "confidence": 0.97, "speaker": 1},
-                                {"word": "feeling", "start": 3.6, "end": 4.0, "confidence": 0.98, "speaker": 1},
-                                {"word": "anxious", "start": 4.1, "end": 4.6, "confidence": 0.94, "speaker": 1},
-                                {"word": "lately", "start": 4.7, "end": 5.1, "confidence": 0.96, "speaker": 1},
+                                {
+                                    "word": "Hello",
+                                    "start": 0.0,
+                                    "end": 0.5,
+                                    "confidence": 0.99,
+                                    "speaker": 0,
+                                },
+                                {
+                                    "word": "how",
+                                    "start": 0.6,
+                                    "end": 0.8,
+                                    "confidence": 0.98,
+                                    "speaker": 0,
+                                },
+                                {
+                                    "word": "are",
+                                    "start": 0.9,
+                                    "end": 1.0,
+                                    "confidence": 0.97,
+                                    "speaker": 0,
+                                },
+                                {
+                                    "word": "you",
+                                    "start": 1.1,
+                                    "end": 1.3,
+                                    "confidence": 0.99,
+                                    "speaker": 0,
+                                },
+                                {
+                                    "word": "feeling",
+                                    "start": 1.4,
+                                    "end": 1.8,
+                                    "confidence": 0.96,
+                                    "speaker": 0,
+                                },
+                                {
+                                    "word": "today",
+                                    "start": 1.9,
+                                    "end": 2.3,
+                                    "confidence": 0.98,
+                                    "speaker": 0,
+                                },
+                                {
+                                    "word": "I've",
+                                    "start": 3.0,
+                                    "end": 3.2,
+                                    "confidence": 0.95,
+                                    "speaker": 1,
+                                },
+                                {
+                                    "word": "been",
+                                    "start": 3.3,
+                                    "end": 3.5,
+                                    "confidence": 0.97,
+                                    "speaker": 1,
+                                },
+                                {
+                                    "word": "feeling",
+                                    "start": 3.6,
+                                    "end": 4.0,
+                                    "confidence": 0.98,
+                                    "speaker": 1,
+                                },
+                                {
+                                    "word": "anxious",
+                                    "start": 4.1,
+                                    "end": 4.6,
+                                    "confidence": 0.94,
+                                    "speaker": 1,
+                                },
+                                {
+                                    "word": "lately",
+                                    "start": 4.7,
+                                    "end": 5.1,
+                                    "confidence": 0.96,
+                                    "speaker": 1,
+                                },
                             ],
                         }
                     ]
@@ -258,6 +324,7 @@ def mock_deepgram_response() -> dict[str, Any]:
 def mock_embedding() -> list[float]:
     """Mock embedding vector (1536 dimensions for text-embedding-3-small)."""
     import random
+
     random.seed(42)  # Reproducible
     return [random.uniform(-1, 1) for _ in range(1536)]
 

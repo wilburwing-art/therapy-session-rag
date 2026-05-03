@@ -55,8 +55,7 @@ def redact_sensitive_data(data: dict[str, Any]) -> dict[str, Any]:
             redacted[key] = redact_sensitive_data(value)
         elif isinstance(value, list):
             redacted[key] = [
-                redact_sensitive_data(item) if isinstance(item, dict) else item
-                for item in value
+                redact_sensitive_data(item) if isinstance(item, dict) else item for item in value
             ]
         else:
             redacted[key] = value
@@ -142,9 +141,7 @@ class JSONFormatter(logging.Formatter):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for logging HTTP requests with request ID tracking."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Process request with logging.
 
         Args:

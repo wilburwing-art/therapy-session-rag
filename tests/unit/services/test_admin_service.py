@@ -84,9 +84,7 @@ class TestListOrganizations:
             disabled_at=datetime(2026, 4, 10, tzinfo=UTC),
             subscription_status=SubscriptionStatus.CANCELED,
         )
-        mock_session.execute.return_value = _all(
-            [(org_a, 4, 12), (org_b, 2, 0)]
-        )
+        mock_session.execute.return_value = _all([(org_a, 4, 12), (org_b, 2, 0)])
 
         result = await service.list_organizations()
 
@@ -182,9 +180,7 @@ class TestDisableEnableOrganization:
         after = datetime.now(UTC)
 
         assert result.disabled_at is not None
-        assert before - timedelta(seconds=1) <= result.disabled_at <= after + timedelta(
-            seconds=1
-        )
+        assert before - timedelta(seconds=1) <= result.disabled_at <= after + timedelta(seconds=1)
         mock_session.flush.assert_awaited_once()
 
     async def test_disable_is_idempotent(

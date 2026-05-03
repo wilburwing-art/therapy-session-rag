@@ -81,9 +81,7 @@ class TestChat:
         )
 
         # Mock vector search
-        chat_service.vector_search.search_similar = AsyncMock(
-            return_value=[sample_search_result]
-        )
+        chat_service.vector_search.search_similar = AsyncMock(return_value=[sample_search_result])
 
         # Mock Claude client
         chat_service._claude_client = MagicMock()
@@ -172,9 +170,7 @@ class TestChat:
         )
 
         # Mock vector search
-        chat_service.vector_search.search_similar = AsyncMock(
-            return_value=[sample_search_result]
-        )
+        chat_service.vector_search.search_similar = AsyncMock(return_value=[sample_search_result])
 
         # Mock Claude client
         chat_service._claude_client = MagicMock()
@@ -251,15 +247,11 @@ class TestChat:
         )
 
         # Mock vector search
-        chat_service.vector_search.search_similar = AsyncMock(
-            return_value=[sample_search_result]
-        )
+        chat_service.vector_search.search_similar = AsyncMock(return_value=[sample_search_result])
 
         # Mock Claude client to fail
         chat_service._claude_client = MagicMock()
-        chat_service._claude_client.chat = AsyncMock(
-            side_effect=ClaudeError("API error")
-        )
+        chat_service._claude_client.chat = AsyncMock(side_effect=ClaudeError("API error"))
         chat_service._claude_client.create_rag_system_prompt = MagicMock(
             return_value="System prompt"
         )
@@ -305,9 +297,7 @@ class TestSourceCitations:
                 token_count=5,
             )
         )
-        chat_service.vector_search.search_similar = AsyncMock(
-            return_value=[search_result]
-        )
+        chat_service.vector_search.search_similar = AsyncMock(return_value=[search_result])
         chat_service._claude_client = MagicMock()
         chat_service._claude_client.chat = AsyncMock(
             return_value=ClaudeChatResponse(
@@ -359,9 +349,7 @@ class TestGetChunkCount:
         """Test getting chunk count."""
         patient_id = uuid.uuid4()
 
-        chat_service.vector_search.get_chunk_count_by_patient = AsyncMock(
-            return_value=25
-        )
+        chat_service.vector_search.get_chunk_count_by_patient = AsyncMock(return_value=25)
 
         count = await chat_service.get_chunk_count(patient_id)
 

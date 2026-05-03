@@ -24,9 +24,7 @@ class PaymentRequiredError(AppError):
 
     def __init__(
         self,
-        detail: str = (
-            "Subscription required. Start or renew your plan in the billing portal."
-        ),
+        detail: str = ("Subscription required. Start or renew your plan in the billing portal."),
     ) -> None:
         super().__init__(
             title="Payment Required",

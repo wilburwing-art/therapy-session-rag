@@ -106,9 +106,7 @@ async def update_form(
         IntakeFormStatus(payload.status.value) if payload.status else None
     )
     questions: list[dict[str, Any]] | None = (
-        [q.model_dump() for q in payload.questions]
-        if payload.questions is not None
-        else None
+        [q.model_dump() for q in payload.questions] if payload.questions is not None else None
     )
     form = await intake_service.update_form(
         organization_id=therapist.organization_id,
@@ -149,9 +147,7 @@ async def create_invitation(
 
     intake_url = f"{settings.web_app_url}/intake?t={raw_token}"
     practice_name = (
-        therapist.organization.name
-        if therapist.organization is not None
-        else "your practice"
+        therapist.organization.name if therapist.organization is not None else "your practice"
     )
     therapist_name = therapist.full_name or therapist.email
     try:
@@ -205,9 +201,7 @@ async def list_invitations(
             patient_email=patient_email,
         )
     else:
-        invitations = await intake_service.list_invitations(
-            therapist.organization_id
-        )
+        invitations = await intake_service.list_invitations(therapist.organization_id)
     return [IntakeInvitationRead.model_validate(inv) for inv in invitations]
 
 
@@ -247,11 +241,7 @@ async def lookup_invitation(
     submitted anything.
     """
     invitation, form = await intake_service.load_public_invitation(t)
-    practice_name = (
-        form.organization.name
-        if form.organization is not None
-        else "Your therapist"
-    )
+    practice_name = form.organization.name if form.organization is not None else "Your therapist"
     return IntakeInvitationPublic(
         form_id=form.id,
         practice_name=practice_name,

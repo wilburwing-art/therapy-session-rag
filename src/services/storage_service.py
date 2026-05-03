@@ -103,9 +103,7 @@ class StorageService:
         """
         unique_id = uuid.uuid4().hex[:12]
         # Sanitize filename
-        safe_filename = "".join(
-            c if c.isalnum() or c in ".-_" else "_" for c in filename
-        )
+        safe_filename = "".join(c if c.isalnum() or c in ".-_" else "_" for c in filename)
         return f"{prefix}/{unique_id}-{safe_filename}"
 
     async def upload_file(

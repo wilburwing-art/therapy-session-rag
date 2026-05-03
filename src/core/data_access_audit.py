@@ -63,6 +63,4 @@ async def log_data_access(
     except Exception:
         # EventPublisher.publish already swallows, but double-protect the
         # read path in case we ever swap in a stricter publisher.
-        logger.warning(
-            "Failed to record DATA_ACCESS event %s", event_name, exc_info=True
-        )
+        logger.warning("Failed to record DATA_ACCESS event %s", event_name, exc_info=True)

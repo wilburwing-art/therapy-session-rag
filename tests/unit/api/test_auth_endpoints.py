@@ -121,9 +121,7 @@ def mock_email_service() -> MagicMock:
     svc.send_email_verification = MagicMock(
         return_value=EmailResult(delivered=True, provider_id="em_1")
     )
-    svc.send_magic_link = MagicMock(
-        return_value=EmailResult(delivered=True, provider_id="em_1")
-    )
+    svc.send_magic_link = MagicMock(return_value=EmailResult(delivered=True, provider_id="em_1"))
     svc.send_password_reset = MagicMock(
         return_value=EmailResult(delivered=True, provider_id="em_1")
     )
@@ -286,9 +284,7 @@ class TestRegister:
             datetime(2026, 4, 21, 12, 0, 0, tzinfo=UTC),
         )
         mock_auth_service.request_email_verification.return_value = "tok"
-        mock_email_service.send_email_verification.side_effect = EmailServiceError(
-            "SMTP down"
-        )
+        mock_email_service.send_email_verification.side_effect = EmailServiceError("SMTP down")
 
         response = client.post(
             "/auth/register",
@@ -306,9 +302,7 @@ class TestRegister:
 
 
 class TestLogout:
-    def test_logout_clears_session_and_csrf_cookies(
-        self, client: TestClient
-    ) -> None:
+    def test_logout_clears_session_and_csrf_cookies(self, client: TestClient) -> None:
         response = client.post("/auth/logout")
         assert response.status_code == 204
         set_cookie_headers = response.headers.get_list("set-cookie")
@@ -317,7 +311,7 @@ class TestLogout:
         assert "therapyrag_session=" in cookie_names
         assert "therapyrag_csrf=" in cookie_names
         # Empty value + Max-Age=0 is how Starlette deletes cookies.
-        assert any('Max-Age=0' in h for h in set_cookie_headers)
+        assert any("Max-Age=0" in h for h in set_cookie_headers)
 
     def test_patient_logout_clears_cookies(self, client: TestClient) -> None:
         response = client.post("/auth/patient/logout")
@@ -442,9 +436,7 @@ class TestEmailVerification:
 
         assert response.status_code == 202
         assert response.json() == {"sent": True}
-        mock_auth_service.request_email_verification.assert_awaited_once_with(
-            therapist_user.id
-        )
+        mock_auth_service.request_email_verification.assert_awaited_once_with(therapist_user.id)
         mock_email_service.send_email_verification.assert_called_once()
 
     def test_verify_email_confirm_returns_current_user(
@@ -727,9 +719,7 @@ class TestTwoFAEnrollmentEndpoints:
         client: TestClient,
         mock_totp_service: MagicMock,
     ) -> None:
-        mock_totp_service.activate.side_effect = UnauthorizedError(
-            "Invalid 2FA code"
-        )
+        mock_totp_service.activate.side_effect = UnauthorizedError("Invalid 2FA code")
 
         response = client.post("/auth/2fa/activate", json={"code": "000000"})
 

@@ -106,17 +106,11 @@ class TestCreateSession:
         )
 
         with (
-            patch(
-                "src.services.session_service.ConsentRepository"
-            ) as mock_consent_repo_class,
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.ConsentRepository") as mock_consent_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_consent_repo = MagicMock()
-            mock_consent_repo.get_active_consent = AsyncMock(
-                return_value=mock_consent
-            )
+            mock_consent_repo.get_active_consent = AsyncMock(return_value=mock_consent)
             mock_consent_repo_class.return_value = mock_consent_repo
 
             mock_session_repo = MagicMock()
@@ -152,9 +146,7 @@ class TestCreateSession:
     ) -> None:
         """Test session creation fails without consent."""
         with (
-            patch(
-                "src.services.session_service.ConsentRepository"
-            ) as mock_consent_repo_class,
+            patch("src.services.session_service.ConsentRepository") as mock_consent_repo_class,
             patch("src.services.session_service.SessionRepository"),
         ):
             mock_consent_repo = MagicMock()
@@ -197,9 +189,7 @@ class TestGetSession:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
@@ -219,9 +209,7 @@ class TestGetSession:
         """Test NotFoundError when session doesn't exist."""
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=None)
@@ -255,9 +243,7 @@ class TestUpdateSession:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
@@ -290,15 +276,11 @@ class TestUpdateSession:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
-            mock_session_repo.update_recording_info = AsyncMock(
-                return_value=True
-            )
+            mock_session_repo.update_recording_info = AsyncMock(return_value=True)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
@@ -324,9 +306,7 @@ class TestUpdateSession:
         """Test NotFoundError when updating nonexistent session."""
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=None)
@@ -352,18 +332,14 @@ class TestUpdateStatus:
         """Test status update returns True on success."""
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.update_status = AsyncMock(return_value=True)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
-            result = await service.update_status(
-                session_id, DomainSessionStatus.TRANSCRIBING
-            )
+            result = await service.update_status(session_id, DomainSessionStatus.TRANSCRIBING)
 
             assert result is True
             mock_session_repo.update_status.assert_called_once()
@@ -376,9 +352,7 @@ class TestUpdateStatus:
         """Test status update with error message for FAILED status."""
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.update_status = AsyncMock(return_value=True)
@@ -406,18 +380,14 @@ class TestUpdateStatus:
         """Test status update returns False when session not found."""
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.update_status = AsyncMock(return_value=False)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
-            result = await service.update_status(
-                session_id, DomainSessionStatus.UPLOADED
-            )
+            result = await service.update_status(session_id, DomainSessionStatus.UPLOADED)
 
             assert result is False
 
@@ -445,14 +415,10 @@ class TestListSessions:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
-            mock_session_repo.list_sessions = AsyncMock(
-                return_value=mock_sessions
-            )
+            mock_session_repo.list_sessions = AsyncMock(return_value=mock_sessions)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
@@ -482,14 +448,10 @@ class TestListSessions:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
-            mock_session_repo.list_sessions = AsyncMock(
-                return_value=mock_sessions
-            )
+            mock_session_repo.list_sessions = AsyncMock(return_value=mock_sessions)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
@@ -526,14 +488,10 @@ class TestGetSessionsForPatient:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
-            mock_session_repo.list_sessions = AsyncMock(
-                return_value=mock_sessions
-            )
+            mock_session_repo.list_sessions = AsyncMock(return_value=mock_sessions)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
@@ -568,14 +526,10 @@ class TestGetSessionsForPatient:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
-            mock_session_repo.list_sessions = AsyncMock(
-                return_value=mock_sessions
-            )
+            mock_session_repo.list_sessions = AsyncMock(return_value=mock_sessions)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
@@ -614,18 +568,14 @@ class TestUpdateNotes:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
             mock_session_repo_class.return_value = mock_session_repo
 
             service = SessionService(mock_db_session)
-            result = await service.update_notes(
-                session_id, "Follow up on sleep issues"
-            )
+            result = await service.update_notes(session_id, "Follow up on sleep issues")
 
             assert result.id == session_id
             assert result.therapist_notes == "Follow up on sleep issues"
@@ -652,9 +602,7 @@ class TestUpdateNotes:
 
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=mock_session)
@@ -674,9 +622,7 @@ class TestUpdateNotes:
         """update_notes raises NotFoundError when session does not exist."""
         with (
             patch("src.services.session_service.ConsentRepository"),
-            patch(
-                "src.services.session_service.SessionRepository"
-            ) as mock_session_repo_class,
+            patch("src.services.session_service.SessionRepository") as mock_session_repo_class,
         ):
             mock_session_repo = MagicMock()
             mock_session_repo.get_by_id = AsyncMock(return_value=None)

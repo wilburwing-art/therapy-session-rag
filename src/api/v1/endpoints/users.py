@@ -53,9 +53,7 @@ async def create_patient(
     Returns 409 if the email already exists anywhere in the system.
     """
     normalized_email = payload.email.lower()
-    existing = await session.execute(
-        select(User).where(User.email == normalized_email)
-    )
+    existing = await session.execute(select(User).where(User.email == normalized_email))
     if existing.scalar_one_or_none() is not None:
         raise ConflictError(detail="A user with this email already exists")
 
@@ -112,8 +110,7 @@ class NotificationPreferencesUpdate(BaseModel):
     channels: dict[str, bool] | None = Field(
         default=None,
         description=(
-            "Per-channel opt-in flags. Valid keys: sms, email, in_app. "
-            "Unknown keys return 422."
+            "Per-channel opt-in flags. Valid keys: sms, email, in_app. Unknown keys return 422."
         ),
     )
     kinds: dict[str, bool] | None = Field(
@@ -127,8 +124,7 @@ class NotificationPreferencesUpdate(BaseModel):
         default=None,
         max_length=32,
         description=(
-            "Destination phone number in E.164. Pass an empty string to "
-            "clear an existing number."
+            "Destination phone number in E.164. Pass an empty string to clear an existing number."
         ),
     )
     quiet_hours_start: int | None = Field(

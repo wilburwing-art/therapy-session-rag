@@ -113,9 +113,7 @@ async def get_current_usage(
         from src.services.billing_service import _period_bounds_for
 
         org_row = await billing.db_session.execute(
-            select(Organization).where(
-                Organization.id == therapist.organization_id
-            )
+            select(Organization).where(Organization.id == therapist.organization_id)
         )
         org = org_row.scalar_one()
         period_start, period_end = _period_bounds_for(org, now)

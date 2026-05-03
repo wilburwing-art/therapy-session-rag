@@ -25,9 +25,7 @@ router = APIRouter()
 class TurnCredentials(BaseModel):
     """TURN server credentials for WebRTC."""
 
-    ice_servers: list[dict[str, Any]] = Field(
-        ..., description="ICE server configuration"
-    )
+    ice_servers: list[dict[str, Any]] = Field(..., description="ICE server configuration")
 
 
 class RoomStatus(BaseModel):
@@ -172,9 +170,7 @@ async def video_signaling(
             return
 
         # Check if video chat is enabled for the org
-        org_result = await db_session.execute(
-            select(Organization).where(Organization.id == org_id)
-        )
+        org_result = await db_session.execute(select(Organization).where(Organization.id == org_id))
         org = org_result.scalar_one()
         if not org.video_chat_enabled:
             await websocket.close(code=4003, reason="Video chat not enabled")

@@ -65,8 +65,7 @@ def _all_fixtures() -> list[TranscriptFixture]:
     files = sorted(FIXTURES_DIR.glob("transcript_*.json"))
     if not files:
         raise RuntimeError(
-            f"No transcript fixtures found in {FIXTURES_DIR}. "
-            "Expected transcript_*.json files."
+            f"No transcript fixtures found in {FIXTURES_DIR}. Expected transcript_*.json files."
         )
     return [_load_fixture(p) for p in files]
 
@@ -86,14 +85,54 @@ def all_transcript_fixtures() -> list[TranscriptFixture]:
 # related chunks cluster. The mapping is fixed so same text -> same vector,
 # and similar text (sharing tokens) -> similar vector.
 _TOPIC_TOKENS = [
-    "anxiety", "anxious", "deadline", "performance", "work", "standup",
-    "grief", "loss", "mother", "mom", "bereavement", "belongings", "continuing",
-    "sleep", "insomnia", "curfew", "hygiene", "wake", "screen", "stimulus",
-    "relationship", "partner", "conflict", "statement", "check-in",
-    "alcohol", "drinking", "wine", "drink", "moderation", "motivational",
-    "suicidal", "ideation", "crisis", "safety", "isolation", "lifeline",
-    "coping", "breathing", "box", "pause", "grounding", "strategy",
-    "journal", "journaling", "letter", "homework", "experiment",
+    "anxiety",
+    "anxious",
+    "deadline",
+    "performance",
+    "work",
+    "standup",
+    "grief",
+    "loss",
+    "mother",
+    "mom",
+    "bereavement",
+    "belongings",
+    "continuing",
+    "sleep",
+    "insomnia",
+    "curfew",
+    "hygiene",
+    "wake",
+    "screen",
+    "stimulus",
+    "relationship",
+    "partner",
+    "conflict",
+    "statement",
+    "check-in",
+    "alcohol",
+    "drinking",
+    "wine",
+    "drink",
+    "moderation",
+    "motivational",
+    "suicidal",
+    "ideation",
+    "crisis",
+    "safety",
+    "isolation",
+    "lifeline",
+    "coping",
+    "breathing",
+    "box",
+    "pause",
+    "grounding",
+    "strategy",
+    "journal",
+    "journaling",
+    "letter",
+    "homework",
+    "experiment",
 ]
 
 _SPLIT_RE = re.compile(r"\b[a-zA-Z][a-zA-Z\-']{1,}\b")
@@ -292,9 +331,7 @@ class FakeClaudeClient:
 
         risk_flags: list[str] = []
         if expected.get("expected_risk_flags"):
-            risk_pool = expected.get("risk_flag_substring_any") or [
-                "I've been thinking"
-            ]
+            risk_pool = expected.get("risk_flag_substring_any") or ["I've been thinking"]
             # Quote the actual phrase from the transcript if present; else use
             # the expected substring as a paraphrase.
             quote = risk_pool[0]
@@ -302,11 +339,7 @@ class FakeClaudeClient:
                 text = seg.get("text", "")
                 if any(sub in text for sub in risk_pool):
                     start = seg.get("start_time")
-                    timestamp = (
-                        f" (~{start:.1f}s)"
-                        if isinstance(start, (int, float))
-                        else ""
-                    )
+                    timestamp = f" (~{start:.1f}s)" if isinstance(start, (int, float)) else ""
                     quote = f'"{text.strip()}"{timestamp}'
                     break
             risk_flags = [quote]

@@ -41,7 +41,5 @@ class MagicLinkRepository:
 
     async def mark_used(self, link_id: uuid.UUID) -> None:
         await self.session.execute(
-            update(MagicLink)
-            .where(MagicLink.id == link_id)
-            .values(used_at=datetime.now(UTC))
+            update(MagicLink).where(MagicLink.id == link_id).values(used_at=datetime.now(UTC))
         )

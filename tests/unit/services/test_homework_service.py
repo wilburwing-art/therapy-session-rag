@@ -136,9 +136,7 @@ async def test_list_for_patient_filters_by_completed(
 
 
 @pytest.mark.asyncio
-async def test_toggle_completion_success(
-    service: HomeworkService, patient_id: uuid.UUID
-) -> None:
+async def test_toggle_completion_success(service: HomeworkService, patient_id: uuid.UUID) -> None:
     row = _mock_row(patient_id, completed=True)
     service.repo.set_completed = AsyncMock(return_value=row)
 

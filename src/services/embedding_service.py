@@ -110,9 +110,7 @@ class EmbeddingService:
 
         try:
             # Delete any existing chunks (for re-embedding)
-            deleted_count = await self.chunk_repo.delete_chunks_by_transcript(
-                transcript.id
-            )
+            deleted_count = await self.chunk_repo.delete_chunks_by_transcript(transcript.id)
             if deleted_count > 0:
                 logger.info(
                     f"Deleted {deleted_count} existing chunks for transcript {transcript.id}"
@@ -378,9 +376,7 @@ class EmbeddingService:
         """
         return len(text) // 4 + 1
 
-    async def get_chunks_for_session(
-        self, session_id: uuid.UUID
-    ) -> list[SessionChunkRead]:
+    async def get_chunks_for_session(self, session_id: uuid.UUID) -> list[SessionChunkRead]:
         """Get all chunks for a session.
 
         Args:
@@ -403,9 +399,7 @@ class EmbeddingService:
         """
         return await self.chunk_repo.has_embeddings(session_id)
 
-    async def _fail_session(
-        self, session_id: uuid.UUID, error_message: str
-    ) -> None:
+    async def _fail_session(self, session_id: uuid.UUID, error_message: str) -> None:
         """Mark a session as failed.
 
         Args:

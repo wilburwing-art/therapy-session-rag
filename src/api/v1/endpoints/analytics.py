@@ -147,9 +147,7 @@ async def get_event_timeline(
 async def get_event_aggregates(
     auth: Auth,
     service: AnalyticsSvc,
-    period: AggregationPeriod = Query(
-        AggregationPeriod.DAY, description="Aggregation period"
-    ),
+    period: AggregationPeriod = Query(AggregationPeriod.DAY, description="Aggregation period"),
     event_name: str | None = Query(None, description="Filter by event name"),
     event_category: EventCategory | None = Query(None, description="Filter by event category"),
     from_date: datetime | None = Query(None, description="Start of date range"),

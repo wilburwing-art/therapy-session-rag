@@ -23,10 +23,7 @@ from src.models.domain.search import SearchHit, SearchSource
 # ts_headline options: keep snippets short for card rendering and use <mark>
 # so the frontend can apply a single highlight style. HighlightAll=false so
 # we get "around the match" rather than the entire document.
-_HEADLINE_OPTIONS = (
-    "MaxWords=30, MinWords=5, HighlightAll=false, "
-    "StartSel=<mark>, StopSel=</mark>"
-)
+_HEADLINE_OPTIONS = "MaxWords=30, MinWords=5, HighlightAll=false, StartSel=<mark>, StopSel=</mark>"
 
 # Transcript search: join transcripts → sessions → patient user for org scope.
 _TRANSCRIPT_SQL = f"""
@@ -148,8 +145,8 @@ class SearchRepository:
                 text(search_query.sql),
                 params,
             )
-            rows: list[Row[tuple[uuid.UUID, uuid.UUID, str | None, datetime, float, str]]] = (
-                list(result.all())
+            rows: list[Row[tuple[uuid.UUID, uuid.UUID, str | None, datetime, float, str]]] = list(
+                result.all()
             )
             for row in rows:
                 hits.append(

@@ -59,9 +59,7 @@ async def get_api_key_auth(
         except AuthError as exc:
             raise UnauthorizedError(str(exc)) from exc
 
-        user_result = await session.execute(
-            select(User).where(User.id == claims.user_id)
-        )
+        user_result = await session.execute(select(User).where(User.id == claims.user_id))
         user = user_result.scalar_one_or_none()
         if user is None or user.role != UserRole.THERAPIST:
             raise UnauthorizedError("Session does not belong to a therapist")
@@ -153,9 +151,7 @@ async def get_current_patient(
         raise UnauthorizedError("Patient session required")
 
     try:
-        claims = decode_access_token(
-            token, expected_audience="patient", settings=settings
-        )
+        claims = decode_access_token(token, expected_audience="patient", settings=settings)
     except AuthError as exc:
         raise UnauthorizedError(str(exc)) from exc
 

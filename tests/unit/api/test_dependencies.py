@@ -72,9 +72,7 @@ class TestGetApiKeyAuth:
         mock_session.execute.return_value = mock_result
 
         # Mock the repository
-        with patch(
-            "src.api.v1.dependencies.ApiKeyRepository"
-        ) as mock_repo_class:
+        with patch("src.api.v1.dependencies.ApiKeyRepository") as mock_repo_class:
             mock_repo = AsyncMock()
             mock_repo_class.return_value = mock_repo
 

@@ -49,9 +49,18 @@ _CRISIS_PATTERNS: list[tuple[str, str]] = [
 _CLINICAL_BOUNDARY_PATTERNS: list[tuple[str, str]] = [
     (r"\b(diagnos(?:e|is|ed|ing))\b", "boundary_diagnosis"),
     (r"\b(prescrib(?:e|ing|ed))\b", "boundary_prescription"),
-    (r"\b(you\s+(?:have|suffer\s+from|are\s+(?:diagnosed|suffering)))\b", "boundary_diagnosis_statement"),
-    (r"\b(you\s+should\s+(?:take|stop\s+taking)\s+(?:your\s+)?(?:medic(?:ation|ine)))\b", "boundary_medication_advice"),
-    (r"\b(stop\s+(?:seeing|going\s+to)\s+(?:your\s+)?(?:therapist|doctor))\b", "boundary_undermine_provider"),
+    (
+        r"\b(you\s+(?:have|suffer\s+from|are\s+(?:diagnosed|suffering)))\b",
+        "boundary_diagnosis_statement",
+    ),
+    (
+        r"\b(you\s+should\s+(?:take|stop\s+taking)\s+(?:your\s+)?(?:medic(?:ation|ine)))\b",
+        "boundary_medication_advice",
+    ),
+    (
+        r"\b(stop\s+(?:seeing|going\s+to)\s+(?:your\s+)?(?:therapist|doctor))\b",
+        "boundary_undermine_provider",
+    ),
 ]
 
 # Harmful content patterns
@@ -62,7 +71,9 @@ _HARMFUL_CONTENT_PATTERNS: list[tuple[str, str]] = [
 ]
 
 _COMPILED_CRISIS = [(re.compile(p, re.IGNORECASE), name) for p, name in _CRISIS_PATTERNS]
-_COMPILED_BOUNDARY = [(re.compile(p, re.IGNORECASE), name) for p, name in _CLINICAL_BOUNDARY_PATTERNS]
+_COMPILED_BOUNDARY = [
+    (re.compile(p, re.IGNORECASE), name) for p, name in _CLINICAL_BOUNDARY_PATTERNS
+]
 _COMPILED_HARMFUL = [(re.compile(p, re.IGNORECASE), name) for p, name in _HARMFUL_CONTENT_PATTERNS]
 
 

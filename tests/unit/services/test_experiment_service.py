@@ -54,9 +54,7 @@ class TestCreateExperiment:
     """Tests for experiment creation."""
 
     @pytest.mark.asyncio
-    async def test_creates_experiment(
-        self, service: ExperimentService, org_id: uuid.UUID
-    ) -> None:
+    async def test_creates_experiment(self, service: ExperimentService, org_id: uuid.UUID) -> None:
         data = ExperimentCreate(
             name="my-test",
             variants={"control": {}, "treatment": {"top_k": 10}},
@@ -144,9 +142,7 @@ class TestExperimentLifecycle:
             await service.stop_experiment(exp.id)
 
     @pytest.mark.asyncio
-    async def test_start_nonexistent_experiment(
-        self, service: ExperimentService
-    ) -> None:
+    async def test_start_nonexistent_experiment(self, service: ExperimentService) -> None:
         service._repo.get_by_id = AsyncMock(return_value=None)
 
         with pytest.raises(ExperimentServiceError, match="not found"):
@@ -184,9 +180,7 @@ class TestAssignSubject:
     """Tests for subject assignment."""
 
     @pytest.mark.asyncio
-    async def test_assigns_new_subject(
-        self, service: ExperimentService, org_id: uuid.UUID
-    ) -> None:
+    async def test_assigns_new_subject(self, service: ExperimentService, org_id: uuid.UUID) -> None:
         exp = _make_experiment(org_id, status=ExperimentStatus.RUNNING)
         service._repo.get_by_id = AsyncMock(return_value=exp)
         service._repo.get_assignment = AsyncMock(return_value=None)
@@ -233,12 +227,8 @@ class TestAssignSubject:
         exp_id = exp.id
         subject_id = uuid.uuid4()
 
-        variant1 = ExperimentService._hash_assign(
-            exp_id, subject_id, ["control", "treatment"]
-        )
-        variant2 = ExperimentService._hash_assign(
-            exp_id, subject_id, ["control", "treatment"]
-        )
+        variant1 = ExperimentService._hash_assign(exp_id, subject_id, ["control", "treatment"])
+        variant2 = ExperimentService._hash_assign(exp_id, subject_id, ["control", "treatment"])
 
         assert variant1 == variant2
 
@@ -246,9 +236,7 @@ class TestAssignSubject:
     async def test_traffic_percentage_respected(
         self, service: ExperimentService, org_id: uuid.UUID
     ) -> None:
-        exp = _make_experiment(
-            org_id, status=ExperimentStatus.RUNNING, traffic_percentage=0
-        )
+        exp = _make_experiment(org_id, status=ExperimentStatus.RUNNING, traffic_percentage=0)
         exp.traffic_percentage = 0
         service._repo.get_by_id = AsyncMock(return_value=exp)
         service._repo.get_assignment = AsyncMock(return_value=None)
@@ -303,9 +291,7 @@ class TestGetResults:
         assert results.p_value > 0.05
 
     @pytest.mark.asyncio
-    async def test_get_results_nonexistent_experiment(
-        self, service: ExperimentService
-    ) -> None:
+    async def test_get_results_nonexistent_experiment(self, service: ExperimentService) -> None:
         service._repo.get_by_id = AsyncMock(return_value=None)
 
         with pytest.raises(ExperimentServiceError, match="not found"):
@@ -340,9 +326,7 @@ class TestIsInTraffic:
         # Test with many subjects — none should be in traffic at 0%
         exp_id = uuid.uuid4()
         for i in range(50):
-            assert ExperimentService._is_in_traffic(
-                exp_id, uuid.UUID(int=i), 0
-            ) is False
+            assert ExperimentService._is_in_traffic(exp_id, uuid.UUID(int=i), 0) is False
 
 
 class TestWelchTTest:

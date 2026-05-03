@@ -56,9 +56,7 @@ class TherapistInviteRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_for_org(
-        self, organization_id: uuid.UUID
-    ) -> list[TherapistInvite]:
+    async def list_for_org(self, organization_id: uuid.UUID) -> list[TherapistInvite]:
         result = await self.session.execute(
             select(TherapistInvite)
             .where(TherapistInvite.organization_id == organization_id)
@@ -92,6 +90,4 @@ class TherapistInviteRepository:
 
     async def revoke(self, invite_id: uuid.UUID) -> None:
         """Delete a pending invite. Callers must verify it isn't accepted."""
-        await self.session.execute(
-            delete(TherapistInvite).where(TherapistInvite.id == invite_id)
-        )
+        await self.session.execute(delete(TherapistInvite).where(TherapistInvite.id == invite_id))

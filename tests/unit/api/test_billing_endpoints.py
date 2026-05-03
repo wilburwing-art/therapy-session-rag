@@ -103,9 +103,7 @@ class TestPortalSession:
         response = client.post("/billing/portal-session")
 
         assert response.status_code == 200
-        assert response.json() == {
-            "url": "https://billing.stripe.com/p/session/bps_test_abc"
-        }
+        assert response.json() == {"url": "https://billing.stripe.com/p/session/bps_test_abc"}
         mock_billing_service.create_portal_session_url.assert_awaited_once_with(
             therapist_user.organization_id
         )

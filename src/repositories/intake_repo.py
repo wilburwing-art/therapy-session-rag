@@ -76,14 +76,10 @@ class IntakeFormRepository:
         return result.scalar_one_or_none()
 
     async def get_by_id(self, form_id: uuid.UUID) -> IntakeForm | None:
-        result = await self.session.execute(
-            select(IntakeForm).where(IntakeForm.id == form_id)
-        )
+        result = await self.session.execute(select(IntakeForm).where(IntakeForm.id == form_id))
         return result.scalar_one_or_none()
 
-    async def list_for_org(
-        self, organization_id: uuid.UUID
-    ) -> list[IntakeForm]:
+    async def list_for_org(self, organization_id: uuid.UUID) -> list[IntakeForm]:
         result = await self.session.execute(
             select(IntakeForm)
             .where(IntakeForm.organization_id == organization_id)
@@ -122,13 +118,9 @@ class IntakeInvitationRepository:
         await self.session.refresh(invitation)
         return invitation
 
-    async def get_by_token_hash(
-        self, token_hash: str
-    ) -> IntakeInvitation | None:
+    async def get_by_token_hash(self, token_hash: str) -> IntakeInvitation | None:
         result = await self.session.execute(
-            select(IntakeInvitation).where(
-                IntakeInvitation.token_hash == token_hash
-            )
+            select(IntakeInvitation).where(IntakeInvitation.token_hash == token_hash)
         )
         return result.scalar_one_or_none()
 
@@ -162,9 +154,7 @@ class IntakeInvitationRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_for_org(
-        self, organization_id: uuid.UUID
-    ) -> list[IntakeInvitation]:
+    async def list_for_org(self, organization_id: uuid.UUID) -> list[IntakeInvitation]:
         result = await self.session.execute(
             select(IntakeInvitation)
             .where(IntakeInvitation.organization_id == organization_id)
@@ -248,13 +238,9 @@ class IntakeResponseRepository:
         await self.session.refresh(response)
         return response
 
-    async def get_by_invitation_id(
-        self, invitation_id: uuid.UUID
-    ) -> IntakeResponse | None:
+    async def get_by_invitation_id(self, invitation_id: uuid.UUID) -> IntakeResponse | None:
         result = await self.session.execute(
-            select(IntakeResponse).where(
-                IntakeResponse.invitation_id == invitation_id
-            )
+            select(IntakeResponse).where(IntakeResponse.invitation_id == invitation_id)
         )
         return result.scalar_one_or_none()
 

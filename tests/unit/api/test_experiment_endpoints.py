@@ -278,9 +278,7 @@ class TestAssignSubject:
     ) -> None:
         mock_experiment_service.assign_subject = AsyncMock(return_value="treatment")
 
-        response = client.post(
-            f"/experiments/{uuid.uuid4()}/assign/{uuid.uuid4()}"
-        )
+        response = client.post(f"/experiments/{uuid.uuid4()}/assign/{uuid.uuid4()}")
 
         assert response.status_code == 200
         assert response.json()["variant"] == "treatment"
@@ -294,9 +292,7 @@ class TestAssignSubject:
             side_effect=ExperimentServiceError("not running")
         )
 
-        response = client.post(
-            f"/experiments/{uuid.uuid4()}/assign/{uuid.uuid4()}"
-        )
+        response = client.post(f"/experiments/{uuid.uuid4()}/assign/{uuid.uuid4()}")
 
         assert response.status_code == 400
 

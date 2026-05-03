@@ -29,9 +29,7 @@ class TranscriptSegment(BaseModel):
     end_time: float = Field(..., description="End time in seconds")
     speaker: str | None = Field(None, description="Speaker identifier")
     confidence: float | None = Field(None, description="Confidence score (0-1)")
-    words: list[dict[str, Any]] | None = Field(
-        None, description="Word-level details"
-    )
+    words: list[dict[str, Any]] | None = Field(None, description="Word-level details")
 
 
 class TranscriptionJobCreate(BaseModel):
@@ -68,9 +66,7 @@ class TranscriptCreate(BaseModel):
     duration_seconds: float | None = Field(None, description="Audio duration")
     language: str | None = Field(None, description="Detected language code")
     confidence: float | None = Field(None, description="Overall confidence score")
-    transcript_metadata: dict[str, Any] | None = Field(
-        None, description="Additional metadata"
-    )
+    transcript_metadata: dict[str, Any] | None = Field(None, description="Additional metadata")
 
 
 class TranscriptRead(BaseModel):
@@ -87,9 +83,7 @@ class TranscriptRead(BaseModel):
     duration_seconds: float | None = Field(None, description="Audio duration")
     language: str | None = Field(None, description="Detected language code")
     confidence: float | None = Field(None, description="Overall confidence score")
-    transcript_metadata: dict[str, Any] | None = Field(
-        None, description="Additional metadata"
-    )
+    transcript_metadata: dict[str, Any] | None = Field(None, description="Additional metadata")
     created_at: datetime = Field(..., description="When the transcript was created")
     updated_at: datetime = Field(..., description="When the transcript was updated")
 
@@ -112,7 +106,5 @@ class TranscriptionStatusResponse(BaseModel):
 
     session_id: UUID = Field(..., description="ID of the session")
     has_transcript: bool = Field(..., description="Whether transcript exists")
-    job_status: TranscriptionJobStatus | None = Field(
-        None, description="Status of most recent job"
-    )
+    job_status: TranscriptionJobStatus | None = Field(None, description="Status of most recent job")
     error_message: str | None = Field(None, description="Error if failed")

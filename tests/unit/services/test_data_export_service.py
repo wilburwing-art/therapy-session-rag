@@ -212,15 +212,15 @@ class TestExportPatient:
         assessment = _mock_assessment(patient_id)
 
         mock_session.execute.side_effect = [
-            _scalar_one_or_none(patient),        # load patient
-            _scalars_all([consent]),             # consents
-            _scalars_all([sess]),                # sessions
-            _scalars_all([recap]),               # recaps
-            _scalars_all([transcript]),          # transcripts
-            _scalar_one_or_none(themes),         # themes
-            _scalars_all([convo]),               # conversations
-            _scalars_all([msg1, msg2]),          # messages
-            _scalars_all([assessment]),          # assessments
+            _scalar_one_or_none(patient),  # load patient
+            _scalars_all([consent]),  # consents
+            _scalars_all([sess]),  # sessions
+            _scalars_all([recap]),  # recaps
+            _scalars_all([transcript]),  # transcripts
+            _scalar_one_or_none(themes),  # themes
+            _scalars_all([convo]),  # conversations
+            _scalars_all([msg1, msg2]),  # messages
+            _scalars_all([assessment]),  # assessments
         ]
 
         bundle = await service.export_patient(patient_id, org_id)
@@ -255,11 +255,11 @@ class TestExportPatient:
 
         mock_session.execute.side_effect = [
             _scalar_one_or_none(patient),
-            _scalars_all([]),       # consents
-            _scalars_all([]),       # sessions
+            _scalars_all([]),  # consents
+            _scalars_all([]),  # sessions
             _scalar_one_or_none(None),  # themes
-            _scalars_all([]),       # conversations
-            _scalars_all([]),       # assessments
+            _scalars_all([]),  # conversations
+            _scalars_all([]),  # assessments
         ]
 
         bundle = await service.export_patient(patient_id, org_id)
@@ -332,11 +332,11 @@ class TestDeletePatient:
         conv_ids = [uuid.uuid4()]
 
         mock_session.execute.side_effect = [
-            _scalar_one_or_none(patient),      # patient load
-            _scalars_all(session_ids),         # session ids
-            _scalars_all(transcript_ids),      # transcript ids
-            _scalars_all(conv_ids),            # conversation ids
-            _scalars_all([]),                  # webhook subscribers for patient.deleted
+            _scalar_one_or_none(patient),  # patient load
+            _scalars_all(session_ids),  # session ids
+            _scalars_all(transcript_ids),  # transcript ids
+            _scalars_all(conv_ids),  # conversation ids
+            _scalars_all([]),  # webhook subscribers for patient.deleted
         ]
         mock_session.delete = AsyncMock()
         # add() is a synchronous attribute on AsyncMock; we inspect .call_args

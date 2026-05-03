@@ -104,9 +104,7 @@ def patient_app(
     app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     app.dependency_overrides[get_current_patient] = lambda: mock_patient_user
     app.dependency_overrides[get_event_publisher] = lambda: mock_events
-    app.dependency_overrides[get_patient_homework_service] = (
-        lambda: mock_homework_service
-    )
+    app.dependency_overrides[get_patient_homework_service] = lambda: mock_homework_service
     return app
 
 
@@ -130,9 +128,7 @@ def therapist_app(
     app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     app.dependency_overrides[get_api_key_auth] = lambda: mock_auth_context
     app.dependency_overrides[get_event_publisher] = lambda: mock_events
-    app.dependency_overrides[get_therapist_homework_service] = (
-        lambda: mock_homework_service
-    )
+    app.dependency_overrides[get_therapist_homework_service] = lambda: mock_homework_service
     return app
 
 
@@ -206,9 +202,7 @@ class TestPatientToggleHomework:
         patient_client: TestClient,
         mock_homework_service: MagicMock,
     ) -> None:
-        mock_homework_service.toggle_completion.side_effect = NotFoundError(
-            resource="HomeworkItem"
-        )
+        mock_homework_service.toggle_completion.side_effect = NotFoundError(resource="HomeworkItem")
 
         response = patient_client.patch(
             f"/homework/{uuid.uuid4()}",
@@ -249,9 +243,7 @@ class TestTherapistListPatientHomework:
     ) -> None:
         mock_homework_service.list_for_patient.return_value = []
 
-        response = therapist_client.get(
-            f"/patients/{patient_id}/homework?completed=true&limit=25"
-        )
+        response = therapist_client.get(f"/patients/{patient_id}/homework?completed=true&limit=25")
 
         assert response.status_code == 200
         _, kwargs = mock_homework_service.list_for_patient.call_args

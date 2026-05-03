@@ -83,9 +83,7 @@ class Settings(BaseSettings):
         """Rewrite postgresql:// to postgresql+asyncpg:// for Railway compatibility."""
         url = values.get("database_url")
         if isinstance(url, str) and url.startswith("postgresql://"):
-            values["database_url"] = url.replace(
-                "postgresql://", "postgresql+asyncpg://", 1
-            )
+            values["database_url"] = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return values
 
     # Application

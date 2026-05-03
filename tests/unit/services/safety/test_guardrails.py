@@ -33,9 +33,7 @@ class TestCheckInput:
         assert result.action in (GuardrailAction.ESCALATE, GuardrailAction.BLOCK)
 
     def test_allows_therapy_question(self, guardrails: Guardrails) -> None:
-        result = guardrails.check_input(
-            "What coping strategies did my therapist recommend?"
-        )
+        result = guardrails.check_input("What coping strategies did my therapist recommend?")
         assert result.action == GuardrailAction.ALLOW
 
 
@@ -58,9 +56,7 @@ class TestCheckOutput:
         assert BOUNDARY_DISCLAIMER in result.modified_text
 
     def test_modifies_prescription_advice(self, guardrails: Guardrails) -> None:
-        result = guardrails.check_output(
-            "I would prescribe you a different medication."
-        )
+        result = guardrails.check_output("I would prescribe you a different medication.")
         assert result.action == GuardrailAction.MODIFY
         assert result.modified_text is not None
 

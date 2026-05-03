@@ -15,15 +15,9 @@ class HomeworkItemRead(BaseModel):
     session_id: UUID = Field(..., description="Session the task was assigned in")
     patient_id: UUID = Field(..., description="Patient the task is assigned to")
     task: str = Field(..., description="What the patient committed to do")
-    notes: str | None = Field(
-        None, description="Optional clinical context or acceptance criteria"
-    )
-    completed: bool = Field(
-        ..., description="Whether the patient has marked the task done"
-    )
-    completed_at: datetime | None = Field(
-        None, description="Timestamp of completion, if completed"
-    )
+    notes: str | None = Field(None, description="Optional clinical context or acceptance criteria")
+    completed: bool = Field(..., description="Whether the patient has marked the task done")
+    completed_at: datetime | None = Field(None, description="Timestamp of completion, if completed")
     created_at: datetime = Field(..., description="When the task was recorded")
     updated_at: datetime = Field(..., description="Last update timestamp")
 

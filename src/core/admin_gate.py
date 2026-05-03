@@ -49,9 +49,7 @@ async def require_admin(
         raise UnauthorizedError("Admin session required")
 
     try:
-        claims = decode_access_token(
-            token, expected_audience="therapist", settings=settings
-        )
+        claims = decode_access_token(token, expected_audience="therapist", settings=settings)
     except AuthError as exc:
         raise UnauthorizedError(str(exc)) from exc
 

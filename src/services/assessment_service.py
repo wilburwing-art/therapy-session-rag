@@ -123,9 +123,7 @@ class AssessmentService:
             .limit(limit)
         )
         if instrument:
-            stmt = stmt.where(
-                Assessment.instrument == AssessmentInstrument(instrument.value)
-            )
+            stmt = stmt.where(Assessment.instrument == AssessmentInstrument(instrument.value))
         result = await self.session.execute(stmt)
         return [self._to_read(a) for a in result.scalars().all()]
 

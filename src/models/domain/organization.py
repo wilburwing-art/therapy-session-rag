@@ -120,9 +120,7 @@ class OrganizationSettingsRead(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    video_chat_enabled: bool = Field(
-        ..., description="Whether video chat is enabled for this org"
-    )
+    video_chat_enabled: bool = Field(..., description="Whether video chat is enabled for this org")
 
 
 class OrganizationSettingsUpdate(BaseModel):

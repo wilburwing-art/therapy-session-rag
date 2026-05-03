@@ -154,9 +154,7 @@ class EmbeddingClient:
             )
         return results
 
-    async def _embed_batch_with_retry(
-        self, texts: list[str]
-    ) -> list[EmbeddingResult]:
+    async def _embed_batch_with_retry(self, texts: list[str]) -> list[EmbeddingResult]:
         """Embed a batch with retry logic.
 
         Args:

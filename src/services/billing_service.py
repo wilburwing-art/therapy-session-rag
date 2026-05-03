@@ -158,9 +158,7 @@ class _RealStripeGateway:
         installed SDK lacks `stripe.billing.MeterEvent.create`, raises
         a BillingServiceError so callers degrade gracefully.
         """
-        meter_event_cls = getattr(
-            getattr(stripe, "billing", None), "MeterEvent", None
-        )
+        meter_event_cls = getattr(getattr(stripe, "billing", None), "MeterEvent", None)
         if meter_event_cls is None or not hasattr(meter_event_cls, "create"):
             raise BillingServiceError(
                 "Stripe SDK is missing billing.MeterEvent.create; "
@@ -234,9 +232,7 @@ class BillingService:
             raise NotFoundError(resource="Organization", resource_id=str(org_id))
         return org
 
-    async def _ensure_stripe_customer(
-        self, org: Organization, therapist_email: str
-    ) -> str:
+    async def _ensure_stripe_customer(self, org: Organization, therapist_email: str) -> str:
         """Create a Stripe customer for this org if one doesn't exist yet."""
         if org.stripe_customer_id:
             return org.stripe_customer_id
@@ -282,9 +278,7 @@ class BillingService:
         """Return a one-time Stripe Customer Portal URL for the org."""
         org = await self._get_organization(organization_id)
         if not org.stripe_customer_id:
-            raise BillingServiceError(
-                "Practice has no Stripe customer yet; start a checkout first"
-            )
+            raise BillingServiceError("Practice has no Stripe customer yet; start a checkout first")
         try:
             session = self.gateway.create_portal_session(
                 customer_id=org.stripe_customer_id,
@@ -297,9 +291,7 @@ class BillingService:
             raise BillingServiceError("Stripe did not return a portal URL")
         return url
 
-    async def handle_webhook(
-        self, payload: bytes, signature: str
-    ) -> dict[str, Any]:
+    async def handle_webhook(self, payload: bytes, signature: str) -> dict[str, Any]:
         """Verify and process a Stripe webhook event.
 
         Only subscription.* events are acted on; other event types are
@@ -362,13 +354,9 @@ class BillingService:
         org.stripe_subscription_id = subscription.get("id") or org.stripe_subscription_id
 
         trial_end = subscription.get("trial_end")
-        org.trial_ends_at = (
-            datetime.fromtimestamp(trial_end, tz=UTC) if trial_end else None
-        )
+        org.trial_ends_at = datetime.fromtimestamp(trial_end, tz=UTC) if trial_end else None
         period_end = subscription.get("current_period_end")
-        org.current_period_end = (
-            datetime.fromtimestamp(period_end, tz=UTC) if period_end else None
-        )
+        org.current_period_end = datetime.fromtimestamp(period_end, tz=UTC) if period_end else None
         await self.db_session.flush()
         logger.info(
             "Synced org %s subscription: status=%s",
@@ -483,9 +471,7 @@ class BillingService:
         """
         org = await self._get_organization(organization_id)
         if not org.stripe_customer_id:
-            raise BillingServiceError(
-                "Org has no Stripe customer; cannot report metered usage."
-            )
+            raise BillingServiceError("Org has no Stripe customer; cannot report metered usage.")
         row = await self._current_usage_row(organization_id, now=now, org=org)
 
         events = (
@@ -511,9 +497,7 @@ class BillingService:
                 raise BillingServiceError(
                     f"Stripe meter event '{event_name}' failed: {exc}"
                 ) from exc
-            event_id = getattr(event, "identifier", None) or getattr(
-                event, "id", None
-            )
+            event_id = getattr(event, "identifier", None) or getattr(event, "id", None)
             if isinstance(event_id, str):
                 last_event_id = event_id
 
@@ -559,9 +543,7 @@ class BillingService:
             ) from exc
         return seats
 
-    async def preview_upcoming_invoice(
-        self, organization_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def preview_upcoming_invoice(self, organization_id: uuid.UUID) -> dict[str, Any]:
         """Return a summary of the customer's next invoice.
 
         Used by the billing page to show users an upfront preview of
@@ -569,17 +551,13 @@ class BillingService:
         """
         org = await self._get_organization(organization_id)
         if not org.stripe_customer_id:
-            raise BillingServiceError(
-                "Practice has no Stripe customer yet; start a checkout first"
-            )
+            raise BillingServiceError("Practice has no Stripe customer yet; start a checkout first")
         try:
             invoice = self.gateway.preview_upcoming_invoice(
                 customer_id=org.stripe_customer_id,
             )
         except stripe.StripeError as exc:
-            raise BillingServiceError(
-                f"Stripe preview invoice failed: {exc}"
-            ) from exc
+            raise BillingServiceError(f"Stripe preview invoice failed: {exc}") from exc
 
         amount_due = _invoice_field(invoice, "amount_due")
         amount_total = _invoice_field(invoice, "total")
@@ -590,16 +568,12 @@ class BillingService:
             "amount_total": int(amount_total) if amount_total is not None else 0,
             "currency": str(currency) if currency is not None else "usd",
             "period_end": (
-                datetime.fromtimestamp(int(period_end), tz=UTC)
-                if period_end is not None
-                else None
+                datetime.fromtimestamp(int(period_end), tz=UTC) if period_end is not None else None
             ),
         }
 
 
-def _period_bounds_for(
-    org: Organization, now: datetime
-) -> tuple[datetime, datetime]:
+def _period_bounds_for(org: Organization, now: datetime) -> tuple[datetime, datetime]:
     """Return the (period_start, period_end) window that contains `now`.
 
     Prefers the Stripe-synced `current_period_end` when available. If

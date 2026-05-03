@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 try:
     from src.core.telemetry import record_duration as _record_duration
 except ImportError:  # pragma: no cover - defensive
+
     @contextmanager
     def _record_duration(
         operation: str,  # noqa: ARG001 - signature-compat no-op stub
@@ -55,9 +56,7 @@ class ChatService:
         self.vector_search = VectorSearchRepository(db_session)
         self._embedding_client: EmbeddingClient | None = None
         self._claude_client: ClaudeClient | None = None
-        self._guardrails: Guardrails | None = (
-            Guardrails() if self.settings.safety_enabled else None
-        )
+        self._guardrails: Guardrails | None = Guardrails() if self.settings.safety_enabled else None
 
     @property
     def embedding_client(self) -> EmbeddingClient:
@@ -168,9 +167,7 @@ class ChatService:
 
                 # Generate system prompt with context
                 if context_chunks:
-                    system_prompt = self.claude_client.create_rag_system_prompt(
-                        context_chunks
-                    )
+                    system_prompt = self.claude_client.create_rag_system_prompt(context_chunks)
                 else:
                     system_prompt = self._get_no_context_system_prompt()
 
@@ -197,8 +194,7 @@ class ChatService:
                             "for guidance on this topic."
                         )
                     elif (
-                        output_check.action == GuardrailAction.MODIFY
-                        and output_check.modified_text
+                        output_check.action == GuardrailAction.MODIFY and output_check.modified_text
                     ):
                         response_text = output_check.modified_text
 

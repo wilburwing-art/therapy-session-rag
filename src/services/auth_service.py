@@ -52,15 +52,11 @@ class AuthService:
         self.settings = settings or get_settings()
 
     async def get_user_by_email(self, email: str) -> User | None:
-        result = await self.db_session.execute(
-            select(User).where(User.email == email.lower())
-        )
+        result = await self.db_session.execute(select(User).where(User.email == email.lower()))
         return result.scalar_one_or_none()
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> User:
-        result = await self.db_session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db_session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
@@ -106,21 +102,15 @@ class AuthService:
             remaining = user.locked_until - now
             minutes = max(1, math.ceil(remaining.total_seconds() / 60))
             logger.info("Login denied: account %s locked for %d more min", user.id, minutes)
-            raise UnauthorizedError(
-                f"Account temporarily locked. Try again in {minutes} minutes."
-            )
+            raise UnauthorizedError(f"Account temporarily locked. Try again in {minutes} minutes.")
 
         if not verify_password(password, user.password_hash):
             user.failed_login_count = (user.failed_login_count or 0) + 1
             threshold = self.settings.lockout_threshold
             if user.failed_login_count >= threshold:
-                user.locked_until = now + timedelta(
-                    minutes=self.settings.lockout_duration_minutes
-                )
+                user.locked_until = now + timedelta(minutes=self.settings.lockout_duration_minutes)
                 user.failed_login_count = 0
-                logger.info(
-                    "Account %s locked after %d failed attempts", user.id, threshold
-                )
+                logger.info("Account %s locked after %d failed attempts", user.id, threshold)
             await self.db_session.flush()
             logger.info("Login failed: password mismatch for %s", user.id)
             raise generic_error
@@ -162,9 +152,7 @@ class AuthService:
             "exp": int(expires_at.timestamp()),
             "jti": secrets.token_urlsafe(8),
         }
-        token = jwt.encode(
-            claims, self.settings.jwt_secret, algorithm=self.settings.jwt_algorithm
-        )
+        token = jwt.encode(claims, self.settings.jwt_secret, algorithm=self.settings.jwt_algorithm)
         return token, expires_at
 
     def _decode_totp_challenge(self, challenge_token: str) -> uuid.UUID:
@@ -323,9 +311,7 @@ class AuthService:
     async def confirm_email_verification(self, raw_token: str) -> User:
         token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
         repo = AuthTokenRepository(self.db_session)
-        token = await repo.get_by_hash(
-            token_hash, AuthTokenPurpose.EMAIL_VERIFICATION
-        )
+        token = await repo.get_by_hash(token_hash, AuthTokenPurpose.EMAIL_VERIFICATION)
         if token is None or token.used_at is not None:
             raise UnauthorizedError("Invalid or already-used verification link")
         if token.expires_at <= datetime.now(UTC):

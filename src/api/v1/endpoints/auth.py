@@ -326,9 +326,7 @@ async def create_patient_magic_link(
             patient_name=patient.full_name,
         )
     except EmailServiceError as exc:
-        logger.warning(
-            "Failed to email magic link to %s: %s", patient.email, exc
-        )
+        logger.warning("Failed to email magic link to %s: %s", patient.email, exc)
 
     return MagicLinkCreateResponse(token=raw_token, expires_at=expires_at)
 

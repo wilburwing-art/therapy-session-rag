@@ -174,9 +174,7 @@ class ConsentService:
         Returns:
             List of all consent audit entries, ordered by granted_at descending
         """
-        db_consent_type = (
-            ConsentType(consent_type.value) if consent_type else None
-        )
+        db_consent_type = ConsentType(consent_type.value) if consent_type else None
         consents = await self.repo.get_audit_log(
             patient_id=patient_id,
             therapist_id=therapist_id,
