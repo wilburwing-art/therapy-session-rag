@@ -1,0 +1,94 @@
+version: 2
+
+models:
+  - name: stg_organizations
+    description: One row per practice, with derived entitlement flag.
+    columns:
+      - name: organization_id
+        description: Primary key.
+        data_tests:
+          - not_null
+          - unique
+      - name: organization_name
+        data_tests:
+          - not_null
+      - name: subscription_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  ["none", "trialing", "active", "past_due", "incomplete", "unpaid", "canceled"]
+      - name: is_entitled
+        data_tests:
+          - not_null
+
+  - name: stg_users
+    description: One row per user, all roles.
+    columns:
+      - name: user_id
+        data_tests:
+          - not_null
+          - unique
+      - name: organization_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_organizations')
+                field: organization_id
+      - name: email
+        data_tests:
+          - not_null
+      - name: role
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["therapist", "patient", "admin"]
+
+  - name: stg_sessions
+    description: One row per therapy session recording with lifecycle fields.
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - unique
+      - name: patient_id
+        data_tests:
+          - not_null
+      - name: therapist_id
+        data_tests:
+          - not_null
+      - name: session_date
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["pending", "uploaded", "transcribing", "embedding", "ready", "failed"]
+
+  - name: stg_analytics_events
+    description: Snowplow-style event stream, one row per event.
+    columns:
+      - name: event_id
+        data_tests:
+          - not_null
+          - unique
+      - name: event_name
+        data_tests:
+          - not_null
+      - name: event_category
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["user_action", "system", "clinical", "performance", "data_access"]
+      - name: organization_id
+        data_tests:
+          - not_null
+      - name: event_timestamp
+        data_tests:
+          - not_null

@@ -74,6 +74,10 @@ npm run dev  # http://localhost:3000
 
 The Expo client under `/mobile/` is the patient-facing app that pairs with the web therapist dashboard. See `mobile/README.md` for setup.
 
+Analytics models (dbt) live under `/analytics/dbt/` — see `analytics/dbt/README.md`.
+
+Observability: OpenTelemetry traces + metrics are opt-in — see `OBSERVABILITY.md` for the local stack (`docker-compose.observability.yml`: OTEL Collector + Prometheus + Tempo + Grafana).
+
 ## Environment variables
 
 | Group | Keys |

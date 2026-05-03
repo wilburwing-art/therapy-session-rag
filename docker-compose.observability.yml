@@ -1,0 +1,77 @@
+# Local observability stack for TherapyRAG.
+#
+# Starts an OpenTelemetry Collector, Prometheus (metrics), Tempo (traces),
+# and Grafana (dashboards). Does NOT replace the main docker-compose.yml —
+# run it alongside:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+# Then point the API at the collector by setting OTEL_ENABLED=true and
+# OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 in .env.
+#
+# Nothing here touches production: the stack is dev-only.
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.112.0
+    container_name: therapyrag-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./infra/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus scrape endpoint (collector-exported metrics)
+    depends_on:
+      - tempo
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: therapyrag-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: therapyrag-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./infra/observability/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP (query)
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: therapyrag-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"   # Grafana UI — http://localhost:3001 (admin / admin, anon Viewer)
+    depends_on:
+      - prometheus
+      - tempo
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  tempo_data:
+  grafana_data:

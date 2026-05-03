@@ -1,0 +1,6 @@
+tier_code,tier_name,monthly_price_usd,session_quota,is_active
+trial,Trial,0,20,true
+solo,Solo Practice,79,100,true
+group,Group Practice,249,500,true
+enterprise,Enterprise,999,99999,true
+legacy_free,Legacy Free,0,10,false

@@ -2,6 +2,8 @@
 
 import logging
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from redis import Redis
@@ -16,6 +18,18 @@ from src.services.billing_service import BillingService, BillingServiceError
 from src.services.transcription_service import TranscriptionError, TranscriptionService
 
 logger = logging.getLogger(__name__)
+
+# Telemetry is opt-in — guard the import so a missing/broken OTEL install
+# never breaks the transcription worker. Falls back to a no-op context manager.
+try:
+    from src.core.telemetry import record_duration as _record_duration
+except ImportError:  # pragma: no cover - defensive
+    @contextmanager
+    def _record_duration(
+        operation: str,  # noqa: ARG001 - signature-compat no-op stub
+        attributes: dict[str, str] | None = None,  # noqa: ARG001
+    ) -> Iterator[None]:
+        yield
 
 
 def get_redis_connection(settings: Settings | None = None) -> Redis:  # type: ignore[type-arg]
@@ -73,7 +87,8 @@ async def process_transcription_job(job_id: str) -> dict[str, Any]:
             service = TranscriptionService(db_session)
 
             # Process the transcription
-            transcript = await service.process_transcription(job_uuid)
+            with _record_duration("worker.transcription"):
+                transcript = await service.process_transcription(job_uuid)
 
             # Commit the transaction
             await db_session.commit()

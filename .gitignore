@@ -153,3 +153,7 @@ dev/dev_config.local.toml
 dbt_project/target/
 dbt_project/dbt_packages/
 dbt_project/logs/
+analytics/dbt/target/
+analytics/dbt/dbt_packages/
+analytics/dbt/logs/
+logs/

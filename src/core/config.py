@@ -290,6 +290,40 @@ class Settings(BaseSettings):
         description="Metered.ca TURN credential",
     )
 
+    # --- observability-engineer: OpenTelemetry settings (append-only anchor) ---
+    otel_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enable OpenTelemetry traces + metrics export. "
+            "When false, no exporters are registered and no network calls "
+            "are made — the app runs with zero OTEL overhead."
+        ),
+    )
+    otel_service_name: str = Field(
+        default="therapyrag-api",
+        description="Resource attribute service.name reported to the collector.",
+    )
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://localhost:4317",
+        description="OTLP/gRPC collector endpoint. Used only when otel_enabled=true.",
+    )
+    otel_exporter_otlp_insecure: bool = Field(
+        default=True,
+        description="Use insecure gRPC (no TLS) to the OTLP collector.",
+    )
+    otel_traces_sample_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Parent-based sampler ratio for traces (0.0 = off, 1.0 = all).",
+    )
+    otel_metric_export_interval_millis: int = Field(
+        default=30_000,
+        ge=1_000,
+        description="How often metrics are pushed to the collector, in milliseconds.",
+    )
+    # --- end observability-engineer anchor ---
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS origins into a list."""

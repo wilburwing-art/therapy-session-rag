@@ -2,6 +2,8 @@
 
 import logging
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +15,18 @@ from src.services.embedding_client import EmbeddingClient, EmbeddingError
 from src.services.safety.guardrails import GuardrailAction, Guardrails
 
 logger = logging.getLogger(__name__)
+
+# Telemetry is opt-in — guard the import so a missing/broken OTEL install
+# never breaks chat. Falls back to a no-op context manager.
+try:
+    from src.core.telemetry import record_duration as _record_duration
+except ImportError:  # pragma: no cover - defensive
+    @contextmanager
+    def _record_duration(
+        operation: str,  # noqa: ARG001 - signature-compat no-op stub
+        attributes: dict[str, str] | None = None,  # noqa: ARG001
+    ) -> Iterator[None]:
+        yield
 
 
 class ChatServiceError(Exception):
@@ -81,121 +95,125 @@ class ChatService:
             ChatServiceError: If chat processing fails
         """
         try:
-            # Safety check on input
-            prepend_crisis = False
-            if self._guardrails:
-                input_check = self._guardrails.check_input(message)
-                if input_check.action == GuardrailAction.BLOCK:
-                    logger.warning(
-                        "Input blocked by guardrails: %s",
-                        input_check.assessment.triggered_rules,
-                    )
-                    return ChatResponse(
-                        response=(
-                            "I'm not able to help with that request. "
-                            "If you're in distress, please reach out to your "
-                            "therapist or call 988 (Suicide & Crisis Lifeline)."
-                        ),
-                        conversation_id=uuid.uuid4(),
-                        sources=[],
-                    )
-                if input_check.action == GuardrailAction.ESCALATE:
-                    prepend_crisis = True
+            with _record_duration("chat.rag"):
+                # Safety check on input
+                prepend_crisis = False
+                if self._guardrails:
+                    input_check = self._guardrails.check_input(message)
+                    if input_check.action == GuardrailAction.BLOCK:
+                        logger.warning(
+                            "Input blocked by guardrails: %s",
+                            input_check.assessment.triggered_rules,
+                        )
+                        return ChatResponse(
+                            response=(
+                                "I'm not able to help with that request. "
+                                "If you're in distress, please reach out to your "
+                                "therapist or call 988 (Suicide & Crisis Lifeline)."
+                            ),
+                            conversation_id=uuid.uuid4(),
+                            sources=[],
+                        )
+                    if input_check.action == GuardrailAction.ESCALATE:
+                        prepend_crisis = True
 
-            # Generate embedding for the query
-            query_embedding = await self._get_query_embedding(message)
+                # Generate embedding for the query
+                query_embedding = await self._get_query_embedding(message)
 
-            # Search for relevant chunks
-            search_results = await self.vector_search.search_similar(
-                query_embedding=query_embedding,
-                patient_id=patient_id,
-                top_k=top_k,
-                min_score=0.5,  # Only include reasonably relevant results
-            )
-
-            # Build context and sources
-            context_chunks: list[str] = []
-            sources: list[ChatSource] = []
-
-            for result in search_results:
-                chunk = result.chunk
-
-                # Build context string with metadata
-                context_parts = []
-                if chunk.speaker:
-                    context_parts.append(f"[{chunk.speaker}]")
-                if chunk.start_time is not None:
-                    context_parts.append(f"(at {chunk.start_time:.1f}s)")
-                context_parts.append(chunk.content)
-                context_chunks.append(" ".join(context_parts))
-
-                # Build source citation
-                sources.append(
-                    ChatSource(
-                        session_id=chunk.session_id,
-                        chunk_id=chunk.id,
-                        content_preview=chunk.content[:200],
-                        relevance_score=result.score,
-                        start_time=chunk.start_time,
-                        speaker=chunk.speaker,
-                    )
+                # Search for relevant chunks
+                search_results = await self.vector_search.search_similar(
+                    query_embedding=query_embedding,
+                    patient_id=patient_id,
+                    top_k=top_k,
+                    min_score=0.5,  # Only include reasonably relevant results
                 )
 
-            # Build messages for Claude
-            messages: list[Message] = []
+                # Build context and sources
+                context_chunks: list[str] = []
+                sources: list[ChatSource] = []
 
-            # Add conversation history if provided
-            if conversation_history:
-                messages.extend(conversation_history)
+                for result in search_results:
+                    chunk = result.chunk
 
-            # Add current message
-            messages.append(Message(role="user", content=message))
+                    # Build context string with metadata
+                    context_parts = []
+                    if chunk.speaker:
+                        context_parts.append(f"[{chunk.speaker}]")
+                    if chunk.start_time is not None:
+                        context_parts.append(f"(at {chunk.start_time:.1f}s)")
+                    context_parts.append(chunk.content)
+                    context_chunks.append(" ".join(context_parts))
 
-            # Generate system prompt with context
-            if context_chunks:
-                system_prompt = self.claude_client.create_rag_system_prompt(
-                    context_chunks
+                    # Build source citation
+                    sources.append(
+                        ChatSource(
+                            session_id=chunk.session_id,
+                            chunk_id=chunk.id,
+                            content_preview=chunk.content[:200],
+                            relevance_score=result.score,
+                            start_time=chunk.start_time,
+                            speaker=chunk.speaker,
+                        )
+                    )
+
+                # Build messages for Claude
+                messages: list[Message] = []
+
+                # Add conversation history if provided
+                if conversation_history:
+                    messages.extend(conversation_history)
+
+                # Add current message
+                messages.append(Message(role="user", content=message))
+
+                # Generate system prompt with context
+                if context_chunks:
+                    system_prompt = self.claude_client.create_rag_system_prompt(
+                        context_chunks
+                    )
+                else:
+                    system_prompt = self._get_no_context_system_prompt()
+
+                # Get response from Claude
+                claude_response = await self.claude_client.chat(
+                    messages=messages,
+                    system_prompt=system_prompt,
+                    temperature=0.7,
                 )
-            else:
-                system_prompt = self._get_no_context_system_prompt()
 
-            # Get response from Claude
-            claude_response = await self.claude_client.chat(
-                messages=messages,
-                system_prompt=system_prompt,
-                temperature=0.7,
-            )
+                response_text = claude_response.content
 
-            response_text = claude_response.content
+                # Safety check on output
+                if self._guardrails:
+                    output_check = self._guardrails.check_output(response_text)
+                    if output_check.action == GuardrailAction.BLOCK:
+                        logger.warning(
+                            "Output blocked by guardrails: %s",
+                            output_check.assessment.triggered_rules,
+                        )
+                        response_text = (
+                            "I generated a response that may not be appropriate. "
+                            "Please consult your therapist or healthcare provider "
+                            "for guidance on this topic."
+                        )
+                    elif (
+                        output_check.action == GuardrailAction.MODIFY
+                        and output_check.modified_text
+                    ):
+                        response_text = output_check.modified_text
 
-            # Safety check on output
-            if self._guardrails:
-                output_check = self._guardrails.check_output(response_text)
-                if output_check.action == GuardrailAction.BLOCK:
-                    logger.warning(
-                        "Output blocked by guardrails: %s",
-                        output_check.assessment.triggered_rules,
-                    )
-                    response_text = (
-                        "I generated a response that may not be appropriate. "
-                        "Please consult your therapist or healthcare provider "
-                        "for guidance on this topic."
-                    )
-                elif output_check.action == GuardrailAction.MODIFY and output_check.modified_text:
-                    response_text = output_check.modified_text
+                # Prepend crisis resources if escalation was triggered
+                if prepend_crisis:
+                    response_text = Guardrails.prepend_crisis_resources(response_text)
 
-            # Prepend crisis resources if escalation was triggered
-            if prepend_crisis:
-                response_text = Guardrails.prepend_crisis_resources(response_text)
+                # Generate conversation ID
+                conversation_id = uuid.uuid4()
 
-            # Generate conversation ID
-            conversation_id = uuid.uuid4()
-
-            return ChatResponse(
-                response=response_text,
-                conversation_id=conversation_id,
-                sources=sources,
-            )
+                return ChatResponse(
+                    response=response_text,
+                    conversation_id=conversation_id,
+                    sources=sources,
+                )
 
         except EmbeddingError as e:
             logger.error(f"Embedding error in chat: {e}")

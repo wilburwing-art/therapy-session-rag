@@ -19,6 +19,7 @@ from src.core.exceptions import setup_exception_handlers
 from src.core.health import HealthCheckService, HealthStatus
 from src.core.logging import setup_logging, setup_request_logging
 from src.core.observability import init_sentry
+from src.core.telemetry import init_telemetry, instrument_fastapi
 from src.models import db as _models  # noqa: F401  # Import to register models
 
 logger = logging.getLogger("therapy_rag")
@@ -47,6 +48,11 @@ def create_app() -> FastAPI:
     # Initialize Sentry before the app is created so startup errors get reported.
     init_sentry(settings)
 
+    # Initialize OpenTelemetry providers before app construction so that any
+    # startup-time spans / metrics are captured. Opt-in via OTEL_ENABLED=true.
+    # FastAPI instrumentation is attached below, after the app is built.
+    init_telemetry(settings)
+
     app = FastAPI(
         title="TherapyRAG API",
         description="Therapy session recording, transcription, and RAG chatbot platform",
@@ -56,6 +62,9 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
         lifespan=lifespan,
     )
+
+    # Attach OTEL FastAPI instrumentation (no-op when otel_enabled=false).
+    instrument_fastapi(app)
 
     # Setup request logging middleware (must be added before CORS)
     setup_request_logging(app)

@@ -13,6 +13,8 @@ import json
 import logging
 import re
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
@@ -31,6 +33,18 @@ from src.repositories.transcript_repo import TranscriptRepository
 from src.services.claude_client import ClaudeClient, ClaudeError, Message
 
 logger = logging.getLogger(__name__)
+
+# Telemetry is opt-in — guard the import so a missing/broken OTEL install
+# never breaks summarization. Falls back to a no-op context manager.
+try:
+    from src.core.telemetry import record_duration as _record_duration
+except ImportError:  # pragma: no cover - defensive
+    @contextmanager
+    def _record_duration(
+        operation: str,  # noqa: ARG001 - signature-compat no-op stub
+        attributes: dict[str, str] | None = None,  # noqa: ARG001
+    ) -> Iterator[None]:
+        yield
 
 _MAX_TRANSCRIPT_CHARS = 120_000
 
@@ -131,12 +145,13 @@ class SummarizationService:
         )
 
         try:
-            response = await self.claude_client.chat(
-                messages=[Message(role="user", content=user_message)],
-                system_prompt=SYSTEM_PROMPT,
-                max_tokens=2048,
-                temperature=0.2,
-            )
+            with _record_duration("summarization.recap"):
+                response = await self.claude_client.chat(
+                    messages=[Message(role="user", content=user_message)],
+                    system_prompt=SYSTEM_PROMPT,
+                    max_tokens=2048,
+                    temperature=0.2,
+                )
         except ClaudeError as exc:
             logger.error("Claude error generating recap for %s: %s", session_id, exc)
             raise SummarizationServiceError(
