@@ -4,6 +4,8 @@ These tests require a running PostgreSQL database.
 Run `docker compose up -d` before running these tests.
 """
 
+import os
+
 import pytest
 from sqlalchemy import text
 
@@ -19,10 +21,16 @@ from src.core.database import (
 
 @pytest.fixture
 def test_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
-    """Create test settings pointing to test database."""
-    monkeypatch.setenv(
-        "DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/therapyrag"
-    )
+    """Create test settings pointing to test database.
+
+    Honors a pre-set DATABASE_URL (e.g. from CI) and falls back to the
+    local-dev default otherwise.
+    """
+    if "DATABASE_URL" not in os.environ:
+        monkeypatch.setenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/therapyrag",
+        )
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("MINIO_ENDPOINT", "localhost:9000")
     monkeypatch.setenv("MINIO_ACCESS_KEY", "minioadmin")
