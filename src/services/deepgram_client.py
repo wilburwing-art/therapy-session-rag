@@ -215,9 +215,7 @@ class DeepgramClient:
                 await asyncio.sleep(delay)
                 continue
 
-        raise DeepgramError(
-            f"Transcription failed after {self.MAX_RETRIES} attempts: {last_error}"
-        )
+        raise DeepgramError(f"Transcription failed after {self.MAX_RETRIES} attempts: {last_error}")
 
     def _parse_response(self, data: dict[str, Any]) -> TranscriptionResult:
         """Parse Deepgram API response.
@@ -311,9 +309,7 @@ class DeepgramClient:
                 if word.speaker != current_speaker and current_text:
                     # Save current segment
                     speaker_label = (
-                        f"Speaker {current_speaker}"
-                        if current_speaker is not None
-                        else None
+                        f"Speaker {current_speaker}" if current_speaker is not None else None
                     )
                     segments.append(
                         Segment(
@@ -338,9 +334,7 @@ class DeepgramClient:
             # Save final segment
             if current_text:
                 speaker_label = (
-                    f"Speaker {current_speaker}"
-                    if current_speaker is not None
-                    else None
+                    f"Speaker {current_speaker}" if current_speaker is not None else None
                 )
                 segments.append(
                     Segment(

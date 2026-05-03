@@ -1,0 +1,42 @@
+{
+  "disclaimer": "FIXTURE_ID=transcript_anxiety_work. This transcript is fictional. All content synthesized for evaluation purposes only and does not represent any real clinical encounter or patient.",
+  "topic_label": "work anxiety",
+  "full_text": "Patient described rising anxiety tied to a Q2 product launch, with deadlines compressing and performance reviews looming. Therapist introduced box breathing and the three-minute pause as interim coping strategies. Patient agreed to try box breathing before morning standups for the coming week.",
+  "segments": [
+    {"text": "So the last two weeks have been rough. The Q2 launch keeps slipping and my manager is getting tense about deadlines.", "start_time": 0.0, "end_time": 6.4, "speaker": "Speaker 0"},
+    {"text": "Can you say more about what that tension feels like in your body when you notice it coming up?", "start_time": 6.8, "end_time": 10.2, "speaker": "Speaker 1"},
+    {"text": "Mostly in my chest. It's tight. My shoulders are up around my ears by mid-morning and my jaw aches by the time I get home.", "start_time": 10.5, "end_time": 16.1, "speaker": "Speaker 0"},
+    {"text": "That sounds like your body is carrying a lot of the anxiety about the deadlines.", "start_time": 16.5, "end_time": 19.3, "speaker": "Speaker 1"},
+    {"text": "Yeah. And the performance review cycle starts next month, so it's stacking up. I feel overwhelmed most mornings.", "start_time": 19.5, "end_time": 25.2, "speaker": "Speaker 0"},
+    {"text": "What's the thought that comes up first when you open your laptop in the morning?", "start_time": 25.5, "end_time": 29.0, "speaker": "Speaker 1"},
+    {"text": "That I'm already behind. That everyone else is delivering faster than I am and I'm going to get exposed as not good enough.", "start_time": 29.3, "end_time": 35.4, "speaker": "Speaker 0"},
+    {"text": "Okay. Let's name that for what it is — that's a performance-based worry, a classic anticipatory anxiety response before the work day even starts.", "start_time": 35.8, "end_time": 42.1, "speaker": "Speaker 1"},
+    {"text": "I want to teach you a grounding technique called box breathing. Four counts in, four counts hold, four counts out, four counts hold.", "start_time": 42.4, "end_time": 50.0, "speaker": "Speaker 1"},
+    {"text": "Box breathing. I've heard of that but never actually done it.", "start_time": 50.3, "end_time": 53.2, "speaker": "Speaker 0"},
+    {"text": "Try it right now with me. Eyes closed if comfortable. Four in... hold... four out... hold.", "start_time": 53.5, "end_time": 61.0, "speaker": "Speaker 1"},
+    {"text": "Okay. That actually drops my shoulders a bit. I can feel that.", "start_time": 62.5, "end_time": 66.0, "speaker": "Speaker 0"},
+    {"text": "Good. The other thing I want to offer is the three-minute pause. Before you open Slack or email in the morning, just three minutes of box breathing at your desk.", "start_time": 66.4, "end_time": 74.8, "speaker": "Speaker 1"},
+    {"text": "Three-minute pause before Slack. I can probably protect that. My first meeting is at nine.", "start_time": 75.1, "end_time": 80.0, "speaker": "Speaker 0"},
+    {"text": "Would you be willing to try box breathing before your morning standup every day this week and we can check in on how it lands?", "start_time": 80.4, "end_time": 86.2, "speaker": "Speaker 1"},
+    {"text": "Yeah. I can commit to that. Morning standups are the peak anxiety point anyway.", "start_time": 86.5, "end_time": 90.8, "speaker": "Speaker 0"},
+    {"text": "Great. Let's also revisit the performance review anxiety next session — I think there's some deeper material there about comparison and not-enoughness.", "start_time": 91.1, "end_time": 98.0, "speaker": "Speaker 1"},
+    {"text": "Yeah, that's the thing that keeps me up at night more than the deadlines themselves.", "start_time": 98.3, "end_time": 102.6, "speaker": "Speaker 0"},
+    {"text": "Good to know. We'll dig into that. Same time next week?", "start_time": 102.9, "end_time": 106.2, "speaker": "Speaker 1"},
+    {"text": "Yes. Thanks, this was helpful.", "start_time": 106.5, "end_time": 108.4, "speaker": "Speaker 0"}
+  ],
+  "expected_recap": {
+    "key_topics_any_of": ["anxiety", "deadlines", "performance", "work"],
+    "emotional_tone_contains_any": ["anxious", "tense", "overwhelmed"],
+    "expected_risk_flags": false
+  },
+  "test_queries": [
+    {
+      "query": "What coping strategies did we discuss for work anxiety?",
+      "expected_chunk_substring_any": ["box breathing", "three-minute pause", "3-minute pause"]
+    },
+    {
+      "query": "What was making me anxious at work?",
+      "expected_chunk_substring_any": ["deadlines", "performance review", "Q2 launch"]
+    }
+  ]
+}

@@ -4,9 +4,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import Auth, Events
 from src.core.database import DbSession
+from src.core.exceptions import ConflictError
 from src.models.db.event import EventCategory
 from src.models.domain.consent import (
     ConsentAuditEntry,
@@ -19,6 +21,18 @@ from src.models.domain.consent import ConsentType as DomainConsentType
 from src.services.consent_service import ConsentService
 
 router = APIRouter()
+
+
+class BulkConsentRequest(BaseModel):
+    """Grant all three consent types for a patient in one call."""
+
+    patient_id: uuid.UUID
+    therapist_id: uuid.UUID
+    attested: bool = Field(
+        ...,
+        description="Therapist attests the patient consented in writing or verbally",
+    )
+    notes: str | None = None
 
 
 def get_consent_service(session: DbSession) -> ConsentService:
@@ -68,6 +82,70 @@ async def grant_consent(
     )
 
     return result
+
+
+@router.post("/bulk", response_model=list[ConsentRead], status_code=201)
+async def grant_all_consents(
+    payload: BulkConsentRequest,
+    request: Request,
+    auth: Auth,
+    service: ConsentSvc,
+    events: Events,
+) -> list[ConsentRead]:
+    """Grant recording, transcription, and AI-analysis consent in one call.
+
+    The therapist attests the patient has consented (typically via signed
+    form or explicit verbal statement). Returns the created consent
+    records. Already-active consents are left as-is rather than raising.
+    """
+    if not payload.attested:
+        raise ConflictError(detail="Therapist attestation is required")
+
+    ip_address, user_agent = get_client_info(request)
+    metadata: dict[str, object] = {"attested_by_therapist": True}
+    if payload.notes:
+        metadata["notes"] = payload.notes
+
+    created: list[ConsentRead] = []
+    for consent_type in (
+        DomainConsentType.RECORDING,
+        DomainConsentType.TRANSCRIPTION,
+        DomainConsentType.AI_ANALYSIS,
+    ):
+        existing = await service.check_consent(
+            patient_id=payload.patient_id,
+            therapist_id=payload.therapist_id,
+            consent_type=consent_type,
+        )
+        if existing.has_consent and existing.consent:
+            created.append(existing.consent)
+            continue
+        consent = await service.grant_consent(
+            grant=ConsentGrant(
+                patient_id=payload.patient_id,
+                therapist_id=payload.therapist_id,
+                consent_type=consent_type,
+                consent_metadata=metadata,
+            ),
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        created.append(consent)
+
+    await events.publish(
+        event_name="consent.bulk_granted",
+        category=EventCategory.USER_ACTION,
+        organization_id=auth.organization_id,
+        actor_id=payload.therapist_id,
+        properties={
+            "patient_id": str(payload.patient_id),
+            "consent_types": [c.value for c in DomainConsentType],
+        },
+        # HIPAA: bulk consent grants anchor every session, transcript,
+        # and chatbot message that follows. Never eligible for purge.
+        retain_forever=True,
+    )
+    return created
 
 
 @router.delete("", response_model=ConsentRead)

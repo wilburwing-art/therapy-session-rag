@@ -99,6 +99,43 @@ class ConversationRepository:
         )
         return list(result.scalars().all())
 
+    async def list_for_patient_in_org(
+        self,
+        patient_id: uuid.UUID,
+        organization_id: uuid.UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[Conversation]:
+        """Therapist-facing list: tenant-scoped by org_id."""
+        result = await self.session.execute(
+            select(Conversation)
+            .where(
+                Conversation.patient_id == patient_id,
+                Conversation.organization_id == organization_id,
+            )
+            .order_by(Conversation.updated_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.scalars().all())
+
+    async def get_for_org(
+        self,
+        conversation_id: uuid.UUID,
+        organization_id: uuid.UUID,
+        include_messages: bool = True,
+    ) -> Conversation | None:
+        """Therapist-facing read: only returns the conversation if it
+        belongs to the given organization."""
+        query = select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.organization_id == organization_id,
+        )
+        if include_messages:
+            query = query.options(selectinload(Conversation.messages))
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def add_message(self, message: ConversationMessage) -> ConversationMessage:
         """Add a message to a conversation.
 
@@ -135,8 +172,9 @@ class ConversationRepository:
             The next sequence number (1-indexed)
         """
         result = await self.session.execute(
-            select(func.coalesce(func.max(ConversationMessage.sequence_number), 0))
-            .where(ConversationMessage.conversation_id == conversation_id)
+            select(func.coalesce(func.max(ConversationMessage.sequence_number), 0)).where(
+                ConversationMessage.conversation_id == conversation_id
+            )
         )
         current_max = result.scalar_one()
         return current_max + 1
@@ -153,7 +191,5 @@ class ConversationRepository:
             title: The new title
         """
         await self.session.execute(
-            update(Conversation)
-            .where(Conversation.id == conversation_id)
-            .values(title=title)
+            update(Conversation).where(Conversation.id == conversation_id).values(title=title)
         )

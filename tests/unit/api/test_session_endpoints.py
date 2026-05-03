@@ -78,9 +78,7 @@ def app(
     test_app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     test_app.dependency_overrides[get_session_service] = lambda: mock_session_service
     test_app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
-    test_app.dependency_overrides[get_transcription_service] = (
-        lambda: mock_transcription_service
-    )
+    test_app.dependency_overrides[get_transcription_service] = lambda: mock_transcription_service
 
     mock_events = MagicMock()
     mock_events.publish = AsyncMock(return_value=None)
@@ -260,9 +258,7 @@ class TestGetSession:
         session_id: uuid.UUID,
     ) -> None:
         """Test 404 when session not found."""
-        mock_session_service.get_session = AsyncMock(
-            side_effect=NotFoundError(resource="Session")
-        )
+        mock_session_service.get_session = AsyncMock(side_effect=NotFoundError(resource="Session"))
 
         response = client.get(f"/sessions/{session_id}")
 
@@ -394,9 +390,7 @@ class TestUploadRecording:
         mock_session_service.update_session = AsyncMock(return_value=mock_session)
 
         mock_storage_service.generate_key.return_value = "recordings/abc123-test.mp3"
-        mock_storage_service.upload_file = AsyncMock(
-            return_value="recordings/abc123-test.mp3"
-        )
+        mock_storage_service.upload_file = AsyncMock(return_value="recordings/abc123-test.mp3")
 
         # Create a mock audio file
         audio_content = b"fake audio content for testing"
@@ -482,9 +476,7 @@ class TestUploadRecording:
         session_id: uuid.UUID,
     ) -> None:
         """Test 404 when session doesn't exist."""
-        mock_session_service.get_session = AsyncMock(
-            side_effect=NotFoundError(resource="Session")
-        )
+        mock_session_service.get_session = AsyncMock(side_effect=NotFoundError(resource="Session"))
 
         files = {
             "file": ("test.mp3", io.BytesIO(b"audio"), "audio/mpeg"),
@@ -517,9 +509,7 @@ class TestGetPatientSessions:
                 therapist_id=therapist_id,
             )
         ]
-        mock_session_service.get_sessions_for_patient = AsyncMock(
-            return_value=mock_summaries
-        )
+        mock_session_service.get_sessions_for_patient = AsyncMock(return_value=mock_summaries)
 
         response = client.get(f"/sessions/patient/{patient_id}")
 
@@ -545,9 +535,7 @@ class TestGetPatientSessions:
                 status=SessionStatus.READY,
             )
         ]
-        mock_session_service.get_sessions_for_patient = AsyncMock(
-            return_value=mock_summaries
-        )
+        mock_session_service.get_sessions_for_patient = AsyncMock(return_value=mock_summaries)
 
         response = client.get(
             f"/sessions/patient/{patient_id}",
@@ -637,13 +625,9 @@ class TestStartTranscription:
 
         # Transcription job created
         mock_job = create_transcription_job_read(job_id, session_id)
-        mock_transcription_service.create_transcription_job = AsyncMock(
-            return_value=mock_job
-        )
+        mock_transcription_service.create_transcription_job = AsyncMock(return_value=mock_job)
 
-        with patch(
-            "src.api.v1.endpoints.sessions.queue_transcription"
-        ) as mock_queue:
+        with patch("src.api.v1.endpoints.sessions.queue_transcription") as mock_queue:
             mock_queue.return_value = "rq-job-123"
 
             response = client.post(f"/sessions/{session_id}/transcribe")
@@ -686,9 +670,7 @@ class TestStartTranscription:
         session_id: uuid.UUID,
     ) -> None:
         """Test 404 when session doesn't exist."""
-        mock_session_service.get_session = AsyncMock(
-            side_effect=NotFoundError(resource="Session")
-        )
+        mock_session_service.get_session = AsyncMock(side_effect=NotFoundError(resource="Session"))
 
         response = client.post(f"/sessions/{session_id}/transcribe")
 
@@ -722,9 +704,7 @@ class TestGetTranscript:
         mock_session_service.get_session = AsyncMock(return_value=mock_session)
 
         mock_transcript = create_transcript_read(transcript_id, session_id, job_id)
-        mock_transcription_service.get_transcript = AsyncMock(
-            return_value=mock_transcript
-        )
+        mock_transcription_service.get_transcript = AsyncMock(return_value=mock_transcript)
 
         response = client.get(f"/sessions/{session_id}/transcript")
 
@@ -805,9 +785,7 @@ class TestGetTranscriptionStatus:
             job_status=TranscriptionJobStatus.COMPLETED,
             error_message=None,
         )
-        mock_transcription_service.get_transcription_status = AsyncMock(
-            return_value=mock_status
-        )
+        mock_transcription_service.get_transcription_status = AsyncMock(return_value=mock_status)
 
         response = client.get(f"/sessions/{session_id}/transcription-status")
 
@@ -838,9 +816,7 @@ class TestGetTranscriptionStatus:
             job_status=TranscriptionJobStatus.PROCESSING,
             error_message=None,
         )
-        mock_transcription_service.get_transcription_status = AsyncMock(
-            return_value=mock_status
-        )
+        mock_transcription_service.get_transcription_status = AsyncMock(return_value=mock_status)
 
         response = client.get(f"/sessions/{session_id}/transcription-status")
 
@@ -871,9 +847,7 @@ class TestGetTranscriptionStatus:
             job_status=TranscriptionJobStatus.PENDING,
             error_message=None,
         )
-        mock_transcription_service.get_transcription_status = AsyncMock(
-            return_value=mock_status
-        )
+        mock_transcription_service.get_transcription_status = AsyncMock(return_value=mock_status)
 
         response = client.get(f"/sessions/{session_id}/transcription-status")
 
@@ -902,9 +876,7 @@ class TestGetTranscriptionStatus:
             job_status=TranscriptionJobStatus.FAILED,
             error_message="Deepgram API error",
         )
-        mock_transcription_service.get_transcription_status = AsyncMock(
-            return_value=mock_status
-        )
+        mock_transcription_service.get_transcription_status = AsyncMock(return_value=mock_status)
 
         response = client.get(f"/sessions/{session_id}/transcription-status")
 
@@ -934,9 +906,7 @@ class TestGetTranscriptionStatus:
             job_status=None,
             error_message=None,
         )
-        mock_transcription_service.get_transcription_status = AsyncMock(
-            return_value=mock_status
-        )
+        mock_transcription_service.get_transcription_status = AsyncMock(return_value=mock_status)
 
         response = client.get(f"/sessions/{session_id}/transcription-status")
 

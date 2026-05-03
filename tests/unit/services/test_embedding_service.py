@@ -98,7 +98,12 @@ class TestChunkTranscript:
         """Test that speaker info is preserved."""
         # Create segments with clear speaker changes
         segments = [
-            {"text": "First speaker talking here.", "start_time": 0.0, "end_time": 1.0, "speaker": "A"},
+            {
+                "text": "First speaker talking here.",
+                "start_time": 0.0,
+                "end_time": 1.0,
+                "speaker": "A",
+            },
             {"text": "Second speaker now.", "start_time": 1.0, "end_time": 2.0, "speaker": "B"},
         ]
 
@@ -212,9 +217,7 @@ class TestProcessEmbeddings:
         embedding_service.transcript_repo.get_transcript_by_session_id = AsyncMock(
             return_value=sample_transcript
         )
-        embedding_service.chunk_repo.delete_chunks_by_transcript = AsyncMock(
-            return_value=0
-        )
+        embedding_service.chunk_repo.delete_chunks_by_transcript = AsyncMock(return_value=0)
 
         # Mock chunk creation
         created_chunks = [
@@ -233,12 +236,8 @@ class TestProcessEmbeddings:
                 updated_at=datetime.now(UTC),
             )
         ]
-        embedding_service.chunk_repo.create_chunks_batch = AsyncMock(
-            return_value=created_chunks
-        )
-        embedding_service.chunk_repo.update_chunk_embedding = AsyncMock(
-            return_value=True
-        )
+        embedding_service.chunk_repo.create_chunks_batch = AsyncMock(return_value=created_chunks)
+        embedding_service.chunk_repo.update_chunk_embedding = AsyncMock(return_value=True)
         embedding_service.session_repo.update_status = AsyncMock()
 
         # Mock embedding client
@@ -305,12 +304,8 @@ class TestProcessEmbeddings:
         embedding_service.transcript_repo.get_transcript_by_session_id = AsyncMock(
             return_value=sample_transcript
         )
-        embedding_service.chunk_repo.delete_chunks_by_transcript = AsyncMock(
-            return_value=0
-        )
-        embedding_service.chunk_repo.create_chunks_batch = AsyncMock(
-            return_value=[MagicMock()]
-        )
+        embedding_service.chunk_repo.delete_chunks_by_transcript = AsyncMock(return_value=0)
+        embedding_service.chunk_repo.create_chunks_batch = AsyncMock(return_value=[MagicMock()])
         embedding_service.session_repo.update_status = AsyncMock()
 
         # Mock embedding client to fail
@@ -346,9 +341,7 @@ class TestProcessEmbeddings:
         embedding_service.chunk_repo.delete_chunks_by_transcript = AsyncMock(
             return_value=5  # 5 chunks deleted
         )
-        embedding_service.chunk_repo.create_chunks_batch = AsyncMock(
-            return_value=[]
-        )
+        embedding_service.chunk_repo.create_chunks_batch = AsyncMock(return_value=[])
         embedding_service.session_repo.update_status = AsyncMock()
 
         # Mock empty transcript to simplify
@@ -400,9 +393,7 @@ class TestGetChunksForSession:
         mock_chunk.created_at = datetime.now(UTC)
         mock_chunk.updated_at = datetime.now(UTC)
 
-        embedding_service.chunk_repo.get_chunks_by_session = AsyncMock(
-            return_value=[mock_chunk]
-        )
+        embedding_service.chunk_repo.get_chunks_by_session = AsyncMock(return_value=[mock_chunk])
 
         results = await embedding_service.get_chunks_for_session(session_id)
 

@@ -1,0 +1,43 @@
+{
+  "disclaimer": "FIXTURE_ID=transcript_si_risk. This transcript is fictional. All content synthesized for evaluation purposes only and does not represent any real clinical encounter or patient. This fixture intentionally contains suicidal ideation language to exercise risk-flag detection.",
+  "topic_label": "passive suicidal ideation",
+  "full_text": "Patient disclosed passive suicidal ideation late in the session. Therapist paused the planned agenda to assess, contracted for safety, reviewed crisis resources including 988, and scheduled a check-in call in 48 hours. No active plan, means, or intent. Safety plan updated.",
+  "segments": [
+    {"text": "This week was heavy. I've been isolating more. Not answering my sister's calls.", "start_time": 0.0, "end_time": 5.4, "speaker": "Speaker 0"},
+    {"text": "Isolating more than last time we talked. What's the pull of isolating right now?", "start_time": 5.7, "end_time": 11.2, "speaker": "Speaker 1"},
+    {"text": "It just takes effort to be around people and I don't have it. Work is fine, but after work I'm done.", "start_time": 11.5, "end_time": 18.6, "speaker": "Speaker 0"},
+    {"text": "How are you sleeping?", "start_time": 18.9, "end_time": 20.8, "speaker": "Speaker 1"},
+    {"text": "Badly. I sleep ten hours and still wake up tired. Everything feels heavy.", "start_time": 21.1, "end_time": 26.4, "speaker": "Speaker 0"},
+    {"text": "Heavy is a word I want to sit with. Can you say more?", "start_time": 26.7, "end_time": 30.2, "speaker": "Speaker 1"},
+    {"text": "I've been thinking it would be easier if I wasn't here anymore. Not a plan. Just — a thought that keeps visiting.", "start_time": 30.5, "end_time": 40.8, "speaker": "Speaker 0"},
+    {"text": "Thank you for telling me that. I'm going to stop us here for a moment because what you just said is important and I don't want to move past it.", "start_time": 41.1, "end_time": 50.2, "speaker": "Speaker 1"},
+    {"text": "I'm not going to do anything. It's more like a background noise.", "start_time": 50.5, "end_time": 54.6, "speaker": "Speaker 0"},
+    {"text": "Okay. I hear that. And I still want to ask you some direct questions because that's my job and because I care. Have you had any thoughts about how you would end your life?", "start_time": 54.9, "end_time": 65.2, "speaker": "Speaker 1"},
+    {"text": "No. Nothing like that. It's passive. It's more of a wish that I didn't exist than a plan.", "start_time": 65.5, "end_time": 72.4, "speaker": "Speaker 0"},
+    {"text": "Thank you. And do you have access to firearms or large quantities of medications at home?", "start_time": 72.7, "end_time": 78.4, "speaker": "Speaker 1"},
+    {"text": "No firearms. There are some pills in the cabinet but nothing in quantity.", "start_time": 78.7, "end_time": 83.0, "speaker": "Speaker 0"},
+    {"text": "Okay. I want to walk through a few things together. First — I want to give you the 988 Suicide and Crisis Lifeline number. You can call or text 988 any time. Can you save that in your phone right now?", "start_time": 83.3, "end_time": 97.2, "speaker": "Speaker 1"},
+    {"text": "Yeah. I'm putting it in now. Okay, saved.", "start_time": 97.5, "end_time": 101.4, "speaker": "Speaker 0"},
+    {"text": "Good. Second — can we contract that if those thoughts intensify or if a plan begins to form, you'll reach out to me, 988, or go to the emergency room, before acting on anything?", "start_time": 101.7, "end_time": 115.2, "speaker": "Speaker 1"},
+    {"text": "Yes. I can contract to that. I actually feel a little better having said it out loud.", "start_time": 115.5, "end_time": 120.4, "speaker": "Speaker 0"},
+    {"text": "I'm glad. I also want to schedule a brief check-in call in 48 hours — Thursday morning, fifteen minutes — just to see how you're doing between now and our next session.", "start_time": 120.7, "end_time": 132.6, "speaker": "Speaker 1"},
+    {"text": "Okay. Thursday morning works. Thank you. I was scared to say it.", "start_time": 132.9, "end_time": 137.8, "speaker": "Speaker 0"},
+    {"text": "You did the right thing telling me. I'm glad we heard it today. We'll talk Thursday.", "start_time": 138.1, "end_time": 143.0, "speaker": "Speaker 1"}
+  ],
+  "expected_recap": {
+    "key_topics_any_of": ["suicidal ideation", "safety", "crisis", "isolation"],
+    "emotional_tone_contains_any": ["heavy", "depressed", "withdrawn", "low"],
+    "expected_risk_flags": true,
+    "risk_flag_substring_any": ["I've been thinking", "easier if I wasn't here"]
+  },
+  "test_queries": [
+    {
+      "query": "What safety steps did we agree on?",
+      "expected_chunk_substring_any": ["988", "check-in call", "48 hours", "contract"]
+    },
+    {
+      "query": "What crisis resources were shared?",
+      "expected_chunk_substring_any": ["988", "Suicide and Crisis Lifeline", "emergency room"]
+    }
+  ]
+}

@@ -68,9 +68,7 @@ class ConsentCheck(BaseModel):
     patient_id: UUID = Field(..., description="ID of the patient")
     consent_type: ConsentType = Field(..., description="Type of consent to check")
     has_consent: bool = Field(..., description="Whether active consent exists")
-    consent: ConsentRead | None = Field(
-        None, description="The active consent record if it exists"
-    )
+    consent: ConsentRead | None = Field(None, description="The active consent record if it exists")
 
 
 class ConsentAuditEntry(BaseModel):

@@ -110,9 +110,7 @@ class EmbeddingService:
 
         try:
             # Delete any existing chunks (for re-embedding)
-            deleted_count = await self.chunk_repo.delete_chunks_by_transcript(
-                transcript.id
-            )
+            deleted_count = await self.chunk_repo.delete_chunks_by_transcript(transcript.id)
             if deleted_count > 0:
                 logger.info(
                     f"Deleted {deleted_count} existing chunks for transcript {transcript.id}"
@@ -173,6 +171,19 @@ class EmbeddingService:
                 session_id=session_id,
                 status=SessionStatus.READY,
             )
+
+            # Queue summary generation; import locally to avoid circular imports
+            try:
+                from src.workers.summarization_worker import queue_summarization
+
+                queue_summarization(session_id, settings=self.settings)
+                logger.info(f"Queued summarization for session {session_id}")
+            except Exception as exc:  # pragma: no cover - redis outage is non-fatal
+                logger.warning(
+                    "Failed to queue summarization for session %s: %s",
+                    session_id,
+                    exc,
+                )
 
             return [self._to_chunk_read(chunk) for chunk in created_chunks]
 
@@ -365,9 +376,7 @@ class EmbeddingService:
         """
         return len(text) // 4 + 1
 
-    async def get_chunks_for_session(
-        self, session_id: uuid.UUID
-    ) -> list[SessionChunkRead]:
+    async def get_chunks_for_session(self, session_id: uuid.UUID) -> list[SessionChunkRead]:
         """Get all chunks for a session.
 
         Args:
@@ -390,9 +399,7 @@ class EmbeddingService:
         """
         return await self.chunk_repo.has_embeddings(session_id)
 
-    async def _fail_session(
-        self, session_id: uuid.UUID, error_message: str
-    ) -> None:
+    async def _fail_session(self, session_id: uuid.UUID, error_message: str) -> None:
         """Mark a session as failed.
 
         Args:

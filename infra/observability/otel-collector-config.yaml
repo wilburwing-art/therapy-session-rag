@@ -1,0 +1,65 @@
+# OpenTelemetry Collector configuration for local TherapyRAG dev.
+#
+# Accepts OTLP traces + metrics from the API and workers over gRPC
+# (:4317) and HTTP (:4318), forwards traces to Tempo, and exposes
+# metrics on :8889 for Prometheus to scrape.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 2s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+  # Protect local dev if the API ever bursts — drop rather than OOM.
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 400
+    spike_limit_mib: 100
+  # Strip PHI-adjacent attribute keys defensively before anything leaves
+  # the collector, even though the API's PHI-safe emitters should already
+  # have done it upstream.
+  attributes/phi_scrub:
+    actions:
+      - key: http.request.body
+        action: delete
+      - key: http.response.body
+        action: delete
+      - key: db.statement
+        action: delete
+
+exporters:
+  # Expose collector-aggregated metrics on :8889 for Prometheus scrape.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+  # Forward traces to Tempo's OTLP gRPC receiver.
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  debug:
+    verbosity: basic
+    sampling_initial: 2
+    sampling_thereafter: 500
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/phi_scrub, batch]
+      exporters: [otlp/tempo, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus, debug]

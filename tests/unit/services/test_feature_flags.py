@@ -88,9 +88,7 @@ class TestIsEnabled:
     ) -> None:
         exp = _make_running_experiment("feature_x", org_id)
         flags._repo.get_by_name = AsyncMock(return_value=exp)
-        flags._service.assign_subject = AsyncMock(
-            side_effect=Exception("not in traffic")
-        )
+        flags._service.assign_subject = AsyncMock(side_effect=Exception("not in traffic"))
 
         result = await flags.is_enabled("feature_x", uuid.uuid4(), org_id)
 
@@ -101,9 +99,7 @@ class TestGetVariant:
     """Tests for get_variant."""
 
     @pytest.mark.asyncio
-    async def test_returns_variant_name(
-        self, flags: FeatureFlags, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_variant_name(self, flags: FeatureFlags, org_id: uuid.UUID) -> None:
         exp = _make_running_experiment("ab_test", org_id)
         flags._repo.get_by_name = AsyncMock(return_value=exp)
         flags._service.assign_subject = AsyncMock(return_value="variant_b")
@@ -123,14 +119,10 @@ class TestGetVariant:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_returns_none_on_error(
-        self, flags: FeatureFlags, org_id: uuid.UUID
-    ) -> None:
+    async def test_returns_none_on_error(self, flags: FeatureFlags, org_id: uuid.UUID) -> None:
         exp = _make_running_experiment("ab_test", org_id)
         flags._repo.get_by_name = AsyncMock(return_value=exp)
-        flags._service.assign_subject = AsyncMock(
-            side_effect=Exception("traffic check")
-        )
+        flags._service.assign_subject = AsyncMock(side_effect=Exception("traffic check"))
 
         result = await flags.get_variant("ab_test", uuid.uuid4(), org_id)
 
@@ -141,9 +133,7 @@ class TestFindExperimentWithoutOrg:
     """Tests for cross-org flag lookup."""
 
     @pytest.mark.asyncio
-    async def test_finds_by_name_across_orgs(
-        self, flags: FeatureFlags
-    ) -> None:
+    async def test_finds_by_name_across_orgs(self, flags: FeatureFlags) -> None:
         org_id = uuid.uuid4()
         exp = _make_running_experiment("global_flag", org_id)
         flags._repo.list_by_org = AsyncMock(return_value=[exp])
@@ -154,9 +144,7 @@ class TestFindExperimentWithoutOrg:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_returns_false_when_no_match(
-        self, flags: FeatureFlags
-    ) -> None:
+    async def test_returns_false_when_no_match(self, flags: FeatureFlags) -> None:
         flags._repo.list_by_org = AsyncMock(return_value=[])
 
         result = await flags.is_enabled("missing", uuid.uuid4())

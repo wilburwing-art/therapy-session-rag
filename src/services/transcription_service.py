@@ -73,9 +73,7 @@ class TranscriptionService:
             self._deepgram_client = DeepgramClient(settings=self.settings)
         return self._deepgram_client
 
-    async def create_transcription_job(
-        self, session_id: uuid.UUID
-    ) -> TranscriptionJobRead:
+    async def create_transcription_job(self, session_id: uuid.UUID) -> TranscriptionJobRead:
         """Create a new transcription job for a session.
 
         Args:
@@ -176,9 +174,7 @@ class TranscriptionService:
                 language=result.language,
                 confidence=result.confidence,
             )
-            created_transcript = await self.transcript_repo.create_transcript(
-                transcript
-            )
+            created_transcript = await self.transcript_repo.create_transcript(transcript)
 
             # Update job to completed
             await self.transcript_repo.update_job_status(
@@ -197,6 +193,7 @@ class TranscriptionService:
 
             # Queue embedding job (import here to avoid circular import)
             from src.workers.embedding_worker import queue_embedding
+
             queue_embedding(session_id)
             logger.info(f"Queued embedding job for session {session_id}")
 
@@ -217,9 +214,7 @@ class TranscriptionService:
             await self._fail_job(job_id, session_id, str(e))
             raise TranscriptionError(f"Transcription failed: {e}") from e
 
-    async def get_transcription_status(
-        self, session_id: uuid.UUID
-    ) -> TranscriptionStatusResponse:
+    async def get_transcription_status(self, session_id: uuid.UUID) -> TranscriptionStatusResponse:
         """Get the transcription status for a session.
 
         Args:
@@ -229,9 +224,7 @@ class TranscriptionService:
             Status response with transcript availability and job status
         """
         # Check if transcript exists
-        transcript = await self.transcript_repo.get_transcript_by_session_id(
-            session_id
-        )
+        transcript = await self.transcript_repo.get_transcript_by_session_id(session_id)
         has_transcript = transcript is not None
 
         # Get latest job status
@@ -262,9 +255,7 @@ class TranscriptionService:
         Raises:
             NotFoundError: If transcript not found
         """
-        transcript = await self.transcript_repo.get_transcript_by_session_id(
-            session_id
-        )
+        transcript = await self.transcript_repo.get_transcript_by_session_id(session_id)
         if not transcript:
             raise NotFoundError(
                 resource="Transcript",

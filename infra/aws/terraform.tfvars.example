@@ -1,0 +1,51 @@
+# Copy to terraform.tfvars (git-ignored) and fill in per environment.
+
+# Short project identifier — becomes part of every resource name.
+# project_name = "therapyrag"
+
+# Environment tag (dev, staging, prod).
+# environment = "prod"
+
+# AWS region.
+# aws_region = "us-east-1"
+
+# Public domain — must live inside hosted_zone_id.
+# domain_name    = "api.therapyrag.example.com"
+# hosted_zone_id = "Z0123456789ABCDEFGHIJ"
+
+# ECR image URIs. worker_image may match app_image.
+# app_image    = "123456789012.dkr.ecr.us-east-1.amazonaws.com/therapyrag/app:sha-abc1234"
+# worker_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/therapyrag/app:sha-abc1234"
+
+# RDS sizing.
+# db_instance_class        = "db.t3.medium"
+# db_allocated_storage     = 100
+# db_max_allocated_storage = 500
+# db_name                  = "therapyrag"
+# db_username              = "therapyrag"
+
+# ElastiCache sizing.
+# redis_node_type = "cache.t3.micro"
+
+# Service scaling.
+# desired_count        = 2
+# app_cpu              = 512
+# app_memory           = 1024
+# worker_cpu           = 256
+# worker_memory        = 512
+# worker_desired_count = 1
+
+# Alarms.
+# alert_email = "ops@therapyrag.example.com"
+
+# Networking.
+# vpc_cidr = "10.0.0.0/16"
+
+# CloudWatch.
+# log_retention_days = 90
+
+# Extra tags.
+# tags = {
+#   Owner      = "platform-team"
+#   CostCenter = "eng-123"
+# }

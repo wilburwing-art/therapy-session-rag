@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from src.api.v1.dependencies import Auth, Events
+from src.api.v1.dependencies import Auth, CurrentPatient, Events
 from src.core.database import DbSession
 from src.core.exceptions import RateLimitError
 from src.models.db.event import EventCategory
@@ -248,4 +248,107 @@ async def get_conversation(
     return await conversation_service.get_conversation(
         conversation_id=conversation_id,
         patient_id=patient_id,
+    )
+
+
+# --- Patient-authenticated endpoints (used by the patient web app) ---
+# These derive patient_id from the patient JWT, so the patient can only
+# ever chat as themselves. No query-param patient_id is accepted.
+
+
+@router.post("/patient", response_model=ChatResponse)
+async def patient_chat(
+    request: ChatRequest,
+    patient: CurrentPatient,
+    service: ChatSvc,
+    conversation_service: ConvSvc,
+    rate_limiter: RateLimiterDep,
+    events: Events,
+) -> ChatResponse:
+    """Patient-authenticated chat endpoint.
+
+    Behaves like POST /chat but uses the patient's magic-link session
+    instead of a therapist API key, and resolves patient_id from the
+    token rather than accepting it as a query parameter.
+    """
+    try:
+        await rate_limiter.check_and_consume(patient.id)
+    except RateLimitExceeded as exc:
+        raise RateLimitError(detail=str(exc), retry_after=exc.reset_time) from exc
+
+    conversation, is_new = await conversation_service.get_or_create_conversation(
+        conversation_id=request.conversation_id,
+        patient_id=patient.id,
+        organization_id=patient.organization_id,
+    )
+
+    conversation_history = conversation_service.get_history_for_claude(conversation)
+    await conversation_service.add_user_message(conversation, request.message)
+    if is_new:
+        await conversation_service.generate_title(conversation.id, request.message)
+
+    response = await service.chat(
+        patient_id=patient.id,
+        message=request.message,
+        conversation_history=conversation_history if conversation_history else None,
+        top_k=request.top_k,
+    )
+    await conversation_service.add_assistant_message(
+        conversation, response.response, response.sources
+    )
+    response.conversation_id = conversation.id
+
+    await events.publish(
+        event_name="chat.message_sent",
+        category=EventCategory.USER_ACTION,
+        organization_id=patient.organization_id,
+        actor_id=patient.id,
+        properties={
+            "top_k": request.top_k,
+            "source_count": len(response.sources),
+            "conversation_id": str(conversation.id),
+            "is_new_conversation": is_new,
+            "message_length": len(request.message),
+            "via": "patient_session",
+        },
+    )
+
+    return response
+
+
+@router.get("/patient/rate-limit")
+async def patient_rate_limit(
+    patient: CurrentPatient,
+    rate_limiter: RateLimiterDep,
+) -> dict[str, int]:
+    remaining = await rate_limiter.get_remaining(patient.id)
+    return {"remaining": remaining, "max_per_hour": rate_limiter.max_requests}
+
+
+@router.get("/patient/conversations", response_model=list[ConversationSummary])
+async def patient_list_conversations(
+    patient: CurrentPatient,
+    conversation_service: ConvSvc,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[ConversationSummary]:
+    return await conversation_service.list_conversations(
+        patient_id=patient.id,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/patient/conversations/{conversation_id}",
+    response_model=ConversationRead,
+)
+async def patient_get_conversation(
+    conversation_id: uuid.UUID,
+    patient: CurrentPatient,
+    conversation_service: ConvSvc,
+) -> ConversationRead:
+    return await conversation_service.get_conversation(
+        conversation_id=conversation_id,
+        patient_id=patient.id,
     )

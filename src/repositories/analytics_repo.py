@@ -51,9 +51,7 @@ class AnalyticsRepository:
                 func.count(Session.id).label("sessions_in_period"),
                 func.count(func.distinct(Session.patient_id)).label("patients_in_period"),
                 func.round(
-                    cast(
-                        func.coalesce(func.sum(Session.recording_duration_seconds), 0), Numeric
-                    )
+                    cast(func.coalesce(func.sum(Session.recording_duration_seconds), 0), Numeric)
                     / 3600.0,
                     2,
                 ).label("total_hours"),
@@ -62,9 +60,7 @@ class AnalyticsRepository:
                     (
                         func.count(Session.id) > 0,
                         func.round(
-                            cast(
-                                func.count(case((Session.status == "ready", 1))), Numeric
-                            )
+                            cast(func.count(case((Session.status == "ready", 1))), Numeric)
                             / cast(func.count(Session.id), Numeric)
                             * 100,
                             2,
@@ -185,8 +181,12 @@ class AnalyticsRepository:
         conditions: list[Any] = [
             AnalyticsEvent.organization_id == organization_id,
             AnalyticsEvent.event_name.in_(
-                ["chat.message_sent", "safety.risk_detected",
-                 "safety.guardrail_triggered", "safety.escalation_created"]
+                [
+                    "chat.message_sent",
+                    "safety.risk_detected",
+                    "safety.guardrail_triggered",
+                    "safety.escalation_created",
+                ]
             ),
         ]
         if from_date is not None:
@@ -200,9 +200,9 @@ class AnalyticsRepository:
             select(
                 cast(period_start, Date).label("period_start"),
                 cast(period_start + text("interval '7 days'"), Date).label("period_end"),
-                func.count(
-                    case((AnalyticsEvent.event_name == "chat.message_sent", 1))
-                ).label("total_messages"),
+                func.count(case((AnalyticsEvent.event_name == "chat.message_sent", 1))).label(
+                    "total_messages"
+                ),
                 func.avg(
                     case(
                         (
@@ -244,9 +244,9 @@ class AnalyticsRepository:
                         )
                     )
                 ).label("zero_source_responses"),
-                func.count(
-                    case((AnalyticsEvent.event_name == "safety.risk_detected", 1))
-                ).label("risk_detections"),
+                func.count(case((AnalyticsEvent.event_name == "safety.risk_detected", 1))).label(
+                    "risk_detections"
+                ),
                 func.count(
                     case((AnalyticsEvent.event_name == "safety.guardrail_triggered", 1))
                 ).label("guardrail_triggers"),

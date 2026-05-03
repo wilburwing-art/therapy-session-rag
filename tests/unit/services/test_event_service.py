@@ -160,9 +160,7 @@ class TestPublishBatch:
             assert batch_arg[0].event_name == "chat.message_sent"
             assert batch_arg[1].event_name == "session.created"
 
-    async def test_publish_batch_empty_list(
-        self, publisher: EventPublisher
-    ) -> None:
+    async def test_publish_batch_empty_list(self, publisher: EventPublisher) -> None:
         result = await publisher.publish_batch([])
         assert result == []
 
@@ -187,7 +185,11 @@ class TestPublishBatch:
         self, publisher: EventPublisher, org_id: uuid.UUID
     ) -> None:
         events_data = [
-            {"event_name": "valid", "event_category": EventCategory.SYSTEM, "organization_id": org_id},
+            {
+                "event_name": "valid",
+                "event_category": EventCategory.SYSTEM,
+                "organization_id": org_id,
+            },
             {},  # missing required fields
         ]
 

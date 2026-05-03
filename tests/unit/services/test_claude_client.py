@@ -54,9 +54,7 @@ def create_mock_response(
 class TestClaudeClientInit:
     """Tests for ClaudeClient initialization."""
 
-    def test_initializes_with_default_model(
-        self, claude_client: ClaudeClient
-    ) -> None:
+    def test_initializes_with_default_model(self, claude_client: ClaudeClient) -> None:
         """Test client initializes with default model."""
         assert claude_client.model == "claude-sonnet-4-20250514"
 
@@ -197,9 +195,7 @@ class TestRetryLogic:
 class TestBackoff:
     """Tests for backoff calculation."""
 
-    def test_backoff_increases_exponentially(
-        self, claude_client: ClaudeClient
-    ) -> None:
+    def test_backoff_increases_exponentially(self, claude_client: ClaudeClient) -> None:
         """Test backoff delay increases exponentially."""
         from unittest.mock import patch
 
@@ -215,9 +211,7 @@ class TestBackoff:
 class TestRAGSystemPrompt:
     """Tests for RAG system prompt generation."""
 
-    def test_creates_system_prompt_with_context(
-        self, claude_client: ClaudeClient
-    ) -> None:
+    def test_creates_system_prompt_with_context(self, claude_client: ClaudeClient) -> None:
         """Test system prompt includes context."""
         chunks = [
             "Patient discussed feeling anxious about work.",
@@ -231,9 +225,7 @@ class TestRAGSystemPrompt:
         assert "supportive" in prompt.lower()
         assert "empathetic" in prompt.lower()
 
-    def test_system_prompt_includes_guidelines(
-        self, claude_client: ClaudeClient
-    ) -> None:
+    def test_system_prompt_includes_guidelines(self, claude_client: ClaudeClient) -> None:
         """Test system prompt includes safety guidelines."""
         prompt = claude_client.create_rag_system_prompt(["test context"])
 

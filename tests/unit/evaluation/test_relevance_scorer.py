@@ -57,8 +57,7 @@ class TestRelevanceScore:
 
     def test_score_bounded(self, scorer: RelevanceScorer) -> None:
         result = scorer.score(
-            "What about therapy?",
-            "Therapy is helpful for managing mental health."
+            "What about therapy?", "Therapy is helpful for managing mental health."
         )
         assert 0.0 <= result.score <= 1.0
         assert 0.0 <= result.query_coverage <= 1.0

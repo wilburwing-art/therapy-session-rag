@@ -1,0 +1,37 @@
+name: therapyrag
+version: "1.0.0"
+config-version: 2
+
+profile: therapyrag
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Directory-level materialization defaults. Individual models override via config().
+models:
+  therapyrag:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  therapyrag:
+    +schema: seeds
+
+# Use standard quoting so lowercase identifiers behave.
+quoting:
+  database: false
+  schema: false
+  identifier: false

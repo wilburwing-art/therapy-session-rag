@@ -62,9 +62,7 @@ class Conversation(Base, TimestampMixin):
         order_by="ConversationMessage.sequence_number",
     )
 
-    __table_args__ = (
-        Index("ix_conversations_patient_updated", "patient_id", "updated_at"),
-    )
+    __table_args__ = (Index("ix_conversations_patient_updated", "patient_id", "updated_at"),)
 
 
 class ConversationMessage(Base, TimestampMixin):

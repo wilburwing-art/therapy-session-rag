@@ -37,9 +37,7 @@ class ExperimentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_name(
-        self, name: str, organization_id: uuid.UUID
-    ) -> Experiment | None:
+    async def get_by_name(self, name: str, organization_id: uuid.UUID) -> Experiment | None:
         """Get experiment by name within an organization."""
         result = await self.session.execute(
             select(Experiment).where(
@@ -89,17 +87,13 @@ class ExperimentRepository:
         )
         return result.scalar_one_or_none()
 
-    async def create_assignment(
-        self, assignment: ExperimentAssignment
-    ) -> ExperimentAssignment:
+    async def create_assignment(self, assignment: ExperimentAssignment) -> ExperimentAssignment:
         """Create a new assignment."""
         self.session.add(assignment)
         await self.session.flush()
         return assignment
 
-    async def count_assignments_by_variant(
-        self, experiment_id: uuid.UUID
-    ) -> list[tuple[str, int]]:
+    async def count_assignments_by_variant(self, experiment_id: uuid.UUID) -> list[tuple[str, int]]:
         """Count assignments per variant for an experiment."""
         stmt = (
             select(

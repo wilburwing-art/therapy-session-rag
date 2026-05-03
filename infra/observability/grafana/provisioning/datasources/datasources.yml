@@ -1,0 +1,22 @@
+# Auto-provisioned Grafana datasources for the TherapyRAG dev stack.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    uid: prometheus-therapyrag
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+
+  - name: Tempo
+    type: tempo
+    access: proxy
+    uid: tempo-therapyrag
+    url: http://tempo:3200
+    jsonData:
+      tracesToMetrics:
+        datasourceUid: prometheus-therapyrag

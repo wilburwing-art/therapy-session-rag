@@ -48,9 +48,7 @@ def create_mock_embedding_response(
 class TestEmbeddingClientInit:
     """Tests for EmbeddingClient initialization."""
 
-    def test_initializes_with_default_model(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    def test_initializes_with_default_model(self, embedding_client: EmbeddingClient) -> None:
         """Test client initializes with default model."""
         assert embedding_client.model == "text-embedding-3-small"
 
@@ -73,15 +71,11 @@ class TestEmbedText:
     """Tests for embed_text method."""
 
     @pytest.mark.asyncio
-    async def test_embeds_single_text(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    async def test_embeds_single_text(self, embedding_client: EmbeddingClient) -> None:
         """Test embedding a single text."""
         mock_response = create_mock_embedding_response(["test text"])
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = AsyncMock(return_value=mock_response)
             embedding_client._client = mock_openai
 
@@ -93,15 +87,11 @@ class TestEmbedText:
             assert result.model == "text-embedding-3-small"
 
     @pytest.mark.asyncio
-    async def test_returns_embedding_result(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    async def test_returns_embedding_result(self, embedding_client: EmbeddingClient) -> None:
         """Test returned EmbeddingResult has all fields."""
         mock_response = create_mock_embedding_response(["hello world"])
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = AsyncMock(return_value=mock_response)
             embedding_client._client = mock_openai
 
@@ -117,16 +107,12 @@ class TestEmbedBatch:
     """Tests for embed_batch method."""
 
     @pytest.mark.asyncio
-    async def test_embeds_multiple_texts(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    async def test_embeds_multiple_texts(self, embedding_client: EmbeddingClient) -> None:
         """Test embedding multiple texts."""
         texts = ["text one", "text two", "text three"]
         mock_response = create_mock_embedding_response(texts)
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = AsyncMock(return_value=mock_response)
             embedding_client._client = mock_openai
 
@@ -146,9 +132,7 @@ class TestEmbedBatch:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_handles_large_batch(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    async def test_handles_large_batch(self, embedding_client: EmbeddingClient) -> None:
         """Test batching for inputs larger than MAX_BATCH_SIZE."""
         # Create 150 texts (> MAX_BATCH_SIZE of 100)
         texts = [f"text {i}" for i in range(150)]
@@ -161,9 +145,7 @@ class TestEmbedBatch:
             input_texts = kwargs.get("input", [])
             return create_mock_embedding_response(input_texts)  # type: ignore[arg-type]
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = mock_create
             embedding_client._client = mock_openai
 
@@ -178,9 +160,7 @@ class TestRetryLogic:
     """Tests for retry logic."""
 
     @pytest.mark.asyncio
-    async def test_retries_on_rate_limit(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    async def test_retries_on_rate_limit(self, embedding_client: EmbeddingClient) -> None:
         """Test retries on rate limit error."""
         texts = ["test text"]
         mock_response = create_mock_embedding_response(texts)
@@ -198,9 +178,7 @@ class TestRetryLogic:
                 )
             return mock_response
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = mock_create
             embedding_client._client = mock_openai
 
@@ -213,9 +191,7 @@ class TestRetryLogic:
             assert len(results) == 1
 
     @pytest.mark.asyncio
-    async def test_raises_after_max_retries(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    async def test_raises_after_max_retries(self, embedding_client: EmbeddingClient) -> None:
         """Test raises error after max retries exhausted."""
         texts = ["test text"]
 
@@ -226,9 +202,7 @@ class TestRetryLogic:
                 body=None,
             )
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = mock_create
             embedding_client._client = mock_openai
 
@@ -252,9 +226,7 @@ class TestRetryLogic:
         async def mock_create(**_kwargs: dict) -> MagicMock:
             raise ValueError("Invalid input")
 
-        with patch.object(
-            embedding_client, "_client", create=True
-        ) as mock_openai:
+        with patch.object(embedding_client, "_client", create=True) as mock_openai:
             mock_openai.embeddings.create = mock_create
             embedding_client._client = mock_openai
 
@@ -267,9 +239,7 @@ class TestRetryLogic:
 class TestBackoff:
     """Tests for backoff calculation."""
 
-    def test_backoff_increases_exponentially(
-        self, embedding_client: EmbeddingClient
-    ) -> None:
+    def test_backoff_increases_exponentially(self, embedding_client: EmbeddingClient) -> None:
         """Test backoff delay increases exponentially."""
         # Get delays without jitter for comparison
         with patch("random.random", return_value=0.5):  # No jitter

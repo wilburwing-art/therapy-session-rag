@@ -70,12 +70,7 @@ class EventRepository:
         query = select(AnalyticsEvent)
         if conditions:
             query = query.where(and_(*conditions))
-        stmt = (
-            query
-            .order_by(AnalyticsEvent.event_timestamp.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt = query.order_by(AnalyticsEvent.event_timestamp.desc()).limit(limit).offset(offset)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

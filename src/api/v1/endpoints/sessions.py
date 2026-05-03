@@ -1,36 +1,55 @@
 """Session API endpoints."""
 
+import io
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import Auth, Events
 from src.core.config import get_settings
+from src.core.data_access_audit import log_data_access
 from src.core.database import DbSession
-from src.core.exceptions import ValidationError
+from src.core.exceptions import NotFoundError, ValidationError
 from src.core.pagination import CursorPage
 from src.core.tenant import TenantContext
 from src.models.db.event import EventCategory
 from src.models.domain.session import (
     SessionCreate,
     SessionFilter,
+    SessionNotesUpdate,
     SessionRead,
     SessionSummary,
     SessionUpdate,
     SessionUploadResponse,
 )
 from src.models.domain.session import SessionStatus as DomainSessionStatus
+from src.models.domain.session_recap import SessionRecapRead
 from src.models.domain.transcript import (
     TranscriptionJobRead,
     TranscriptionStatusResponse,
     TranscriptRead,
 )
+from src.services.pdf_service import PdfService
 from src.services.session_service import SessionService
 from src.services.storage_service import StorageService
+from src.services.summarization_service import SummarizationService
 from src.services.transcription_service import TranscriptionService
 from src.workers.transcription_worker import queue_transcription
+
+
+class RecordingUrlResponse(BaseModel):
+    """Response for a presigned recording URL."""
+
+    url: str = Field(..., description="Presigned URL for the recording")
+    expires_at: datetime = Field(..., description="When the URL expires")
+
+
+# Presigned URL expiry: 15 minutes
+RECORDING_URL_EXPIRY_SECONDS = 900
 
 router = APIRouter()
 
@@ -72,9 +91,21 @@ def get_transcription_service(session: DbSession) -> TranscriptionService:
     return TranscriptionService(session)
 
 
+def get_summarization_service(session: DbSession) -> SummarizationService:
+    """Get summarization service instance."""
+    return SummarizationService(session)
+
+
+def get_pdf_service(session: DbSession) -> PdfService:
+    """Get PDF service instance."""
+    return PdfService(session)
+
+
 SessionSvc = Annotated[SessionService, Depends(get_session_service)]
 StorageSvc = Annotated[StorageService, Depends(get_storage_service)]
 TranscriptSvc = Annotated[TranscriptionService, Depends(get_transcription_service)]
+SummarySvc = Annotated[SummarizationService, Depends(get_summarization_service)]
+PdfSvc = Annotated[PdfService, Depends(get_pdf_service)]
 
 
 @router.post("", response_model=SessionRead, status_code=201)
@@ -129,18 +160,52 @@ async def update_session(
     return await service.update_session(session_id, update)
 
 
+@router.patch("/{session_id}/notes", response_model=SessionRead)
+async def update_session_notes(
+    session_id: uuid.UUID,
+    payload: SessionNotesUpdate,
+    service: SessionSvc,
+) -> SessionRead:
+    """Update the therapist notes for a session.
+
+    Notes are private to the therapist and not exposed to patients.
+    Returns 404 if session not found.
+    """
+    return await service.update_notes(session_id, payload.notes)
+
+
+@router.get("/{session_id}/recording/url", response_model=RecordingUrlResponse)
+async def get_recording_url(
+    session_id: uuid.UUID,
+    service: SessionSvc,
+    storage_service: StorageSvc,
+) -> RecordingUrlResponse:
+    """Get a short-lived presigned URL for the session recording.
+
+    Returns 404 if the session has no recording uploaded.
+    The URL expires in 15 minutes.
+    """
+    session = await service.get_session(session_id)
+    if not session.recording_path:
+        raise NotFoundError(
+            resource="Recording",
+            detail=f"Session {session_id} has no recording uploaded",
+        )
+
+    url = await storage_service.get_presigned_url(
+        session.recording_path,
+        expires=timedelta(seconds=RECORDING_URL_EXPIRY_SECONDS),
+    )
+    expires_at = datetime.now(UTC) + timedelta(seconds=RECORDING_URL_EXPIRY_SECONDS)
+    return RecordingUrlResponse(url=url, expires_at=expires_at)
+
+
 @router.get("", response_model=CursorPage[SessionSummary])
 async def list_sessions(
     service: SessionSvc,
-    patient_id: Annotated[
-        uuid.UUID | None, Query(description="Filter by patient ID")
-    ] = None,
-    therapist_id: Annotated[
-        uuid.UUID | None, Query(description="Filter by therapist ID")
-    ] = None,
-    status: Annotated[
-        DomainSessionStatus | None, Query(description="Filter by status")
-    ] = None,
+    patient_id: Annotated[uuid.UUID | None, Query(description="Filter by patient ID")] = None,
+    therapist_id: Annotated[uuid.UUID | None, Query(description="Filter by therapist ID")] = None,
+    status: Annotated[DomainSessionStatus | None, Query(description="Filter by status")] = None,
     cursor: Annotated[
         str | None, Query(description="Pagination cursor from previous response")
     ] = None,
@@ -247,12 +312,8 @@ async def upload_recording(
 async def get_patient_sessions(
     patient_id: uuid.UUID,
     service: SessionSvc,
-    therapist_id: Annotated[
-        uuid.UUID | None, Query(description="Filter by therapist ID")
-    ] = None,
-    status: Annotated[
-        DomainSessionStatus | None, Query(description="Filter by status")
-    ] = None,
+    therapist_id: Annotated[uuid.UUID | None, Query(description="Filter by therapist ID")] = None,
+    status: Annotated[DomainSessionStatus | None, Query(description="Filter by status")] = None,
 ) -> list[SessionSummary]:
     """Get all sessions for a patient.
 
@@ -286,9 +347,7 @@ async def start_transcription(
     # Verify session exists and has a recording
     session = await session_service.get_session(session_id)
     if not session.recording_path:
-        raise ValidationError(
-            detail="Session has no recording. Upload a recording first."
-        )
+        raise ValidationError(detail="Session has no recording. Upload a recording first.")
 
     # Create transcription job
     job = await transcription_service.create_transcription_job(session_id)
@@ -312,6 +371,8 @@ async def get_transcript(
     session_id: uuid.UUID,
     session_service: SessionSvc,
     transcription_service: TranscriptSvc,
+    auth: Auth,
+    events: Events,
 ) -> TranscriptRead:
     """Get the transcript for a session.
 
@@ -320,7 +381,82 @@ async def get_transcript(
     """
     # Validate session access via tenant context
     await session_service.get_session(session_id)
-    return await transcription_service.get_transcript(session_id)
+    transcript = await transcription_service.get_transcript(session_id)
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="session",
+        event_name="session.transcript_viewed",
+        properties={"session_id": str(session_id)},
+    )
+
+    return transcript
+
+
+@router.get("/{session_id}/recap", response_model=SessionRecapRead)
+async def get_session_recap(
+    session_id: uuid.UUID,
+    session_service: SessionSvc,
+    summarization_service: SummarySvc,
+    auth: Auth,
+    events: Events,
+) -> SessionRecapRead:
+    """Get the LLM-generated recap for a session.
+
+    Returns 404 if the recap hasn't been generated yet. Recaps are
+    automatically created after embedding completes, but may take a
+    few seconds to appear. Use POST to regenerate.
+    """
+    await session_service.get_session(session_id)
+    recap = await summarization_service.get_recap(session_id)
+
+    await log_data_access(
+        events,
+        actor_id=auth.api_key_id,
+        organization_id=auth.organization_id,
+        subject="session",
+        event_name="session.recap_viewed",
+        properties={"session_id": str(session_id)},
+    )
+
+    return recap
+
+
+@router.post(
+    "/{session_id}/recap",
+    response_model=SessionRecapRead,
+    status_code=201,
+)
+async def generate_session_recap(
+    session_id: uuid.UUID,
+    session_service: SessionSvc,
+    summarization_service: SummarySvc,
+    auth: Auth,
+    events: Events,
+) -> SessionRecapRead:
+    """Generate or regenerate the recap for a session.
+
+    Runs synchronously and returns the new recap. Use this to refresh
+    after a re-transcription or when the auto-generated recap failed.
+    Requires the session to have a transcript.
+    """
+    await session_service.get_session(session_id)
+    recap = await summarization_service.generate_recap(session_id)
+
+    await events.publish(
+        event_name="session.recap_generated",
+        category=EventCategory.SYSTEM,
+        organization_id=auth.organization_id,
+        session_id=session_id,
+        properties={
+            "model": recap.model_name,
+            "risk_flag_count": len(recap.risk_flags),
+        },
+    )
+
+    return recap
 
 
 @router.get(
@@ -355,4 +491,37 @@ async def get_transcription_status(
     return JSONResponse(
         status_code=200,
         content=status.model_dump(mode="json"),
+    )
+
+
+@router.get(
+    "/{session_id}/recap.pdf",
+    responses={
+        200: {"content": {"application/pdf": {}}},
+        404: {"description": "Session or recap not found"},
+    },
+)
+async def download_session_recap_pdf(
+    session_id: uuid.UUID,
+    pdf_service: PdfSvc,
+    auth: Auth,
+) -> StreamingResponse:
+    """Download a styled PDF of the session's recap.
+
+    Returns a letter-size PDF with the practice name in the header and
+    the session date in the filename. 404 if the session or its recap
+    does not exist. 403 if the session belongs to another organization.
+    """
+    session = await pdf_service.session_repo.get_by_id(session_id)
+    if session is None:
+        raise NotFoundError(resource="Session", resource_id=str(session_id))
+    pdf_bytes = await pdf_service.render_session_recap_pdf(
+        session_id=session_id,
+        organization_id=auth.organization_id,
+    )
+    filename = f"session-{session.session_date.strftime('%Y-%m-%d')}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

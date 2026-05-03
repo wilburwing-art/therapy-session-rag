@@ -15,19 +15,24 @@ class EventCategory(StrEnum):
     SYSTEM = "system"
     CLINICAL = "clinical"
     PERFORMANCE = "performance"
+    DATA_ACCESS = "data_access"
 
 
 class EventCreate(BaseModel):
     """Schema for creating an analytics event."""
 
-    event_name: str = Field(..., max_length=255, description="Event name (e.g. 'chat.message_sent')")
+    event_name: str = Field(
+        ..., max_length=255, description="Event name (e.g. 'chat.message_sent')"
+    )
     event_category: EventCategory = Field(..., description="Event category")
     actor_id: UUID | None = Field(None, description="User who triggered the event")
     organization_id: UUID = Field(..., description="Organization the event belongs to")
     session_id: UUID | None = Field(None, description="Therapy session ID if applicable")
     properties: dict[str, Any] | None = Field(None, description="Event-specific payload")
     contexts: dict[str, Any] | None = Field(None, description="Snowplow-style contexts")
-    event_timestamp: datetime | None = Field(None, description="When the event occurred (defaults to now)")
+    event_timestamp: datetime | None = Field(
+        None, description="When the event occurred (defaults to now)"
+    )
 
 
 class EventRead(BaseModel):

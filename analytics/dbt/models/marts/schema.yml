@@ -1,0 +1,137 @@
+version: 2
+
+models:
+  - name: fct_sessions_daily
+    description: >
+      Daily session funnel per practice. Grain is one row per
+      (organization_id, session_date_utc). Incremental on session_date_utc.
+      A surrogate grain_key column enforces uniqueness without dbt_utils.
+    columns:
+      - name: organization_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_practices')
+                field: organization_id
+      - name: session_date_utc
+        data_tests:
+          - not_null
+      - name: session_count
+        data_tests:
+          - not_null
+      - name: grain_key
+        description: "organization_id || '|' || session_date_utc — grain uniqueness key."
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_mrr_by_week
+    description: >
+      Weekly MRR by subscription tier. Grain is one row per
+      (week_start, tier_code). A surrogate grain_key enforces uniqueness.
+    columns:
+      - name: week_start
+        data_tests:
+          - not_null
+      - name: tier_code
+        data_tests:
+          - not_null
+      - name: paying_org_count
+        data_tests:
+          - not_null
+      - name: mrr_usd
+      - name: grain_key
+        description: "week_start || '|' || tier_code — grain uniqueness key."
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_cohort_retention
+    description: >
+      Monthly signup cohort retention on chat activity. Grain is
+      (cohort_month, period_number). A surrogate grain_key enforces uniqueness.
+    columns:
+      - name: cohort_month
+        data_tests:
+          - not_null
+      - name: period_number
+        data_tests:
+          - not_null
+      - name: cohort_size
+        data_tests:
+          - not_null
+      - name: retention_rate
+      - name: grain_key
+        description: "cohort_month || '|' || period_number — grain uniqueness key."
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_recap_quality
+    description: >
+      LLM recap QA features, one row per recap. Length, counts, and
+      risk-flag boolean for spotting regressions after prompt changes.
+    columns:
+      - name: recap_id
+        data_tests:
+          - not_null
+          - unique
+      - name: session_id
+        data_tests:
+          - not_null
+      - name: model_name
+        data_tests:
+          - not_null
+      - name: generated_at
+        data_tests:
+          - not_null
+
+  - name: dim_practices
+    description: >
+      One row per practice with therapist / patient / session rollups and
+      entitlement.
+    columns:
+      - name: organization_id
+        data_tests:
+          - not_null
+          - unique
+      - name: organization_name
+        data_tests:
+          - not_null
+      - name: subscription_status
+        data_tests:
+          - not_null
+      - name: is_entitled
+        data_tests:
+          - not_null
+
+  - name: dim_patients
+    description: >
+      One row per patient with session + chat activity summary.
+    columns:
+      - name: patient_id
+        data_tests:
+          - not_null
+          - unique
+      - name: organization_id
+        data_tests:
+          - not_null
+      - name: email
+        data_tests:
+          - not_null
+
+seeds:
+  - name: subscription_tier_list
+    description: Static reference of subscription tiers, prices, and quotas.
+    columns:
+      - name: tier_code
+        data_tests:
+          - not_null
+          - unique
+      - name: tier_name
+        data_tests:
+          - not_null
+      - name: monthly_price_usd
+        data_tests:
+          - not_null

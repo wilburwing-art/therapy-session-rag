@@ -1,0 +1,108 @@
+version: 2
+
+sources:
+  - name: app
+    description: >
+      TherapyRAG operational database (the same Postgres instance the FastAPI
+      app writes to). All staging models read from here.
+    database: "{{ env_var('POSTGRES_DB', 'therapy_rag') }}"
+    schema: public
+    tables:
+      - name: organizations
+        description: One row per therapy practice or platform integrator.
+        columns:
+          - name: id
+            description: Primary key (uuid).
+            data_tests:
+              - not_null
+              - unique
+          - name: stripe_customer_id
+          - name: subscription_status
+          - name: disabled_at
+      - name: users
+        description: Therapists, patients, and admins across all orgs.
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: organization_id
+            data_tests:
+              - not_null
+          - name: email
+            data_tests:
+              - not_null
+          - name: role
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ["therapist", "patient", "admin"]
+      - name: sessions
+        description: Therapy session recordings with processing state.
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: patient_id
+            data_tests:
+              - not_null
+          - name: therapist_id
+            data_tests:
+              - not_null
+          - name: status
+            data_tests:
+              - not_null
+      - name: analytics_events
+        description: >
+          Snowplow-style event stream written by the FastAPI app. One row per
+          user_action / system / clinical / performance / data_access event.
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: event_name
+            data_tests:
+              - not_null
+          - name: event_category
+            data_tests:
+              - not_null
+          - name: organization_id
+            data_tests:
+              - not_null
+          - name: event_timestamp
+            data_tests:
+              - not_null
+      - name: session_recaps
+        description: LLM-generated recap, one row per session.
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: session_id
+            data_tests:
+              - not_null
+              - unique
+      - name: conversations
+        description: Patient chat conversations.
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: patient_id
+            data_tests:
+              - not_null
+      - name: billing_usage
+        description: Per-org, per-period metered usage counters.
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: organization_id
+            data_tests:
+              - not_null

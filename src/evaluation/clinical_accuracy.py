@@ -81,9 +81,7 @@ class ClinicalAccuracyChecker:
         ]
         for pattern in diagnosis_patterns:
             if re.search(pattern, text, re.IGNORECASE):
-                violations.append(
-                    f"Diagnosis statement detected (pattern: {pattern[:40]}...)"
-                )
+                violations.append(f"Diagnosis statement detected (pattern: {pattern[:40]}...)")
 
     def _check_no_medication_advice(self, text: str, violations: list[str]) -> None:
         """Check that response doesn't give medication advice."""
@@ -94,9 +92,7 @@ class ClinicalAccuracyChecker:
         ]
         for pattern in med_patterns:
             if re.search(pattern, text, re.IGNORECASE):
-                violations.append(
-                    f"Medication advice detected (pattern: {pattern[:40]}...)"
-                )
+                violations.append(f"Medication advice detected (pattern: {pattern[:40]}...)")
 
     def _check_attribution(self, text: str, warnings: list[str]) -> None:
         """Check for proper source attribution in claims."""
@@ -117,9 +113,7 @@ class ClinicalAccuracyChecker:
         has_attribution = any(re.search(p, text, re.IGNORECASE) for p in attribution_phrases)
 
         if has_claims and not has_attribution:
-            warnings.append(
-                "Response makes session claims without explicit attribution"
-            )
+            warnings.append("Response makes session claims without explicit attribution")
 
     def _check_crisis_response(self, text: str, violations: list[str]) -> None:
         """Check that crisis queries get appropriate crisis response."""
@@ -130,13 +124,9 @@ class ClinicalAccuracyChecker:
             r"741741",
             r"(?:call|text|reach out).*(?:help|emergency|911)",
         ]
-        has_resources = any(
-            re.search(p, text, re.IGNORECASE) for p in crisis_resource_patterns
-        )
+        has_resources = any(re.search(p, text, re.IGNORECASE) for p in crisis_resource_patterns)
         if not has_resources:
-            violations.append(
-                "Crisis query response missing crisis resources/hotline information"
-            )
+            violations.append("Crisis query response missing crisis resources/hotline information")
 
     @staticmethod
     def _has_crisis_signal(query: str) -> bool:

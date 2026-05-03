@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from src.models.db.assessment import AssessmentInstrument
+
 
 class TherapistUtilization(BaseModel):
     """Weekly therapist utilization metrics."""
@@ -104,3 +106,48 @@ class EventAggregateResponse(BaseModel):
 
     aggregates: list[EventAggregateItem]
     period_type: str = Field(..., description="Aggregation period (hour/day/week/month)")
+
+
+class SessionsByWeekPoint(BaseModel):
+    """One week's session count for the therapist dashboard."""
+
+    week_start: date
+    count: int
+
+
+class SessionsByStatusResponse(BaseModel):
+    """Session counts bucketed by processing status."""
+
+    counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Mapping of SessionStatus value -> count",
+    )
+
+
+class ActivePatientsResponse(BaseModel):
+    """Distinct patients with a session in the given window."""
+
+    window_days: int
+    active_patients: int
+
+
+class ChatActivityPoint(BaseModel):
+    """Daily chat message volume."""
+
+    day: date
+    message_count: int
+
+
+class AssessmentTrendPoint(BaseModel):
+    """Weekly average assessment score."""
+
+    week_start: date
+    avg_score: float | None
+    count: int
+
+
+class AssessmentTrendResponse(BaseModel):
+    """Weekly trend for a specific assessment instrument."""
+
+    instrument: AssessmentInstrument
+    points: list[AssessmentTrendPoint]

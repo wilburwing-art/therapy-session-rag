@@ -45,9 +45,7 @@ class TestHallucinationCheck:
         assert result.total_claims == 0
 
     def test_empty_sources(self, detector: HallucinationDetector) -> None:
-        result = detector.check(
-            "You discussed anxiety in your session.", []
-        )
+        result = detector.check("You discussed anxiety in your session.", [])
         # No source keywords to match against
         assert result.total_claims > 0
 

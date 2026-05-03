@@ -1,0 +1,16 @@
+# Auto-provision the TherapyRAG dashboards from JSON files mounted
+# into /var/lib/grafana/dashboards.
+
+apiVersion: 1
+
+providers:
+  - name: therapyrag-dashboards
+    orgId: 1
+    folder: TherapyRAG
+    type: file
+    disableDeletion: true
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

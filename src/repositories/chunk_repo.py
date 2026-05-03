@@ -28,9 +28,7 @@ class ChunkRepository:
         await self.session.refresh(chunk)
         return chunk
 
-    async def create_chunks_batch(
-        self, chunks: list[SessionChunk]
-    ) -> list[SessionChunk]:
+    async def create_chunks_batch(self, chunks: list[SessionChunk]) -> list[SessionChunk]:
         """Create multiple chunks in a batch.
 
         Args:
@@ -59,9 +57,7 @@ class ChunkRepository:
         Returns:
             The chunk if found, None otherwise
         """
-        result = await self.session.execute(
-            select(SessionChunk).where(SessionChunk.id == chunk_id)
-        )
+        result = await self.session.execute(select(SessionChunk).where(SessionChunk.id == chunk_id))
         return result.scalar_one_or_none()
 
     async def get_chunks_by_session(
@@ -85,9 +81,7 @@ class ChunkRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_chunks_by_transcript(
-        self, transcript_id: uuid.UUID
-    ) -> list[SessionChunk]:
+    async def get_chunks_by_transcript(self, transcript_id: uuid.UUID) -> list[SessionChunk]:
         """Get all chunks for a transcript.
 
         Args:
@@ -103,9 +97,7 @@ class ChunkRepository:
         )
         return list(result.scalars().all())
 
-    async def get_chunks_without_embeddings(
-        self, session_id: uuid.UUID
-    ) -> list[SessionChunk]:
+    async def get_chunks_without_embeddings(self, session_id: uuid.UUID) -> list[SessionChunk]:
         """Get chunks that don't have embeddings yet.
 
         Args:

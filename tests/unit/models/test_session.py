@@ -152,9 +152,7 @@ class TestSessionUpdate:
 
     def test_update_recording_path(self) -> None:
         """Test SessionUpdate can update recording path."""
-        schema = SessionUpdate(
-            recording_path="recordings/2025/01/session-abc123.mp3"
-        )
+        schema = SessionUpdate(recording_path="recordings/2025/01/session-abc123.mp3")
         assert schema.recording_path == "recordings/2025/01/session-abc123.mp3"
 
     def test_update_error_message(self) -> None:

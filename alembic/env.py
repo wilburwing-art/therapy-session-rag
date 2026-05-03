@@ -21,11 +21,25 @@ from src.models.db.experiment import (  # noqa: F401
     ExperimentAssignment,
     ExperimentMetric,
 )
+from src.models.db.assessment import Assessment  # noqa: F401
+from src.models.db.auth_token import AuthToken  # noqa: F401
+from src.models.db.billing_usage import BillingUsage  # noqa: F401
+from src.models.db.homework_item import HomeworkItem  # noqa: F401
+from src.models.db.intake_form import IntakeForm  # noqa: F401
+from src.models.db.intake_invitation import IntakeInvitation  # noqa: F401
+from src.models.db.intake_response import IntakeResponse  # noqa: F401
+from src.models.db.magic_link import MagicLink  # noqa: F401
 from src.models.db.organization import Organization  # noqa: F401
+from src.models.db.patient_themes import PatientThemes  # noqa: F401
+from src.models.db.reminder_sent import ReminderSent  # noqa: F401
 from src.models.db.session import Session  # noqa: F401
 from src.models.db.session_chunk import SessionChunk  # noqa: F401
+from src.models.db.session_recap import SessionRecap  # noqa: F401
+from src.models.db.therapist_invite import TherapistInvite  # noqa: F401
 from src.models.db.transcript import Transcript  # noqa: F401
 from src.models.db.user import User  # noqa: F401
+from src.models.db.webhook_delivery import WebhookDelivery  # noqa: F401
+from src.models.db.webhook_endpoint import WebhookEndpoint  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from src.api.v1.dependencies import get_api_key_auth
 from src.api.v1.endpoints.users import router
 from src.core.database import get_db_session
+from src.core.exceptions import setup_exception_handlers
 from src.models.db.user import User, UserRole
 
 
@@ -26,6 +27,8 @@ def _make_user(
     user.organization_id = org_id
     user.email = email
     user.role = role
+    user.full_name = None
+    user.email_verified_at = None
     user.created_at = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
     user.updated_at = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
     return user
@@ -57,6 +60,7 @@ def mock_db_session() -> AsyncMock:
 def app(mock_auth_context: MagicMock, mock_db_session: AsyncMock) -> FastAPI:
     """Create test app with mocked dependencies."""
     test_app = FastAPI()
+    setup_exception_handlers(test_app)
     test_app.include_router(router, prefix="/users")
 
     test_app.dependency_overrides[get_api_key_auth] = lambda: mock_auth_context
@@ -210,6 +214,8 @@ class TestListUsersEndpoint:
         user.organization_id = org_id
         user.email = "test@example.com"
         user.role = UserRole.THERAPIST
+        user.full_name = None
+        user.email_verified_at = None
         user.created_at = created
         user.updated_at = updated
 
@@ -278,3 +284,111 @@ class TestListUsersMultiTenancy:
 
         # Verify execute was called (the actual query contains org filter)
         mock_db_session.execute.assert_called_once()
+
+
+class TestCreatePatientEndpoint:
+    """Tests for POST /users/patients endpoint."""
+
+    def test_create_patient_success(
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
+        org_id: uuid.UUID,
+    ) -> None:
+        """New patient email not in use: returns 201 with UserRead shape."""
+        empty_result = MagicMock()
+        empty_result.scalar_one_or_none.return_value = None
+        mock_db_session.execute.return_value = empty_result
+        # session.add is sync, not async; override to avoid "coroutine
+        # never awaited" RuntimeWarning from the default AsyncMock.
+        mock_db_session.add = MagicMock()
+
+        patient_id = uuid.uuid4()
+
+        async def fake_refresh(obj: User) -> None:
+            obj.id = patient_id
+            obj.created_at = datetime(2026, 4, 21, 10, 0, 0, tzinfo=UTC)
+            obj.updated_at = datetime(2026, 4, 21, 10, 0, 0, tzinfo=UTC)
+            obj.email_verified_at = None
+
+        mock_db_session.refresh.side_effect = fake_refresh
+
+        response = client.post(
+            "/users/patients",
+            json={"email": "New.Patient@Example.com", "full_name": "Newt"},
+        )
+
+        assert response.status_code == 201
+        body = response.json()
+        assert body["id"] == str(patient_id)
+        assert body["email"] == "new.patient@example.com"  # lowercased
+        assert body["role"] == "patient"
+        assert body["full_name"] == "Newt"
+        assert body["organization_id"] == str(org_id)
+        mock_db_session.flush.assert_awaited()
+
+    def test_create_patient_duplicate_email_returns_409(
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
+        org_id: uuid.UUID,
+    ) -> None:
+        """Existing email returns 409 ConflictError."""
+        existing = _make_user(org_id, "dup@example.com", UserRole.PATIENT)
+        dup_result = MagicMock()
+        dup_result.scalar_one_or_none.return_value = existing
+        mock_db_session.execute.return_value = dup_result
+
+        response = client.post(
+            "/users/patients",
+            json={"email": "dup@example.com", "full_name": "Dup Pat"},
+        )
+
+        assert response.status_code == 409
+        body = response.json()
+        assert body["status"] == 409
+        assert "already exists" in body["detail"].lower()
+
+
+class TestGetUserEndpoint:
+    """Tests for GET /users/{id} endpoint."""
+
+    def test_get_user_success_own_org(
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
+        org_id: uuid.UUID,
+    ) -> None:
+        user_id = uuid.uuid4()
+        user = _make_user(org_id, "me@example.com", UserRole.THERAPIST, user_id=user_id)
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = user
+        mock_db_session.execute.return_value = result
+
+        response = client.get(f"/users/{user_id}")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["id"] == str(user_id)
+        assert body["organization_id"] == str(org_id)
+        assert body["email"] == "me@example.com"
+        assert body["role"] == "therapist"
+
+    def test_get_user_cross_org_returns_404(
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
+    ) -> None:
+        """The query filters by organization_id — an out-of-org user ID
+        returns None from the query, which the endpoint maps to 404."""
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = None
+        mock_db_session.execute.return_value = result
+
+        bogus_id = uuid.uuid4()
+        response = client.get(f"/users/{bogus_id}")
+
+        assert response.status_code == 404
+        body = response.json()
+        assert body["status"] == 404
+        assert str(bogus_id) in body["detail"]

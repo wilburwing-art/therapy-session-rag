@@ -35,14 +35,10 @@ class ApiKeyRepository:
         Returns:
             The API key if found, None otherwise
         """
-        result = await self.session.execute(
-            select(ApiKey).where(ApiKey.id == api_key_id)
-        )
+        result = await self.session.execute(select(ApiKey).where(ApiKey.id == api_key_id))
         return result.scalar_one_or_none()
 
-    async def get_active_by_organization(
-        self, organization_id: uuid.UUID
-    ) -> list[ApiKey]:
+    async def get_active_by_organization(self, organization_id: uuid.UUID) -> list[ApiKey]:
         """Get all active API keys for an organization.
 
         Args:
@@ -80,9 +76,7 @@ class ApiKeyRepository:
             api_key_id: The API key ID
         """
         await self.session.execute(
-            update(ApiKey)
-            .where(ApiKey.id == api_key_id)
-            .values(last_used_at=datetime.now(UTC))
+            update(ApiKey).where(ApiKey.id == api_key_id).values(last_used_at=datetime.now(UTC))
         )
 
     async def revoke(self, api_key_id: uuid.UUID) -> bool:

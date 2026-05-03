@@ -21,9 +21,7 @@ class EventTrackingMiddleware(BaseHTTPMiddleware):
     performance event for every completed request.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start = time.perf_counter()
         request.state.request_start_time = start
 

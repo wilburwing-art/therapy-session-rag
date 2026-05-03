@@ -30,18 +30,14 @@ class TenantContext:
             NotFoundError: If user does not exist
             ForbiddenError: If user belongs to a different organization
         """
-        result = await self.db_session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db_session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
 
         if not user:
             raise NotFoundError(resource="User", resource_id=str(user_id))
 
         if user.organization_id != self.organization_id:
-            raise ForbiddenError(
-                detail="Access denied: user belongs to a different organization"
-            )
+            raise ForbiddenError(detail="Access denied: user belongs to a different organization")
 
         return user
 
@@ -78,9 +74,7 @@ class TenantContext:
         """
         from src.models.db.session import Session
 
-        result = await self.db_session.execute(
-            select(Session).where(Session.id == session_id)
-        )
+        result = await self.db_session.execute(select(Session).where(Session.id == session_id))
         session = result.scalar_one_or_none()
 
         if not session:

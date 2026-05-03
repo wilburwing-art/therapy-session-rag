@@ -35,8 +35,14 @@ class EventPublisher:
         properties: dict[str, Any] | None = None,
         contexts: dict[str, Any] | None = None,
         event_timestamp: datetime | None = None,
+        retain_forever: bool = False,
     ) -> AnalyticsEvent | None:
         """Publish a single analytics event.
+
+        When ``retain_forever`` is True the event is flagged so the
+        retention-purge job leaves it in place past the normal horizon —
+        used for compliance tombstones (bulk consent, 2FA disable,
+        admin org disable, patient deletions).
 
         Returns the created event, or None if publishing failed.
         Failures are logged but never raised.
@@ -52,6 +58,7 @@ class EventPublisher:
                 contexts=contexts,
                 event_timestamp=event_timestamp or datetime.now(UTC),
                 received_at=datetime.now(UTC),
+                retain_forever=retain_forever,
             )
             return await self._repo.create(event)
         except Exception:

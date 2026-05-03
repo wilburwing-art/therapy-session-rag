@@ -136,8 +136,10 @@ class ClaudeClient:
         context_preview = ""
         if system_prompt and "CONTEXT FROM THERAPY SESSIONS:" in system_prompt:
             context_start = system_prompt.find("CONTEXT FROM THERAPY SESSIONS:")
-            context_text = system_prompt[context_start + 30:context_start + 500]
-            context_preview = context_text[:200] + "..." if len(context_text) > 200 else context_text
+            context_text = system_prompt[context_start + 30 : context_start + 500]
+            context_preview = (
+                context_text[:200] + "..." if len(context_text) > 200 else context_text
+            )
 
         mock_response = f"""Based on your therapy session records, I can see some relevant information.
 
@@ -173,8 +175,7 @@ In a production environment, I would analyze your sessions to provide personaliz
 
         # Convert messages to Anthropic format
         anthropic_messages: list[MessageParam] = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.messages
+            {"role": msg.role, "content": msg.content} for msg in request.messages
         ]
 
         for attempt in range(self.MAX_RETRIES):

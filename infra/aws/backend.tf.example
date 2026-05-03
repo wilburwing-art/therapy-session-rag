@@ -1,0 +1,18 @@
+# Remote state backend.
+#
+# Copy this file to backend.tf and fill in bucket / dynamodb_table names.
+# The bucket must exist in advance (bootstrap step) and have:
+#   - versioning enabled
+#   - SSE-KMS or SSE-S3 encryption
+#   - block_public_access: true
+# The DynamoDB table must have a primary key `LockID` (string).
+#
+# terraform {
+#   backend "s3" {
+#     bucket         = "therapyrag-tfstate-REPLACE"
+#     key            = "aws/prod/terraform.tfstate"
+#     region         = "us-east-1"
+#     dynamodb_table = "therapyrag-tflock-REPLACE"
+#     encrypt        = true
+#   }
+# }

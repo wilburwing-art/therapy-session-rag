@@ -55,9 +55,7 @@ class SessionService:
         """
         # Validate tenant access - ensure patient and therapist belong to org
         if self.tenant:
-            await self.tenant.validate_users_in_org(
-                create.patient_id, create.therapist_id
-            )
+            await self.tenant.validate_users_in_org(create.patient_id, create.therapist_id)
 
         # Check for active recording consent
         consent = await self.consent_repo.get_active_consent(
@@ -152,6 +150,37 @@ class SessionService:
             )
 
         # Refresh and return
+        await self.db_session.refresh(session)
+        return self._to_session_read(session)
+
+    async def update_notes(
+        self,
+        session_id: uuid.UUID,
+        notes: str | None,
+    ) -> SessionRead:
+        """Update the therapist notes on a session.
+
+        Args:
+            session_id: The session ID
+            notes: The new notes value (may be None to clear)
+
+        Returns:
+            The updated session
+
+        Raises:
+            NotFoundError: If session not found
+            ForbiddenError: If session belongs to a different organization
+        """
+        session = await self.session_repo.get_by_id(session_id)
+        if not session:
+            raise NotFoundError(resource="Session", resource_id=str(session_id))
+
+        # Validate tenant access
+        if self.tenant:
+            await self.tenant.validate_session_access(session_id)
+
+        session.therapist_notes = notes
+        await self.db_session.flush()
         await self.db_session.refresh(session)
         return self._to_session_read(session)
 
@@ -286,6 +315,7 @@ class SessionService:
             status=DomainSessionStatus(session.status.value),
             session_type=DomainSessionType(session.session_type.value),
             error_message=session.error_message,
+            therapist_notes=session.therapist_notes,
             session_metadata=session.session_metadata,
             created_at=session.created_at,
             updated_at=session.updated_at,

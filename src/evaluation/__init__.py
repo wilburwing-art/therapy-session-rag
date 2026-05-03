@@ -2,6 +2,7 @@
 
 from src.evaluation.clinical_accuracy import ClinicalAccuracyChecker
 from src.evaluation.eval_suite import EvalCase, EvalResult, EvalSuite
+from src.evaluation.grounding import compute_grounding_score
 from src.evaluation.hallucination_detector import HallucinationDetector
 from src.evaluation.relevance_scorer import RelevanceScorer
 
@@ -12,4 +13,5 @@ __all__ = [
     "EvalSuite",
     "HallucinationDetector",
     "RelevanceScorer",
+    "compute_grounding_score",
 ]

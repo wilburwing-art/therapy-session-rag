@@ -1,221 +1,170 @@
 # TherapyRAG
 
+**AI co-pilot for private-practice therapists.** Upload a session recording → get a structured recap, cross-session themes, and a patient-facing chatbot that answers questions grounded in the patient's own sessions.
+
 [![CI](https://github.com/wilburwing-art/therapy-session-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/wilburwing-art/therapy-session-rag/actions/workflows/ci.yml)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Session Recording → Transcription → Patient-Facing RAG Chatbot**
+## What it does
 
-Therapy providers want to give patients access to their session content between appointments — but manual transcription is a nonstarter, and generic chatbots have no patient context. TherapyRAG closes that gap: therapists upload recordings (with consent), the pipeline auto-transcribes and indexes them, and patients get a chatbot that answers questions like *"What homework did we discuss last week?"* with cited, relevant excerpts from their own sessions.
-
-Built as a production-ready backend targeting telehealth platform integration.
+- **Session recap** — 2-3 sentence brief, key topics, emotional tone, homework assigned, follow-ups, and clinical risk flags (SI, abuse disclosure, mandatory-reporting triggers) for therapist review after every session.
+- **Cross-session themes** — recurring topics, emotional patterns, coping strategies mentioned, progress indicators, and ongoing concerns, synthesized across a patient's recap history.
+- **Patient chatbot** — patient clicks a one-time magic link and can ask questions like *"what did we discuss about sleep last week?"* with citations back to the source session and timestamp.
+- **Outcome tracking** — PHQ-9 and GAD-7 with standard severity bands, history charted on the patient page.
+- **Consent + audit** — append-only consent records with IP/user-agent/timestamp, full revocation audit trail.
 
 ## Architecture
 
 ```
-                           INGESTION PIPELINE
-  ┌───────────┐    ┌───────────┐    ┌──────────────┐    ┌──────────────┐
-  │  Upload   │───>│   MinIO   │───>│   Deepgram   │───>│   OpenAI     │
-  │  Audio    │    │   (S3)    │    │   ASR +      │    │   Embeddings │
-  │           │    │           │    │   Diarize    │    │   (1536-dim) │
-  └───────────┘    └───────────┘    └──────────────┘    └──────┬───────┘
-       │                                                       │
-       │  consent check                              chunk + store
-       v                                                       v
-  ┌───────────┐                                    ┌───────────────────┐
-  │  Consent  │                                    │   PostgreSQL      │
-  │  Audit    │                                    │   + pgvector      │
-  │  (append- │                                    │                   │
-  │   only)   │                                    │  sessions         │
-  └───────────┘                                    │  transcripts      │
-                                                   │  chunks + vectors │
-                                                   └─────────┬─────────┘
-                           QUERY PATH                        │
-  ┌───────────┐    ┌──────────────────────────┐              │
-  │  Patient  │<──>│  Claude RAG Chat         │<─── semantic search
-  │  Chat UI  │    │  + citations             │    (cosine similarity,
-  └───────────┘    │  + safety guardrails     │     patient-scoped)
-                   └──────────────────────────┘
-                              │
-                   ┌──────────┴──────────┐
-                   │  Redis              │
-                   │  rate limits + jobs  │
-                   └─────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                          Next.js 15 (web/)                           │
+│  (marketing)   (public-auth)         (therapist)        (patient)    │
+│   landing       login/signup           dashboard          chat       │
+│                  forgot/reset          patient detail                │
+│                  verify-email          session upload                │
+│                                        billing / Stripe              │
+└──────────────────────────┬───────────────────────────────────────────┘
+                           │ cookies (JWT)
+┌──────────────────────────▼───────────────────────────────────────────┐
+│                       FastAPI (src/)                                 │
+│  /auth  /billing  /sessions  /patients  /consent  /chat              │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │  Services: auth, billing, email, summarization, themes, chat,  │ │
+│  │  assessment, consent, transcription, embedding, safety         │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │  Workers: transcription → embedding → summarization (RQ)        │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+└──────┬────────────────────┬─────────────────┬─────────────────┬──────┘
+       │                    │                 │                 │
+   ┌───▼───┐          ┌─────▼─────┐      ┌────▼────┐       ┌────▼────┐
+   │ Postgres        │ Redis      │      │ MinIO   │       │ Stripe  │
+   │ + pgvector      │ (RQ + rate │      │ (S3)    │       │ + Resend│
+   │ HIPAA tenant    │  limiting) │      │ recording│      │ + Sentry│
+   │ isolation       │            │      │ storage │       │         │
+   └─────────────────┴────────────┘      └─────────┘       └─────────┘
 ```
 
-### Component Breakdown
+**External AI vendors** (BAA required for production): Deepgram (transcription), OpenAI text-embedding-3-small (embeddings), Anthropic Claude Sonnet 4 (chat + recaps + themes).
 
-| Layer | Tech | Role |
-|-------|------|------|
-| **API** | FastAPI (async) | 30+ endpoints across consent, sessions, chat, admin |
-| **Database** | PostgreSQL 16 + pgvector | Relational data + vector similarity search |
-| **Queue** | Redis 7 + RQ | Async transcription and embedding jobs |
-| **Storage** | MinIO (S3-compatible) | Audio/video recording files |
-| **Transcription** | Deepgram | Speech-to-text with speaker diarization |
-| **Embeddings** | OpenAI (text-embedding-3-small) | 1536-dimensional chunk vectors |
-| **Chat LLM** | Claude (claude-sonnet-4) | RAG responses with session citations |
-| **Safety** | Custom guardrails | Crisis detection, input/output filtering |
+**Tenant isolation**: every query is scoped to the authenticated organization via a `TenantContext` at the repository layer, not just the API layer. Patient A can never see Patient B's data.
 
-### Data Isolation Model
-
-Every query is scoped to the authenticated organization via `TenantContext`. Patient A never sees Patient B's data — enforced at the repository layer, not just the API layer.
-
-```
-API Key (X-API-Key) → Organization → TenantContext
-  └── All queries filtered: WHERE patient_id IN (SELECT id FROM users WHERE org_id = ?)
-```
-
-Consent is append-only: grants and revocations create new immutable records. No UPDATE, no DELETE. Full audit trail with IP, user-agent, and timestamps.
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.12+
-- Docker and Docker Compose
-- API keys: [Deepgram](https://deepgram.com), [OpenAI](https://platform.openai.com), [Anthropic](https://console.anthropic.com)
-
-### Setup
+## Quick start
 
 ```bash
-git clone https://github.com/wilburwing-art/therapy-session-rag.git
-cd therapy-session-rag
-
-# Install dependencies
+# Backend
 uv sync
-
-# Configure environment
-cp .env.example .env
-# Add your API keys to .env
-
-# Start infrastructure
+cp .env.example .env     # fill in API keys + JWT_SECRET
 docker compose up -d postgres redis minio minio-setup
-
-# Run migrations
 uv run alembic upgrade head
-
-# Start API server
 uv run uvicorn src.main:app --reload
 
-# Start background workers (separate terminals)
+# RQ workers (separate terminals)
 uv run python -m rq.cli worker transcription --url redis://localhost:6379
 uv run python -m rq.cli worker embedding --url redis://localhost:6379
+uv run python -m rq.cli worker summarization --url redis://localhost:6379
+
+# Web app
+cd web
+cp .env.example .env.local  # set THERAPYRAG_API_URL
+npm install
+npm run dev  # http://localhost:3000
 ```
 
-Or run the full stack via Docker:
-```bash
-docker compose up
-```
+The Expo client under `/mobile/` is the patient-facing app that pairs with the web therapist dashboard. See `mobile/README.md` for setup.
 
-API docs at http://localhost:8000/docs
+Analytics models (dbt) live under `/analytics/dbt/` — see `analytics/dbt/README.md`.
 
-## API
+Observability: OpenTelemetry traces + metrics are opt-in — see `OBSERVABILITY.md` for the local stack (`docker-compose.observability.yml`: OTEL Collector + Prometheus + Tempo + Grafana).
 
-All endpoints (except `/health*`) require `X-API-Key` header.
+## Environment variables
 
-### Consent
+| Group | Keys |
+|-------|------|
+| Core | `DATABASE_URL` `REDIS_URL` `APP_ENV` |
+| AI vendors | `DEEPGRAM_API_KEY` `OPENAI_API_KEY` `ANTHROPIC_API_KEY` |
+| Storage | `MINIO_ENDPOINT` `MINIO_ACCESS_KEY` `MINIO_SECRET_KEY` `MINIO_BUCKET` |
+| Auth | `JWT_SECRET` `JWT_COOKIE_SECURE` `JWT_ACCESS_TOKEN_TTL_SECONDS` |
+| Billing | `STRIPE_SECRET_KEY` `STRIPE_WEBHOOK_SECRET` `STRIPE_PRICE_ID` `BILLING_ENFORCED` |
+| Email | `RESEND_API_KEY` `EMAIL_FROM_ADDRESS` `EMAIL_FROM_NAME` `WEB_APP_URL` |
+| Observability | `SENTRY_DSN` `SENTRY_ENVIRONMENT` |
+| Safety | `SAFETY_ENABLED` `CHAT_RATE_LIMIT_PER_HOUR` |
 
-```
-POST   /api/v1/consent                      # Grant recording consent
-DELETE /api/v1/consent                      # Revoke consent (creates revocation record)
-GET    /api/v1/consent/{patient_id}/check   # Check active consent
-GET    /api/v1/consent/{patient_id}/audit   # Full immutable audit trail
-```
-
-### Sessions
-
-```
-POST   /api/v1/sessions                       # Create session
-POST   /api/v1/sessions/{id}/recording        # Upload audio/video
-POST   /api/v1/sessions/{id}/transcribe       # Queue transcription job
-GET    /api/v1/sessions/{id}/transcript       # Get transcript
-GET    /api/v1/sessions                       # List (cursor pagination)
-```
-
-### Chat
-
-```
-POST   /api/v1/chat?patient_id=uuid     # Send message → RAG response with citations
-GET    /api/v1/chat/rate-limit           # Check remaining quota (20/hr per patient)
-GET    /api/v1/chat/conversations        # List conversation threads
-```
-
-### Example: Chat Request
+## Development
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/chat?patient_id=<uuid>" \
-  -H "X-API-Key: your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What did we discuss about managing anxiety?", "top_k": 5}'
+# Backend
+uv run ruff check src/ tests/
+uv run mypy src/                    # strict mode
+uv run pytest tests/unit            # 667+ unit tests
+uv run pytest tests/integration     # needs Postgres + Redis
+
+# Web
+cd web
+npm run typecheck
+npm run build
 ```
 
-```json
-{
-  "response": "In your session, you discussed several techniques for managing anxiety...",
-  "conversation_id": "550e8400-...",
-  "sources": [
-    {
-      "session_id": "...",
-      "chunk_id": "...",
-      "content_preview": "Patient discussed feeling anxious about...",
-      "relevance_score": 0.89,
-      "start_time": 120.5,
-      "speaker": "Speaker 0"
-    }
-  ]
-}
-```
+### Running E2E tests
 
-## Project Structure
+The web app ships a Playwright suite under `web/e2e/`. It drives the real backend + Next.js but mocks every external AI / billing / email vendor via placeholder API keys (the codebase already returns canned responses when keys equal `"placeholder"`).
+
+- Start the local stack: `docker compose up -d postgres redis minio minio-setup && uv run alembic upgrade head && uv run uvicorn src.main:app --reload`. Launch the API with `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, and the `STRIPE_*` vars all set to `placeholder` so the tests hit mock paths instead of real vendors.
+- Install browsers once: `cd web && npm install && npx playwright install chromium`.
+- Run the suite: `npm run e2e` (or `npm run e2e:ui` for the Playwright UI). Set `PLAYWRIGHT_PROJECTS=chromium,firefox,webkit` to run the full browser matrix.
+
+### Project layout
 
 ```
 src/
-├── api/v1/endpoints/     # Consent, Sessions, Chat, Users, Organizations
-├── core/                 # Config, database, security, tenant isolation, pagination
+├── api/v1/endpoints/     # FastAPI routes (auth, billing, sessions, patients, chat, consent…)
+├── services/             # Business logic
+├── repositories/         # Data access (SQLAlchemy async)
 ├── models/
-│   ├── db/               # SQLAlchemy ORM (12 models)
-│   └── domain/           # Pydantic DTOs (API contracts)
-├── repositories/         # Data access layer (10 repos, including vector search)
-├── services/             # Business logic (21 service modules)
-│   ├── chat_service.py       # RAG orchestration: embed → search → Claude
-│   ├── deepgram_client.py    # ASR with speaker diarization
-│   ├── embedding_service.py  # Chunking + OpenAI embeddings
-│   ├── claude_client.py      # LLM integration
-│   ├── safety/               # Guardrails, risk detection, audit
-│   └── ...
-├── workers/              # RQ background job processors
+│   ├── db/               # SQLAlchemy ORM
+│   └── domain/           # Pydantic DTOs (never leak ORM to the API)
+├── core/                 # Config, database, auth, observability, tenant isolation
+├── workers/              # RQ background jobs (transcription, embedding, summarization)
 └── evaluation/           # RAG quality metrics
 
+web/
+├── app/
+│   ├── (marketing)/      # Public landing page
+│   ├── (public-auth)/    # Login, signup, password reset, verify email
+│   ├── (therapist)/      # Protected — auth-gated dashboard, billing
+│   └── (patient)/        # Magic-link chat
+├── components/           # AppShell, AudioRecorder, ChatSurface, SubscriptionBanner
+└── lib/                  # api client, types, auth helpers
+
 tests/
-├── unit/                 # 407 tests (all passing)
-└── integration/          # Full pipeline tests
+├── unit/
+└── integration/          # Full-stack tests against real Postgres
 ```
 
-## Validation
+## HIPAA / security notes
 
-```bash
-uv run ruff check src/ tests/    # Lint
-uv run mypy src/                 # Type check (strict mode)
-uv run pytest tests/unit -v      # 407 unit tests
-./scripts/e2e_test.sh            # Full E2E flow
-```
+- Consent is append-only — never `UPDATE` or `DELETE` consent rows
+- API keys are HMAC-hashed; JWTs are audience-scoped (therapist vs. patient)
+- Sentry's `before_send` hook strips Authorization/Cookie/X-API-Key headers and request bodies
+- Claude guardrails: crisis detection with a canned 988 response, output filtering, scope limits ("this AI cannot diagnose, prescribe, or provide clinical advice")
+- Tenant isolation enforced at the repository layer via `TenantContext`
+- Signed BAAs required before production launch: Anthropic, OpenAI, Deepgram, Stripe, Resend, your host
 
-## Environment Variables
+## Production checklist
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL async connection string |
-| `REDIS_URL` | Redis for job queue + rate limiting |
-| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | S3-compatible storage |
-| `DEEPGRAM_API_KEY` | Transcription service |
-| `OPENAI_API_KEY` | Embedding generation |
-| `ANTHROPIC_API_KEY` | Claude chat responses |
-| `CHAT_RATE_LIMIT_PER_HOUR` | Per-patient chat limit (default: 20) |
-| `SAFETY_ENABLED` | Clinical AI guardrails (default: true) |
+Before real patients touch this:
 
-## Tech Stack
-
-Python 3.12+ / FastAPI / PostgreSQL 16 + pgvector / Redis 7 + RQ / MinIO / Deepgram / OpenAI Embeddings / Claude / SQLAlchemy 2.0 (async) / Alembic / mypy (strict) / ruff / structlog
+1. `uv run alembic upgrade head` against production Postgres
+2. `JWT_SECRET` set to a 256-bit random string (not the dev default)
+3. `JWT_COOKIE_SECURE=true` and `BILLING_ENFORCED=true`
+4. Stripe: production keys, webhook endpoint set to `https://yourhost/api/v1/billing/webhook`, price + product configured
+5. Resend: production API key, verified sending domain, DMARC/SPF/DKIM configured
+6. Sentry: DSN configured with production environment tag
+7. BAAs signed with every upstream AI + storage + infra vendor
+8. Clinical Director appointed and credentialed in the relevant state(s)
+9. Liability insurance: E&O, cyber
+10. Crisis protocol documented: what happens when a risk flag fires after hours
 
 ## License
 

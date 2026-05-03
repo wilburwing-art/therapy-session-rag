@@ -90,12 +90,9 @@ class TestNoMedicationAdvice:
         assert not result.passes
         assert any("Medication" in v for v in result.violations)
 
-    def test_allows_mentioning_medication_discussed(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_allows_mentioning_medication_discussed(self, checker: ClinicalAccuracyChecker) -> None:
         response = (
-            "In your session, you mentioned that your current medication "
-            "is helping with sleep."
+            "In your session, you mentioned that your current medication is helping with sleep."
         )
         result = checker.check(response)
         assert result.passes
@@ -104,26 +101,18 @@ class TestNoMedicationAdvice:
 class TestAttribution:
     """Tests for source attribution warnings."""
 
-    def test_warns_on_claims_without_attribution(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_warns_on_claims_without_attribution(self, checker: ClinicalAccuracyChecker) -> None:
         response = "You mentioned feeling stressed at work last week."
         result = checker.check(response, has_sources=True)
         assert result.passes  # Warnings don't fail
         assert any("attribution" in w.lower() for w in result.warnings)
 
-    def test_no_warning_with_attribution(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
-        response = (
-            "Based on your session notes, you mentioned feeling stressed at work."
-        )
+    def test_no_warning_with_attribution(self, checker: ClinicalAccuracyChecker) -> None:
+        response = "Based on your session notes, you mentioned feeling stressed at work."
         result = checker.check(response, has_sources=True)
         assert result.warnings == []
 
-    def test_no_warning_without_claims(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_no_warning_without_claims(self, checker: ClinicalAccuracyChecker) -> None:
         response = "I'm here to help you with any questions about your sessions."
         result = checker.check(response, has_sources=True)
         assert result.warnings == []
@@ -139,18 +128,14 @@ class TestAttribution:
 class TestCrisisResponse:
     """Tests for crisis response handling."""
 
-    def test_crisis_query_needs_resources(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_crisis_query_needs_resources(self, checker: ClinicalAccuracyChecker) -> None:
         query = "I want to kill myself"
         response = "I'm here to support you during difficult times."
         result = checker.check(response, query=query)
         assert not result.passes
         assert any("crisis" in v.lower() for v in result.violations)
 
-    def test_crisis_query_with_988_passes(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_crisis_query_with_988_passes(self, checker: ClinicalAccuracyChecker) -> None:
         query = "I'm thinking about ending it all"
         response = (
             "I'm concerned about what you're sharing. Please call 988 "
@@ -159,20 +144,13 @@ class TestCrisisResponse:
         result = checker.check(response, query=query)
         assert result.passes
 
-    def test_crisis_query_with_hotline_passes(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_crisis_query_with_hotline_passes(self, checker: ClinicalAccuracyChecker) -> None:
         query = "I want to harm myself"
-        response = (
-            "Please reach out to a crisis hotline immediately. "
-            "You can text HOME to 741741."
-        )
+        response = "Please reach out to a crisis hotline immediately. You can text HOME to 741741."
         result = checker.check(response, query=query)
         assert result.passes
 
-    def test_non_crisis_query_no_resources_needed(
-        self, checker: ClinicalAccuracyChecker
-    ) -> None:
+    def test_non_crisis_query_no_resources_needed(self, checker: ClinicalAccuracyChecker) -> None:
         query = "What did we talk about last session?"
         response = "In your last session, you discussed work stress."
         result = checker.check(response, query=query)

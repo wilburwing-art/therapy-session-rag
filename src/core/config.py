@@ -83,9 +83,7 @@ class Settings(BaseSettings):
         """Rewrite postgresql:// to postgresql+asyncpg:// for Railway compatibility."""
         url = values.get("database_url")
         if isinstance(url, str) and url.startswith("postgresql://"):
-            values["database_url"] = url.replace(
-                "postgresql://", "postgresql+asyncpg://", 1
-            )
+            values["database_url"] = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return values
 
     # Application
@@ -124,10 +122,156 @@ class Settings(BaseSettings):
         description="Enable clinical AI safety guardrails",
     )
 
+    # Auth
+    jwt_secret: str = Field(
+        default="insecure-dev-secret-change-me",
+        description="Secret used to sign JWT session tokens",
+    )
+    jwt_algorithm: Literal["HS256", "HS384", "HS512"] = Field(
+        default="HS256",
+        description="JWT signing algorithm",
+    )
+    jwt_access_token_ttl_seconds: int = Field(
+        default=43200,  # 12 hours
+        description="Lifetime of therapist JWT session tokens in seconds",
+    )
+    jwt_cookie_name: str = Field(
+        default="therapyrag_session",
+        description="Name of the cookie storing the therapist JWT",
+    )
+    jwt_cookie_secure: bool = Field(
+        default=True,
+        description="Require HTTPS on JWT cookies (set to false for local dev)",
+    )
+    magic_link_ttl_seconds: int = Field(
+        default=900,  # 15 minutes
+        description="Lifetime of patient magic-link tokens in seconds",
+    )
+
+    # Account lockout
+    lockout_threshold: int = Field(
+        default=5,
+        description="Failed login attempts before temporary lockout",
+    )
+    lockout_duration_minutes: int = Field(
+        default=15,
+        description="How long an account stays locked after hitting the threshold",
+    )
+
+    # TOTP 2FA
+    totp_encryption_key: str = Field(
+        default="placeholder-32-byte-key-for-dev-only-change-me",
+        description=(
+            "Fernet encryption key (32-byte urlsafe-base64) for TOTP secrets. "
+            "Must be stable across deploys — rotating this value invalidates "
+            "all existing 2FA secrets. In non-dev envs set via env var."
+        ),
+    )
+    totp_challenge_ttl_seconds: int = Field(
+        default=300,  # 5 minutes
+        description="Lifetime of short-lived TOTP challenge tokens",
+    )
+    totp_issuer: str = Field(
+        default="TherapyRAG",
+        description="Issuer label shown in authenticator apps",
+    )
+
+    # Stripe billing
+    stripe_secret_key: str = Field(
+        default="placeholder",
+        description="Stripe secret API key",
+    )
+    stripe_webhook_secret: str = Field(
+        default="placeholder",
+        description="Stripe webhook signing secret for verifying events",
+    )
+    stripe_price_id: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the $149/mo therapist plan",
+    )
+    stripe_price_id_starter: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the Starter tier (1 seat, base quota)",
+    )
+    stripe_price_id_pro: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the Pro tier (up to 5 seats, expanded quota)",
+    )
+    stripe_price_id_scale: str = Field(
+        default="placeholder",
+        description="Stripe Price ID for the Scale tier (metered usage + seats)",
+    )
+    stripe_trial_days: int = Field(
+        default=14,
+        description="Free trial length in days on new subscriptions",
+    )
+    stripe_success_url: str = Field(
+        default="http://localhost:3000/dashboard?checkout=success",
+        description="Stripe redirect URL after successful checkout",
+    )
+    stripe_cancel_url: str = Field(
+        default="http://localhost:3000/billing?checkout=canceled",
+        description="Stripe redirect URL after canceled checkout",
+    )
+    stripe_portal_return_url: str = Field(
+        default="http://localhost:3000/billing",
+        description="Stripe customer portal return URL",
+    )
+    billing_enforced: bool = Field(
+        default=False,
+        description=(
+            "When true, subscription-gating middleware blocks API access "
+            "for orgs without an active/trialing subscription"
+        ),
+    )
+
+    # Transactional email (Resend)
+    resend_api_key: str = Field(
+        default="placeholder",
+        description="Resend API key for transactional email",
+    )
+    email_from_address: str = Field(
+        default="noreply@therapyrag.local",
+        description="From address for transactional email",
+    )
+    email_from_name: str = Field(
+        default="TherapyRAG",
+        description="From name for transactional email",
+    )
+    web_app_url: str = Field(
+        default="http://localhost:3000",
+        description="Public base URL of the web app (used in email links)",
+    )
+
+    # Error tracking
+    sentry_dsn: str = Field(
+        default="",
+        description="Sentry DSN. Empty disables Sentry.",
+    )
+    sentry_environment: str = Field(
+        default="development",
+        description="Sentry environment tag",
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of transactions to record for performance monitoring",
+    )
+
     # File upload
     max_upload_size: int = Field(
         default=524288000,  # 500MB
         description="Maximum upload file size in bytes",
+    )
+
+    # Disclosure / security.txt
+    security_contact_email: str = Field(
+        default="security@therapyrag.local",
+        description=(
+            "Contact shown in /.well-known/security.txt and the /security "
+            "disclosure page. Override per-env via SECURITY_CONTACT_EMAIL."
+        ),
     )
 
     # Video Chat (Metered.ca TURN server)
@@ -143,6 +287,80 @@ class Settings(BaseSettings):
         default="",
         description="Metered.ca TURN credential",
     )
+
+    # --- reminders-engineer: twilio notifications settings (append-only anchor) ---
+    reminders_enabled: bool = Field(
+        default=False,
+        description="Enable scheduled reminder notifications (SMS/email).",
+    )
+    reminders_scheduler_interval_seconds: int = Field(
+        default=60,
+        description="How often the rq-scheduler wakes to enqueue due reminders.",
+    )
+    twilio_account_sid: str = Field(
+        default="",
+        description="Twilio Account SID. Empty disables SMS sending (sender becomes a no-op stub).",
+    )
+    twilio_auth_token: str = Field(
+        default="",
+        description="Twilio auth token. Empty disables SMS sending.",
+    )
+    twilio_from_number: str = Field(
+        default="",
+        description="E.164-formatted Twilio phone number used as the SMS sender.",
+    )
+    twilio_messaging_service_sid: str = Field(
+        default="",
+        description=(
+            "Optional Twilio Messaging Service SID. When set, takes precedence "
+            "over twilio_from_number for delivery."
+        ),
+    )
+
+    @property
+    def twilio_configured(self) -> bool:
+        """True when Twilio credentials are present and SMS can be sent."""
+        return bool(
+            self.twilio_account_sid
+            and self.twilio_auth_token
+            and (self.twilio_from_number or self.twilio_messaging_service_sid)
+        )
+
+    # --- end reminders-engineer anchor ---
+
+    # --- observability-engineer: OpenTelemetry settings (append-only anchor) ---
+    otel_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enable OpenTelemetry traces + metrics export. "
+            "When false, no exporters are registered and no network calls "
+            "are made — the app runs with zero OTEL overhead."
+        ),
+    )
+    otel_service_name: str = Field(
+        default="therapyrag-api",
+        description="Resource attribute service.name reported to the collector.",
+    )
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://localhost:4317",
+        description="OTLP/gRPC collector endpoint. Used only when otel_enabled=true.",
+    )
+    otel_exporter_otlp_insecure: bool = Field(
+        default=True,
+        description="Use insecure gRPC (no TLS) to the OTLP collector.",
+    )
+    otel_traces_sample_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Parent-based sampler ratio for traces (0.0 = off, 1.0 = all).",
+    )
+    otel_metric_export_interval_millis: int = Field(
+        default=30_000,
+        ge=1_000,
+        description="How often metrics are pushed to the collector, in milliseconds.",
+    )
+    # --- end observability-engineer anchor ---
 
     @property
     def cors_origins_list(self) -> list[str]:

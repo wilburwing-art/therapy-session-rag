@@ -105,9 +105,7 @@ class ConsentRepository:
             conditions.append(Consent.consent_type == consent_type)
 
         result = await self.session.execute(
-            select(Consent)
-            .where(and_(*conditions))
-            .order_by(Consent.granted_at.desc())
+            select(Consent).where(and_(*conditions)).order_by(Consent.granted_at.desc())
         )
         return list(result.scalars().all())
 
@@ -127,9 +125,7 @@ class ConsentRepository:
         """
         active_consents: list[Consent] = []
         for consent_type in ConsentType:
-            consent = await self.get_active_consent(
-                patient_id, therapist_id, consent_type
-            )
+            consent = await self.get_active_consent(patient_id, therapist_id, consent_type)
             if consent:
                 active_consents.append(consent)
         return active_consents

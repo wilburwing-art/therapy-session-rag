@@ -72,9 +72,7 @@ class Experiment(Base, TimestampMixin):
         nullable=True,
     )
 
-    __table_args__ = (
-        Index("ix_experiments_org_status", "organization_id", "status"),
-    )
+    __table_args__ = (Index("ix_experiments_org_status", "organization_id", "status"),)
 
 
 class ExperimentAssignment(Base, TimestampMixin):

@@ -29,9 +29,7 @@ def mock_minio_client() -> MagicMock:
 
 
 @pytest.fixture
-def storage_service(
-    mock_settings: MagicMock, mock_minio_client: MagicMock
-) -> StorageService:
+def storage_service(mock_settings: MagicMock, mock_minio_client: MagicMock) -> StorageService:
     """Create StorageService with mocked client."""
     service = StorageService(settings=mock_settings)
     service._client = mock_minio_client
@@ -46,9 +44,7 @@ class TestStorageServiceInit:
         service = StorageService(settings=mock_settings)
         assert service.settings == mock_settings
 
-    def test_bucket_name_from_settings(
-        self, mock_settings: MagicMock
-    ) -> None:
+    def test_bucket_name_from_settings(self, mock_settings: MagicMock) -> None:
         """Test bucket name is retrieved from settings."""
         service = StorageService(settings=mock_settings)
         assert service.bucket_name == "test-bucket"
@@ -57,9 +53,7 @@ class TestStorageServiceInit:
 class TestGenerateKey:
     """Tests for generate_key method."""
 
-    def test_generates_unique_keys(
-        self, storage_service: StorageService
-    ) -> None:
+    def test_generates_unique_keys(self, storage_service: StorageService) -> None:
         """Test that generated keys are unique."""
         key1 = storage_service.generate_key("file.mp3")
         key2 = storage_service.generate_key("file.mp3")
@@ -70,9 +64,7 @@ class TestGenerateKey:
         key = storage_service.generate_key("file.mp3", prefix="audio")
         assert key.startswith("audio/")
 
-    def test_sanitizes_filename(
-        self, storage_service: StorageService
-    ) -> None:
+    def test_sanitizes_filename(self, storage_service: StorageService) -> None:
         """Test that special characters in filename are sanitized."""
         key = storage_service.generate_key("file with spaces!@#.mp3")
         # Should not contain spaces or special characters

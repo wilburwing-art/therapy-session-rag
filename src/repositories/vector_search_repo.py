@@ -134,9 +134,7 @@ class VectorSearchRepository:
         )
         return len(result.scalars().all())
 
-    async def get_sessions_with_embeddings(
-        self, patient_id: uuid.UUID
-    ) -> list[uuid.UUID]:
+    async def get_sessions_with_embeddings(self, patient_id: uuid.UUID) -> list[uuid.UUID]:
         """Get session IDs that have embeddings for a patient.
 
         Args:

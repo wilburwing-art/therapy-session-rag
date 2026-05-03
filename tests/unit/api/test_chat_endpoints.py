@@ -62,9 +62,7 @@ def mock_conversation_service(mock_auth_context: MagicMock) -> MagicMock:
     mock_conversation.organization_id = mock_auth_context.organization_id
     mock_conversation.messages = []
 
-    service.get_or_create_conversation = AsyncMock(
-        return_value=(mock_conversation, True)
-    )
+    service.get_or_create_conversation = AsyncMock(return_value=(mock_conversation, True))
     service.get_history_for_claude = MagicMock(return_value=[])
     service.add_user_message = AsyncMock()
     service.add_assistant_message = AsyncMock()
@@ -240,9 +238,7 @@ class TestChatEndpoint:
         patient_id: uuid.UUID,
     ) -> None:
         """Test handling of chat service errors."""
-        mock_chat_service.chat = AsyncMock(
-            side_effect=ChatServiceError("Failed to process query")
-        )
+        mock_chat_service.chat = AsyncMock(side_effect=ChatServiceError("Failed to process query"))
 
         # The generic exception handler returns 500
         response = client.post(

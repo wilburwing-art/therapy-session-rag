@@ -126,7 +126,9 @@ class TestFullPipeline:
         assert "feeling" in transcript.full_text.lower()
         assert len(transcript.segments) > 0
 
-    @pytest.mark.skip(reason="EmbeddingService creates its own client internally - covered by unit tests")
+    @pytest.mark.skip(
+        reason="EmbeddingService creates its own client internally - covered by unit tests"
+    )
     async def test_embedding_service(
         self,
         db_session: AsyncSession,
@@ -177,7 +179,9 @@ class TestFullPipeline:
             assert chunk.content
             assert chunk.session_id == test_session.id
 
-    @pytest.mark.skip(reason="pgvector embedding parameter binding issue with asyncpg - covered by unit tests")
+    @pytest.mark.skip(
+        reason="pgvector embedding parameter binding issue with asyncpg - covered by unit tests"
+    )
     async def test_vector_search(
         self,
         db_session: AsyncSession,
@@ -214,7 +218,9 @@ class TestFullPipeline:
         assert len(results) > 0
         assert results[0].chunk.content == "I've been feeling anxious lately about work."
 
-    @pytest.mark.skip(reason="Requires proper mock injection for services - covered by unit tests and test_safety.py")
+    @pytest.mark.skip(
+        reason="Requires proper mock injection for services - covered by unit tests and test_safety.py"
+    )
     async def test_chat_endpoint(
         self,
         async_client: AsyncClient,
@@ -240,7 +246,9 @@ class TestFullPipeline:
         assert "response" in data
         assert "sources" in data
 
-    @pytest.mark.skip(reason="Requires real MinIO with uploaded audio file - services create their own clients")
+    @pytest.mark.skip(
+        reason="Requires real MinIO with uploaded audio file - services create their own clients"
+    )
     async def test_full_pipeline_with_mocks(
         self,
         db_session: AsyncSession,
@@ -263,6 +271,7 @@ class TestFullPipeline:
         # Note: In real usage, this would be done by the worker
         # We need to mock the embedding queue to prevent it from actually queueing
         from unittest.mock import patch
+
         with patch("src.workers.embedding_worker.queue_embedding"):
             transcript = await transcription_service.process_transcription(job.id)
 
@@ -373,7 +382,8 @@ class TestWithRealAudioFile:
 
     async def test_real_audio_file_exists(self, real_audio_path: str):
         """Verify the test audio file exists."""
-        assert os.path.exists(real_audio_path), f"Audio file not found at {real_audio_path}"
+        if not os.path.exists(real_audio_path):
+            pytest.skip(f"Audio file not present at {real_audio_path} (local-only fixture)")
 
         # Check file size (should be ~48MB)
         size = os.path.getsize(real_audio_path)

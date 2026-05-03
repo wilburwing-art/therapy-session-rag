@@ -77,9 +77,7 @@ class TestGrantConsent:
             mock_repo = MockRepo.return_value
             mock_repo.get_active_consent = AsyncMock(return_value=None)
 
-            created_consent = make_mock_consent(
-                patient_id, therapist_id, "recording", "granted"
-            )
+            created_consent = make_mock_consent(patient_id, therapist_id, "recording", "granted")
             mock_repo.create = AsyncMock(return_value=created_consent)
             MockConsent.return_value = created_consent
 
@@ -181,9 +179,7 @@ class TestGrantConsent:
             mock_repo.get_active_consent = AsyncMock(return_value=None)
 
             metadata = {"source": "web", "version": "1.0"}
-            created_consent = make_mock_consent(
-                patient_id, therapist_id, consent_metadata=metadata
-            )
+            created_consent = make_mock_consent(patient_id, therapist_id, consent_metadata=metadata)
             mock_repo.create = AsyncMock(return_value=created_consent)
             MockConsent.return_value = created_consent
 
@@ -383,9 +379,7 @@ class TestGetAuditLog:
             mock_repo = MockRepo.return_value
             now = datetime.now(UTC)
             consents = [
-                make_mock_consent(
-                    patient_id, therapist_id, status="revoked", revoked_at=now
-                ),
+                make_mock_consent(patient_id, therapist_id, status="revoked", revoked_at=now),
                 make_mock_consent(patient_id, therapist_id, status="granted"),
             ]
             mock_repo.get_audit_log = AsyncMock(return_value=consents)
@@ -419,9 +413,7 @@ class TestGetAuditLog:
             service = ConsentService(mock_session)
             service.repo = mock_repo
 
-            await service.get_audit_log(
-                patient_id, therapist_id, DomainConsentType.TRANSCRIPTION
-            )
+            await service.get_audit_log(patient_id, therapist_id, DomainConsentType.TRANSCRIPTION)
 
             mock_repo.get_audit_log.assert_called_once()
 

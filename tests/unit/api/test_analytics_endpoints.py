@@ -1,24 +1,36 @@
 """Unit tests for Analytics API endpoints."""
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.v1.dependencies import get_api_key_auth, get_event_publisher
+from src.api.v1.dependencies import (
+    get_api_key_auth,
+    get_current_therapist,
+    get_event_publisher,
+)
 from src.api.v1.endpoints.analytics import get_analytics_service, router
 from src.core.database import get_db_session
+from src.models.db.assessment import AssessmentInstrument
+from src.models.db.user import User, UserRole
 from src.models.domain.analytics import (
+    ActivePatientsResponse,
     AISafetyMetrics,
+    AssessmentTrendPoint,
+    AssessmentTrendResponse,
+    ChatActivityPoint,
     EventAggregateItem,
     EventAggregateResponse,
     EventTimelineItem,
     EventTimelineResponse,
     PatientEngagementTrend,
     SessionOutcomeSummary,
+    SessionsByStatusResponse,
+    SessionsByWeekPoint,
     TherapistUtilization,
 )
 
@@ -40,7 +52,25 @@ def mock_analytics_service() -> MagicMock:
 
 
 @pytest.fixture
-def app(mock_auth_context: MagicMock, mock_analytics_service: MagicMock) -> FastAPI:
+def therapist_user() -> MagicMock:
+    u = MagicMock(spec=User)
+    u.id = uuid.uuid4()
+    u.organization_id = uuid.uuid4()
+    u.email = "doc@example.com"
+    u.role = UserRole.THERAPIST
+    u.full_name = "Dr. Example"
+    u.email_verified_at = None
+    u.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    u.updated_at = datetime(2026, 1, 1, tzinfo=UTC)
+    return u
+
+
+@pytest.fixture
+def app(
+    mock_auth_context: MagicMock,
+    mock_analytics_service: MagicMock,
+    therapist_user: MagicMock,
+) -> FastAPI:
     """Create test app with mocked dependencies."""
     test_app = FastAPI()
     test_app.include_router(router, prefix="/analytics")
@@ -49,6 +79,7 @@ def app(mock_auth_context: MagicMock, mock_analytics_service: MagicMock) -> Fast
     mock_events.publish = AsyncMock(return_value=None)
 
     test_app.dependency_overrides[get_api_key_auth] = lambda: mock_auth_context
+    test_app.dependency_overrides[get_current_therapist] = lambda: therapist_user
     test_app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     test_app.dependency_overrides[get_analytics_service] = lambda: mock_analytics_service
     test_app.dependency_overrides[get_event_publisher] = lambda: mock_events
@@ -439,3 +470,197 @@ class TestEventAggregateEndpoint:
         call_kwargs = mock_analytics_service.get_event_aggregates.call_args.kwargs
         assert call_kwargs["event_name"] == "chat.message_sent"
         assert call_kwargs["period"] == "hour"
+
+
+# ----------------------------------------------------------------------
+# Therapist dashboard endpoints
+# ----------------------------------------------------------------------
+
+
+class TestTherapistSessionsByWeek:
+    """GET /analytics/therapist/sessions-by-week."""
+
+    def test_returns_series(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+        therapist_user: MagicMock,
+    ) -> None:
+        mock_analytics_service.sessions_by_week = AsyncMock(
+            return_value=[
+                SessionsByWeekPoint(week_start=date(2026, 2, 2), count=4),
+                SessionsByWeekPoint(week_start=date(2026, 2, 9), count=6),
+            ]
+        )
+
+        response = client.get("/analytics/therapist/sessions-by-week")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["count"] == 4
+        call_kwargs = mock_analytics_service.sessions_by_week.call_args.kwargs
+        assert call_kwargs["organization_id"] == therapist_user.organization_id
+        assert call_kwargs["weeks_back"] == 12
+
+    def test_respects_weeks_back_query(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.sessions_by_week = AsyncMock(return_value=[])
+
+        response = client.get("/analytics/therapist/sessions-by-week", params={"weeks_back": 4})
+
+        assert response.status_code == 200
+        call_kwargs = mock_analytics_service.sessions_by_week.call_args.kwargs
+        assert call_kwargs["weeks_back"] == 4
+
+
+class TestTherapistSessionsByStatus:
+    """GET /analytics/therapist/sessions-by-status."""
+
+    def test_returns_counts(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.sessions_by_status_response = AsyncMock(
+            return_value=SessionsByStatusResponse(counts={"ready": 12, "failed": 1})
+        )
+
+        response = client.get("/analytics/therapist/sessions-by-status")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["counts"]["ready"] == 12
+        assert data["counts"]["failed"] == 1
+
+
+class TestTherapistActivePatients:
+    """GET /analytics/therapist/active-patients."""
+
+    def test_returns_count(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.active_patients_response = AsyncMock(
+            return_value=ActivePatientsResponse(window_days=30, active_patients=7)
+        )
+
+        response = client.get("/analytics/therapist/active-patients")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["active_patients"] == 7
+        assert data["window_days"] == 30
+
+    def test_respects_days_query(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.active_patients_response = AsyncMock(
+            return_value=ActivePatientsResponse(window_days=7, active_patients=3)
+        )
+
+        response = client.get("/analytics/therapist/active-patients", params={"days": 7})
+
+        assert response.status_code == 200
+        call_kwargs = mock_analytics_service.active_patients_response.call_args.kwargs
+        assert call_kwargs["days"] == 7
+
+
+class TestTherapistChatActivity:
+    """GET /analytics/therapist/chat-activity."""
+
+    def test_returns_points(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.chat_activity_by_day = AsyncMock(
+            return_value=[
+                ChatActivityPoint(day=date(2026, 2, 1), message_count=2),
+                ChatActivityPoint(day=date(2026, 2, 2), message_count=0),
+            ]
+        )
+
+        response = client.get("/analytics/therapist/chat-activity")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["message_count"] == 2
+
+
+class TestTherapistAssessmentTrend:
+    """GET /analytics/therapist/assessment-trend."""
+
+    def test_requires_instrument(
+        self,
+        client: TestClient,
+    ) -> None:
+        response = client.get("/analytics/therapist/assessment-trend")
+
+        assert response.status_code == 422
+
+    def test_rejects_invalid_instrument(
+        self,
+        client: TestClient,
+    ) -> None:
+        response = client.get(
+            "/analytics/therapist/assessment-trend",
+            params={"instrument": "bogus"},
+        )
+
+        assert response.status_code == 422
+
+    def test_returns_trend(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.assessment_trend_response = AsyncMock(
+            return_value=AssessmentTrendResponse(
+                instrument=AssessmentInstrument.PHQ9,
+                points=[
+                    AssessmentTrendPoint(week_start=date(2026, 2, 2), avg_score=11.5, count=3),
+                ],
+            )
+        )
+
+        response = client.get(
+            "/analytics/therapist/assessment-trend", params={"instrument": "phq9"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["instrument"] == "phq9"
+        assert len(data["points"]) == 1
+        assert data["points"][0]["avg_score"] == 11.5
+        call_kwargs = mock_analytics_service.assessment_trend_response.call_args.kwargs
+        assert call_kwargs["instrument"] == AssessmentInstrument.PHQ9
+
+    def test_supports_gad7(
+        self,
+        client: TestClient,
+        mock_analytics_service: MagicMock,
+    ) -> None:
+        mock_analytics_service.assessment_trend_response = AsyncMock(
+            return_value=AssessmentTrendResponse(
+                instrument=AssessmentInstrument.GAD7,
+                points=[],
+            )
+        )
+
+        response = client.get(
+            "/analytics/therapist/assessment-trend",
+            params={"instrument": "gad7", "weeks": 4},
+        )
+
+        assert response.status_code == 200
+        call_kwargs = mock_analytics_service.assessment_trend_response.call_args.kwargs
+        assert call_kwargs["instrument"] == AssessmentInstrument.GAD7
+        assert call_kwargs["weeks"] == 4

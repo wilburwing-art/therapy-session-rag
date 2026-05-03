@@ -6,15 +6,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from src.api.v1.dependencies import Auth
+from src.api.v1.dependencies import Auth, CurrentTherapist
 from src.core.database import DbSession
+from src.models.db.assessment import AssessmentInstrument
 from src.models.db.event import EventCategory
 from src.models.domain.analytics import (
+    ActivePatientsResponse,
     AISafetyMetrics,
+    AssessmentTrendResponse,
+    ChatActivityPoint,
     EventAggregateResponse,
     EventTimelineResponse,
     PatientEngagementTrend,
     SessionOutcomeSummary,
+    SessionsByStatusResponse,
+    SessionsByWeekPoint,
     TherapistUtilization,
 )
 from src.services.analytics_service import AnalyticsService
@@ -141,9 +147,7 @@ async def get_event_timeline(
 async def get_event_aggregates(
     auth: Auth,
     service: AnalyticsSvc,
-    period: AggregationPeriod = Query(
-        AggregationPeriod.DAY, description="Aggregation period"
-    ),
+    period: AggregationPeriod = Query(AggregationPeriod.DAY, description="Aggregation period"),
     event_name: str | None = Query(None, description="Filter by event name"),
     event_category: EventCategory | None = Query(None, description="Filter by event category"),
     from_date: datetime | None = Query(None, description="Start of date range"),
@@ -160,4 +164,99 @@ async def get_event_aggregates(
         event_category=event_category,
         from_date=from_date,
         to_date=to_date,
+    )
+
+
+# ----------------------------------------------------------------------
+# Therapist dashboard analytics — JWT cookie auth, org-scoped
+# ----------------------------------------------------------------------
+
+
+class TherapistAssessmentInstrument(StrEnum):
+    """Enum mirroring AssessmentInstrument for query-string validation."""
+
+    PHQ9 = "phq9"
+    GAD7 = "gad7"
+
+
+@router.get(
+    "/therapist/sessions-by-week",
+    response_model=list[SessionsByWeekPoint],
+)
+async def therapist_sessions_by_week(
+    therapist: CurrentTherapist,
+    service: AnalyticsSvc,
+    weeks_back: int = Query(12, ge=1, le=52),
+) -> list[SessionsByWeekPoint]:
+    """Session counts per ISO week for the last ``weeks_back`` weeks."""
+    return await service.sessions_by_week(
+        organization_id=therapist.organization_id,
+        weeks_back=weeks_back,
+    )
+
+
+@router.get(
+    "/therapist/sessions-by-status",
+    response_model=SessionsByStatusResponse,
+)
+async def therapist_sessions_by_status(
+    therapist: CurrentTherapist,
+    service: AnalyticsSvc,
+) -> SessionsByStatusResponse:
+    """Session counts bucketed by processing status."""
+    return await service.sessions_by_status_response(
+        organization_id=therapist.organization_id,
+    )
+
+
+@router.get(
+    "/therapist/active-patients",
+    response_model=ActivePatientsResponse,
+)
+async def therapist_active_patients(
+    therapist: CurrentTherapist,
+    service: AnalyticsSvc,
+    days: int = Query(30, ge=1, le=365),
+) -> ActivePatientsResponse:
+    """Distinct patients with a session in the last ``days`` days."""
+    return await service.active_patients_response(
+        organization_id=therapist.organization_id,
+        days=days,
+    )
+
+
+@router.get(
+    "/therapist/chat-activity",
+    response_model=list[ChatActivityPoint],
+)
+async def therapist_chat_activity(
+    therapist: CurrentTherapist,
+    service: AnalyticsSvc,
+    days: int = Query(30, ge=1, le=180),
+) -> list[ChatActivityPoint]:
+    """Daily chat message volume for the org's conversations."""
+    return await service.chat_activity_by_day(
+        organization_id=therapist.organization_id,
+        days=days,
+    )
+
+
+@router.get(
+    "/therapist/assessment-trend",
+    response_model=AssessmentTrendResponse,
+)
+async def therapist_assessment_trend(
+    therapist: CurrentTherapist,
+    service: AnalyticsSvc,
+    instrument: TherapistAssessmentInstrument = Query(
+        ...,
+        description="Assessment instrument (phq9 or gad7)",
+    ),
+    weeks: int = Query(12, ge=1, le=52),
+) -> AssessmentTrendResponse:
+    """Weekly average PHQ-9 / GAD-7 scores for the org."""
+    return await service.assessment_trend_response(
+        organization_id=therapist.organization_id,
+        instrument=AssessmentInstrument(instrument.value),
+        weeks=weeks,
     )

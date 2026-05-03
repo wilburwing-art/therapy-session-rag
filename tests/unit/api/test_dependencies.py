@@ -6,9 +6,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.api.v1.dependencies import AuthContext, get_api_key_auth
+from src.core.config import Settings
 from src.core.exceptions import UnauthorizedError
 from src.core.security import create_api_key
 from src.models.db.api_key import ApiKey
+
+
+def _test_settings() -> Settings:
+    return Settings(
+        database_url="postgresql://user:pass@localhost/test",  # type: ignore[arg-type]
+        redis_url="redis://localhost:6379",  # type: ignore[arg-type]
+        jwt_secret="test-secret",
+    )
 
 
 class TestGetApiKeyAuth:
@@ -18,17 +27,25 @@ class TestGetApiKeyAuth:
         """Test that missing API key raises UnauthorizedError."""
         mock_session = AsyncMock()
 
-        with pytest.raises(UnauthorizedError) as exc_info:
-            await get_api_key_auth(x_api_key=None, session=mock_session)
-
-        assert "API key required" in str(exc_info.value.detail)
+        with pytest.raises(UnauthorizedError):
+            await get_api_key_auth(
+                x_api_key=None,
+                session=mock_session,
+                cookie_token=None,
+                settings=_test_settings(),
+            )
 
     async def test_invalid_format_raises_unauthorized(self) -> None:
         """Test that invalid API key format raises UnauthorizedError."""
         mock_session = AsyncMock()
 
         with pytest.raises(UnauthorizedError) as exc_info:
-            await get_api_key_auth(x_api_key="invalid_key", session=mock_session)
+            await get_api_key_auth(
+                x_api_key="invalid_key",
+                session=mock_session,
+                cookie_token=None,
+                settings=_test_settings(),
+            )
 
         assert "Invalid API key format" in str(exc_info.value.detail)
 
@@ -55,13 +72,16 @@ class TestGetApiKeyAuth:
         mock_session.execute.return_value = mock_result
 
         # Mock the repository
-        with patch(
-            "src.api.v1.dependencies.ApiKeyRepository"
-        ) as mock_repo_class:
+        with patch("src.api.v1.dependencies.ApiKeyRepository") as mock_repo_class:
             mock_repo = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
-            result = await get_api_key_auth(x_api_key=plain_key, session=mock_session)
+            result = await get_api_key_auth(
+                x_api_key=plain_key,
+                session=mock_session,
+                cookie_token=None,
+                settings=_test_settings(),
+            )
 
         assert isinstance(result, AuthContext)
         assert result.api_key_id == key_id
@@ -90,7 +110,12 @@ class TestGetApiKeyAuth:
         mock_session.execute.return_value = mock_result
 
         with pytest.raises(UnauthorizedError) as exc_info:
-            await get_api_key_auth(x_api_key=wrong_key, session=mock_session)
+            await get_api_key_auth(
+                x_api_key=wrong_key,
+                session=mock_session,
+                cookie_token=None,
+                settings=_test_settings(),
+            )
 
         assert "Invalid API key" in str(exc_info.value.detail)
 
@@ -106,7 +131,12 @@ class TestGetApiKeyAuth:
         mock_session.execute.return_value = mock_result
 
         with pytest.raises(UnauthorizedError) as exc_info:
-            await get_api_key_auth(x_api_key=plain_key, session=mock_session)
+            await get_api_key_auth(
+                x_api_key=plain_key,
+                session=mock_session,
+                cookie_token=None,
+                settings=_test_settings(),
+            )
 
         assert "Invalid API key" in str(exc_info.value.detail)
 

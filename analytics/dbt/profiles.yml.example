@@ -1,0 +1,45 @@
+# Example profiles.yml for the therapyrag dbt project.
+#
+# Copy this file to ~/.dbt/profiles.yml (or set DBT_PROFILES_DIR to point at
+# analytics/dbt) and fill in the credentials, or supply the referenced env
+# vars.
+#
+# The TherapyRAG backend is configured with a single DATABASE_URL, e.g.:
+#
+#   postgresql+asyncpg://therapy_user:therapy_pass@localhost:5432/therapy_rag
+#
+# dbt-postgres expects host / user / password / dbname / port as separate
+# fields, so either set those individually or parse DATABASE_URL in your
+# shell before invoking dbt:
+#
+#   export POSTGRES_HOST=$(python -c "from urllib.parse import urlparse; import os; u=urlparse(os.environ['DATABASE_URL'].replace('+asyncpg','')); print(u.hostname)")
+#   export POSTGRES_PORT=$(python -c "from urllib.parse import urlparse; import os; u=urlparse(os.environ['DATABASE_URL'].replace('+asyncpg','')); print(u.port or 5432)")
+#   export POSTGRES_USER=$(python -c "from urllib.parse import urlparse; import os; u=urlparse(os.environ['DATABASE_URL'].replace('+asyncpg','')); print(u.username)")
+#   export POSTGRES_PASSWORD=$(python -c "from urllib.parse import urlparse; import os; u=urlparse(os.environ['DATABASE_URL'].replace('+asyncpg','')); print(u.password)")
+#   export POSTGRES_DB=$(python -c "from urllib.parse import urlparse; import os; u=urlparse(os.environ['DATABASE_URL'].replace('+asyncpg','')); print(u.path.lstrip('/'))")
+#
+therapyrag:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'therapy_user') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'therapy_pass') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'therapy_rag') }}"
+      schema: analytics
+      threads: 4
+      keepalives_idle: 0
+      connect_timeout: 10
+      search_path: "public"
+    prod:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: analytics
+      threads: 4
+      sslmode: require

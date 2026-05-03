@@ -205,12 +205,8 @@ class TestProcessTranscription:
             patch(
                 "src.services.transcription_service.TranscriptRepository"
             ) as mock_transcript_repo_class,
-            patch(
-                "src.services.transcription_service.StorageService"
-            ) as mock_storage_class,
-            patch(
-                "src.services.transcription_service.DeepgramClient"
-            ) as mock_deepgram_class,
+            patch("src.services.transcription_service.StorageService") as mock_storage_class,
+            patch("src.services.transcription_service.DeepgramClient") as mock_deepgram_class,
             patch("httpx.AsyncClient") as mock_httpx,
             patch("src.workers.embedding_worker.queue_embedding"),
         ):
@@ -222,15 +218,11 @@ class TestProcessTranscription:
             mock_transcript_repo = MagicMock()
             mock_transcript_repo.get_job_by_id = AsyncMock(return_value=mock_job)
             mock_transcript_repo.update_job_status = AsyncMock(return_value=True)
-            mock_transcript_repo.create_transcript = AsyncMock(
-                return_value=mock_transcript
-            )
+            mock_transcript_repo.create_transcript = AsyncMock(return_value=mock_transcript)
             mock_transcript_repo_class.return_value = mock_transcript_repo
 
             mock_storage = MagicMock()
-            mock_storage.get_presigned_url = AsyncMock(
-                return_value="http://test-url.com/audio.mp3"
-            )
+            mock_storage.get_presigned_url = AsyncMock(return_value="http://test-url.com/audio.mp3")
             mock_storage_class.return_value = mock_storage
 
             mock_deepgram = MagicMock()
@@ -324,9 +316,7 @@ class TestGetTranscriptionStatus:
     ) -> None:
         """Test status when transcript exists."""
         mock_transcript = create_mock_transcript(session_id, job_id)
-        mock_job = create_mock_job(
-            job_id, session_id, status=TranscriptionJobStatus.COMPLETED
-        )
+        mock_job = create_mock_job(job_id, session_id, status=TranscriptionJobStatus.COMPLETED)
 
         with (
             patch("src.services.transcription_service.SessionRepository"),
@@ -338,9 +328,7 @@ class TestGetTranscriptionStatus:
             mock_transcript_repo.get_transcript_by_session_id = AsyncMock(
                 return_value=mock_transcript
             )
-            mock_transcript_repo.get_latest_job_for_session = AsyncMock(
-                return_value=mock_job
-            )
+            mock_transcript_repo.get_latest_job_for_session = AsyncMock(return_value=mock_job)
             mock_transcript_repo_class.return_value = mock_transcript_repo
 
             service = TranscriptionService(mock_db_session, settings=mock_settings)
@@ -358,9 +346,7 @@ class TestGetTranscriptionStatus:
         job_id: uuid.UUID,
     ) -> None:
         """Test status when still processing."""
-        mock_job = create_mock_job(
-            job_id, session_id, status=TranscriptionJobStatus.PROCESSING
-        )
+        mock_job = create_mock_job(job_id, session_id, status=TranscriptionJobStatus.PROCESSING)
 
         with (
             patch("src.services.transcription_service.SessionRepository"),
@@ -369,12 +355,8 @@ class TestGetTranscriptionStatus:
             ) as mock_transcript_repo_class,
         ):
             mock_transcript_repo = MagicMock()
-            mock_transcript_repo.get_transcript_by_session_id = AsyncMock(
-                return_value=None
-            )
-            mock_transcript_repo.get_latest_job_for_session = AsyncMock(
-                return_value=mock_job
-            )
+            mock_transcript_repo.get_transcript_by_session_id = AsyncMock(return_value=None)
+            mock_transcript_repo.get_latest_job_for_session = AsyncMock(return_value=mock_job)
             mock_transcript_repo_class.return_value = mock_transcript_repo
 
             service = TranscriptionService(mock_db_session, settings=mock_settings)
@@ -429,9 +411,7 @@ class TestGetTranscript:
             ) as mock_transcript_repo_class,
         ):
             mock_transcript_repo = MagicMock()
-            mock_transcript_repo.get_transcript_by_session_id = AsyncMock(
-                return_value=None
-            )
+            mock_transcript_repo.get_transcript_by_session_id = AsyncMock(return_value=None)
             mock_transcript_repo_class.return_value = mock_transcript_repo
 
             service = TranscriptionService(mock_db_session, settings=mock_settings)
@@ -451,15 +431,11 @@ class TestRetryTranscription:
         job_id: uuid.UUID,
     ) -> None:
         """Test retrying a failed job."""
-        mock_job = create_mock_job(
-            job_id, session_id, status=TranscriptionJobStatus.FAILED
-        )
+        mock_job = create_mock_job(job_id, session_id, status=TranscriptionJobStatus.FAILED)
         mock_job.error_message = "Previous error"
 
         # After reset
-        mock_job_reset = create_mock_job(
-            job_id, session_id, status=TranscriptionJobStatus.PENDING
-        )
+        mock_job_reset = create_mock_job(job_id, session_id, status=TranscriptionJobStatus.PENDING)
         mock_job_reset.retry_count = 1
 
         with (
@@ -469,9 +445,7 @@ class TestRetryTranscription:
             ) as mock_transcript_repo_class,
         ):
             mock_transcript_repo = MagicMock()
-            mock_transcript_repo.get_job_by_id = AsyncMock(
-                side_effect=[mock_job, mock_job_reset]
-            )
+            mock_transcript_repo.get_job_by_id = AsyncMock(side_effect=[mock_job, mock_job_reset])
             mock_transcript_repo.update_job_status = AsyncMock(return_value=True)
             mock_transcript_repo.increment_retry_count = AsyncMock(return_value=True)
             mock_transcript_repo_class.return_value = mock_transcript_repo
@@ -490,9 +464,7 @@ class TestRetryTranscription:
         job_id: uuid.UUID,
     ) -> None:
         """Test error when trying to retry non-failed job."""
-        mock_job = create_mock_job(
-            job_id, session_id, status=TranscriptionJobStatus.COMPLETED
-        )
+        mock_job = create_mock_job(job_id, session_id, status=TranscriptionJobStatus.COMPLETED)
 
         with (
             patch("src.services.transcription_service.SessionRepository"),

@@ -1,0 +1,48 @@
+# Install + build output
+node_modules
+.next
+out
+dist
+.turbo
+
+# VCS
+.git
+.gitignore
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TS build cache
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Tests / coverage (none today, future-proof)
+coverage/
+*.test.ts
+*.test.tsx
+__tests__/
+
+# Docker context doesn't need these
+Dockerfile
+.dockerignore
+
+# Docs
+README.md

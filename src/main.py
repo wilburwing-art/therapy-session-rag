@@ -3,23 +3,28 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1 import router as v1_router
 from src.core.config import get_settings
+from src.core.csrf import CsrfMiddleware
 from src.core.database import close_database, get_db_session, init_database
 from src.core.event_middleware import EventTrackingMiddleware
 from src.core.exceptions import setup_exception_handlers
 from src.core.health import HealthCheckService, HealthStatus
 from src.core.logging import setup_logging, setup_request_logging
+from src.core.observability import init_sentry
+from src.core.telemetry import init_telemetry, instrument_fastapi
 from src.models import db as _models  # noqa: F401  # Import to register models
+from src.workers.reminder_scheduler import (  # reminders-engineer:scheduler-hook
+    start_scheduler,
+    stop_scheduler,
+)
 
 logger = logging.getLogger("therapy_rag")
 
@@ -30,10 +35,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     # Startup
     settings = get_settings()
     init_database(settings)
+    # --- reminders-engineer: scheduler startup (unique anchor) ---
+    try:
+        start_scheduler(settings)
+    except Exception as exc:  # noqa: BLE001 - scheduler is non-critical at boot
+        logger.warning("reminder_scheduler.start_failed", extra={"error": str(exc)})
+    # --- end reminders-engineer startup anchor ---
     logger.info("Application started", extra={"env": settings.app_env})
     yield
     # Shutdown
     logger.info("Application shutting down")
+    # --- reminders-engineer: scheduler shutdown (unique anchor) ---
+    try:
+        stop_scheduler(settings)
+    except Exception as exc:  # noqa: BLE001 - best-effort teardown
+        logger.warning("reminder_scheduler.stop_failed", extra={"error": str(exc)})
+    # --- end reminders-engineer shutdown anchor ---
     await close_database()
 
 
@@ -43,6 +60,14 @@ def create_app() -> FastAPI:
 
     # Setup structured logging first
     setup_logging(settings)
+
+    # Initialize Sentry before the app is created so startup errors get reported.
+    init_sentry(settings)
+
+    # Initialize OpenTelemetry providers before app construction so that any
+    # startup-time spans / metrics are captured. Opt-in via OTEL_ENABLED=true.
+    # FastAPI instrumentation is attached below, after the app is built.
+    init_telemetry(settings)
 
     app = FastAPI(
         title="TherapyRAG API",
@@ -54,11 +79,17 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Attach OTEL FastAPI instrumentation (no-op when otel_enabled=false).
+    instrument_fastapi(app)
+
     # Setup request logging middleware (must be added before CORS)
     setup_request_logging(app)
 
     # Event tracking middleware (request timing and context)
     app.add_middleware(EventTrackingMiddleware)
+
+    # CSRF protection — enforced on cookie-authenticated state-changing routes
+    app.add_middleware(CsrfMiddleware, settings=settings)
 
     # Configure CORS
     app.add_middleware(
@@ -115,11 +146,6 @@ def create_app() -> FastAPI:
 
     # Include API routers
     app.include_router(v1_router)
-
-    # Serve frontend static files
-    frontend_path = Path(__file__).parent.parent / "frontend"
-    if frontend_path.exists():
-        app.mount("/app", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
 
     return app
 
