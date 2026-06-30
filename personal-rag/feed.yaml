@@ -1,0 +1,8 @@
+name: therapy-session-rag
+kind: transcripts
+source_glob: "data/transcripts/**/*.md"  # TODO confirm; transcripts currently live in the app DB (Deepgram output), not on disk
+format: markdown
+index_target: khoj
+embed: true
+status: placeholder
+notes: "Downstream RAG app; transcripts stored in the database, need an export path before Khoj can index."
